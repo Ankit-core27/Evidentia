@@ -37,7 +37,7 @@ PLAN.md doesn't pin these down. The frontend builds against the defaults below; 
 | Report templates | `court`, `summary`, `custody`, `medical` |
 | Alert severity | `info`, `warning`, `critical` |
 | Case location | `cases` has no location column. The create modal posts an `incident_site` row to `/locations` with an address and optional lat/lng |
-| Workspace call | `GET /cases/{id}/workspace` also returns `locations`, plus computed `counts` (evidence, pending reviews, open conflicts, reviewed and total AI items) |
+| Workspace call | `GET /cases/{id}/workspace` also returns `locations`, the case's evidence `links` (so any record can show its source passage), and computed `counts` (evidence, pending reviews, open conflicts, reviewed and total AI items) |
 | Evidence upload | Multipart field `files`, several files per request; the response is the list of created evidence rows |
 | Processing updates | Polling: the evidence list refetches every 3 seconds while any item is `queued` or `processing` |
 | File access | `<img>`, `<video>`, `<audio>` and `<iframe>` can't send headers, so `GET /evidence/{id}/file` takes `?investigator_id=` for the audit entry and `?download=1` to log "exported" instead of "viewed" |
@@ -108,7 +108,7 @@ Routes: `GET /cases/{id}/workspace`, `PATCH /cases/{id}`, `GET`/`POST /cases/{id
 
 - Sidebar modules: Overview, Evidence, People & Vehicles, Review, Canvas, Timeline, Reconstruction, AI Copilot, Reports, Settings. Autopsy stays hidden until T13. Badges show real counts.
 - Banner: an edit dialog for title, description, incident type and date, lead and team (T3 already saves status and shows review progress).
-- Overview: builds on T3's read-only overview with links into each module and a graph preview, and deletes the draft overview and its mock strings.
+- Overview: builds on T3's read-only overview with links into each module. The draft workspace, with its overview and mock strings, is deleted once no page links to draft cases (after T5 and T12); the graph preview comes with T8.
 - People & Vehicles: persons, objects and locations with add, edit and delete. Rows the AI proposed show a pending badge with Confirm and Reject.
 
 Done when the overview shows only data from the workspace call and edits appear everywhere they are used.
