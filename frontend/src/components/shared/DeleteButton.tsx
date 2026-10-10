@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Loader2, Trash2 } from 'lucide-react';
+import { iconButtonClass } from './formStyles';
 
 /** Delete with a second click to confirm. The confirmation resets after a few seconds. */
 export const DeleteButton: React.FC<{ onDelete: () => void; busy?: boolean; label: string }> = ({
@@ -14,25 +15,26 @@ export const DeleteButton: React.FC<{ onDelete: () => void; busy?: boolean; labe
     return () => clearTimeout(timer);
   }, [armed]);
 
-  if (busy) return <Loader2 className="w-3.5 h-3.5 text-slate-400 animate-spin" />;
+  if (busy) {
+    return (
+      <span className="inline-flex items-center justify-center size-7" role="status" aria-label={`Deleting ${label}`}>
+        <Loader2 className="size-3.5 text-ink-muted animate-spin" />
+      </span>
+    );
+  }
   return armed ? (
     <button
       onClick={() => {
         setArmed(false);
         onDelete();
       }}
-      className="px-2 py-0.5 rounded bg-red-500/15 border border-red-500/40 text-red-300 text-[10px] font-bold"
+      className="h-7 px-2 rounded bg-danger/15 border border-danger/50 text-danger text-xs font-medium whitespace-nowrap"
     >
       Confirm delete
     </button>
   ) : (
-    <button
-      onClick={() => setArmed(true)}
-      className="p-1 rounded text-slate-500 hover:text-red-400"
-      title={`Delete ${label}`}
-      aria-label={`Delete ${label}`}
-    >
-      <Trash2 className="w-3.5 h-3.5" />
+    <button onClick={() => setArmed(true)} className={`${iconButtonClass} hover:text-danger`} title={`Delete ${label}`} aria-label={`Delete ${label}`}>
+      <Trash2 className="size-3.5" />
     </button>
   );
 };

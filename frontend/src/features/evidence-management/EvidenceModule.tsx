@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
-import { Folder, Search } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { EVIDENCE_ICONS } from '@/components/evidence/evidenceIcons';
 import { ProcessingBadge } from '@/components/shared/Badges';
+import { PageHeader } from '@/components/shared/PageHeader';
 import { EmptyState, QueryBoundary } from '@/components/shared/QueryState';
+import { FilterChips } from '@/components/shared/Segmented';
+import { inputClass } from '@/components/shared/formStyles';
 import { useCaseEvidence } from '@/hooks/useEvidence';
 import { useEvidenceInspector } from '@/hooks/useEvidenceInspector';
 import { formatBytes, formatDateTime, humanize } from '@/lib/format';
@@ -26,15 +29,7 @@ export const EvidenceModule: React.FC<{ caseId: Id }> = ({ caseId }) => {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-        <div>
-          <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2">
-            <Folder className="w-5 h-5 text-cyan-400" />
-            Evidence
-          </h2>
-          <p className="text-xs text-slate-400">Originals with their SHA-256 hashes, processing status and AI summaries.</p>
-        </div>
-      </div>
+      <PageHeader title="Evidence" description="Original files with their SHA-256 hashes, processing status and summaries. Open one to see its text, links and custody record." />
 
       <EvidenceUploader caseId={caseId} />
 
@@ -47,40 +42,43 @@ export const EvidenceModule: React.FC<{ caseId: Id }> = ({ caseId }) => {
           const types = [...new Set(items.map((e) => e.type))];
           const visible = items.filter(matches);
           return (
-            <div className="space-y-4">
-              <div className="flex flex-col md:flex-row gap-3">
-                <div className="relative md:w-72">
-                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+            <div className="space-y-3">
+              <div className="flex flex-col md:flex-row md:items-center gap-2">
+                <div className="relative md:w-72 shrink-0">
+                  <Search className="size-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-muted pointer-events-none" aria-hidden />
                   <input
                     type="search"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Filter by title, summary or notes…"
+                    placeholder="Title, summary or notes"
                     aria-label="Filter evidence"
-                    className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500"
+                    className={`${inputClass} pl-8`}
                   />
                 </div>
-                <div className="flex items-center gap-1 overflow-x-auto p-1 bg-slate-950 rounded-xl border border-slate-800 text-xs">
-                  {(['all', ...types] as const).map((t) => (
-                    <button
-                      key={t}
-                      onClick={() => setTypeFilter(t)}
-                      className={`px-3 py-1 rounded-lg whitespace-nowrap ${
-                        typeFilter === t ? 'bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-500/40' : 'text-slate-400 hover:text-slate-200'
-                      }`}
-                    >
-                      {t === 'all' ? `All (${items.length})` : `${humanize(t)} (${items.filter((e) => e.type === t).length})`}
-                    </button>
-                  ))}
-                </div>
+                {types.length > 1 && (
+                  <FilterChips
+                    label="Evidence type"
+                    value={typeFilter}
+                    onChange={setTypeFilter}
+                    options={[
+                      { value: 'all', label: 'All', count: items.length },
+                      ...types.map((t) => ({ value: t, label: humanize(t), count: items.filter((e) => e.type === t).length }))
+                    ]}
+                  />
+                )}
               </div>
 
-              {visible.length === 0 && <EmptyState title="Nothing matches this filter" />}
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                {visible.map((item) => (
-                  <EvidenceCard key={item.id} item={item} onOpen={() => open(item.id)} />
-                ))}
-              </div>
+              {visible.length === 0 ? (
+                <EmptyState title="Nothing matches this filter" />
+              ) : (
+                <ul className="rounded-md border border-line divide-y divide-line">
+                  {visible.map((item) => (
+                    <li key={item.id}>
+                      <EvidenceRow item={item} onOpen={() => open(item.id)} />
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           );
         }}
@@ -89,33 +87,42 @@ export const EvidenceModule: React.FC<{ caseId: Id }> = ({ caseId }) => {
   );
 };
 
-export const EvidenceCard: React.FC<{ item: Evidence; onOpen: () => void; footer?: React.ReactNode }> = ({ item, onOpen, footer }) => {
-  const { icon: Icon, colour } = EVIDENCE_ICONS[item.type];
+/** One evidence item in a list: what it is, what it says, and the facts that identify the file. */
+export const EvidenceRow: React.FC<{ item: Evidence; onOpen: () => void; footer?: React.ReactNode }> = ({ item, onOpen, footer }) => {
+  const Icon = EVIDENCE_ICONS[item.type].icon;
   return (
-    <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-cyan-500/50 transition-all flex flex-col gap-3" data-testid={`evidence-card-${item.id}`}>
-      <button onClick={onOpen} className="text-left space-y-2 flex-1 group">
-        <div className="flex items-center justify-between gap-2">
-          <span className="flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded bg-slate-950 border border-slate-800 text-slate-300">
-            <Icon className={`w-3.5 h-3.5 ${colour}`} /> {humanize(item.type)}
+    <div className="group relative flex gap-3 px-3 py-3 hover:bg-surface transition-colors" data-testid={`evidence-card-${item.id}`}>
+      <Icon className="size-4 text-ink-muted shrink-0 mt-0.5" aria-hidden />
+      <div className="min-w-0 flex-1 space-y-1">
+        <div className="flex items-start justify-between gap-3">
+          {/* The title button covers the row, so the whole row opens the inspector. */}
+          <button
+            onClick={onOpen}
+            className="text-left text-body font-medium text-ink group-hover:text-accent-text break-words after:absolute after:inset-0 after:content-['']"
+          >
+            {item.title}
+          </button>
+          <span className="shrink-0">
+            <ProcessingBadge status={item.processing_status} />
           </span>
-          <ProcessingBadge status={item.processing_status} />
         </div>
-        <h3 className="text-sm font-bold text-slate-100 group-hover:text-cyan-300 transition-colors break-words">{item.title}</h3>
         {item.summary ? (
-          <p className="text-xs text-slate-400 line-clamp-3 leading-relaxed">{item.summary}</p>
+          <p className="text-body text-ink-soft line-clamp-2 max-w-4xl">{item.summary}</p>
         ) : (
-          <p className="text-xs text-slate-500 italic">
-            {item.processing_status === 'failed' ? 'Processing failed. Open it to reprocess.' : 'Summary appears when processing finishes.'}
+          <p className="text-body text-ink-muted">
+            {item.processing_status === 'failed' ? 'Processing failed. Open it to reprocess.' : 'The summary appears when processing finishes.'}
           </p>
         )}
-      </button>
-      <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px] text-slate-500 gap-2">
-        <span>
-          {formatBytes(item.size_bytes)} • {formatDateTime(item.collected_at ?? item.created_at)}
-        </span>
-        <span title={item.sha256}>SHA-256 {item.sha256.slice(0, 8)}…</span>
+        <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-ink-muted">
+          <span>{humanize(item.type)}</span>
+          <span className="font-mono">{formatBytes(item.size_bytes)}</span>
+          <span className="font-mono">{formatDateTime(item.collected_at ?? item.created_at)}</span>
+          <span className="font-mono" title={item.sha256}>
+            SHA-256 {item.sha256.slice(0, 12)}…
+          </span>
+        </div>
+        {footer && <div className="relative">{footer}</div>}
       </div>
-      {footer}
     </div>
   );
 };

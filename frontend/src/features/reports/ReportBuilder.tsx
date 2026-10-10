@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { FileText, Loader2, Printer, Sparkles } from 'lucide-react';
+import { Loader2, Printer } from 'lucide-react';
+import { SectionHeader } from '@/components/shared/PageHeader';
 import { EmptyState, ErrorState, LoadingState } from '@/components/shared/QueryState';
-import { labelClass, primaryButtonClass, secondaryButtonClass } from '@/components/shared/formStyles';
+import { primaryButtonClass, secondaryButtonClass } from '@/components/shared/formStyles';
 import { useInvestigators } from '@/hooks/useCases';
 import { useCaseReports, useCreateReport, useReport } from '@/hooks/useReports';
 import { formatDateTime, shortHash } from '@/lib/format';
@@ -28,7 +29,7 @@ const PrintCopy: React.FC<{ report: Report; investigators: Investigator[] | unde
 /**
  * Builds reports for one case (POST /api/cases/{id}/reports), lists the ones already stored
  * and shows the selected one, ready to print. Used by the workspace Reports tab and the
- * Intelligence Hub, which passes its case picker in as `caseSelector`.
+ * Reports page, which passes its case picker in as `caseSelector`.
  */
 export const ReportBuilder: React.FC<{ caseId: Id; caseSelector?: React.ReactNode }> = ({ caseId, caseSelector }) => {
   const [template, setTemplate] = useState<ReportTemplate>('court');
@@ -59,99 +60,115 @@ export const ReportBuilder: React.FC<{ caseId: Id; caseSelector?: React.ReactNod
   };
 
   const toggle = (checked: boolean, onChange: (v: boolean) => void, label: string, hint: string, disabled = false) => (
-    <label className={`flex items-start gap-2.5 p-2.5 rounded-xl border border-slate-800 bg-slate-950 ${disabled ? 'opacity-60' : 'cursor-pointer hover:border-slate-700'}`}>
-      <input type="checkbox" checked={checked} disabled={disabled} onChange={(e) => onChange(e.target.checked)} className="mt-0.5 accent-cyan-500" />
+    <label className={`flex items-start gap-2.5 px-3 py-2 ${disabled ? 'opacity-60' : 'cursor-pointer hover:bg-surface'}`}>
+      <input type="checkbox" checked={checked} disabled={disabled} onChange={(e) => onChange(e.target.checked)} className="mt-1" />
       <span>
-        <span className="block text-slate-200 font-bold">{label}</span>
-        <span className="block text-[10px] text-slate-500">{hint}</span>
+        <span className="block text-body text-ink">{label}</span>
+        <span className="block text-xs text-ink-muted">{hint}</span>
       </span>
     </label>
   );
 
+  const legend = 'text-xs font-medium text-ink-soft mb-1.5';
+
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
-      <div className="xl:col-span-4 space-y-4 text-xs">
-        <section className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-4" aria-label="New report">
+    <div className="grid grid-cols-1 xl:grid-cols-12 gap-x-8 gap-y-6 items-start">
+      <div className="xl:col-span-4 space-y-6">
+        <section className="space-y-4" aria-label="New report">
           {caseSelector}
-          <fieldset className="space-y-1.5">
-            <legend className={labelClass}>Template</legend>
-            {TEMPLATES.map((t) => (
-              <label
-                key={t.value}
-                className={`block p-2.5 rounded-xl border cursor-pointer ${
-                  template === t.value ? 'bg-cyan-500/10 border-cyan-500/40' : 'bg-slate-950 border-slate-800 hover:border-slate-700'
-                }`}
-              >
-                <input type="radio" name="report-template" value={t.value} checked={template === t.value} onChange={() => setTemplate(t.value)} className="sr-only" />
-                <span className={`block font-bold ${template === t.value ? 'text-cyan-300' : 'text-slate-200'}`}>{TEMPLATE_LABELS[t.value]}</span>
-                <span className="block text-[10px] text-slate-500">{t.description}</span>
-              </label>
-            ))}
+          <fieldset>
+            <legend className={legend}>Template</legend>
+            <div className="rounded-md border border-line divide-y divide-line">
+              {TEMPLATES.map((t) => (
+                <label key={t.value} className={`flex items-start gap-2.5 px-3 py-2 cursor-pointer ${template === t.value ? 'bg-accent/5' : 'hover:bg-surface'}`}>
+                  <input
+                    type="radio"
+                    name="report-template"
+                    value={t.value}
+                    checked={template === t.value}
+                    onChange={() => setTemplate(t.value)}
+                    className="mt-1"
+                  />
+                  <span>
+                    <span className="block text-body text-ink">{TEMPLATE_LABELS[t.value]}</span>
+                    <span className="block text-xs text-ink-muted">{t.description}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
           </fieldset>
-          <fieldset className="space-y-1.5">
-            <legend className={labelClass}>Include</legend>
-            {toggle(includeAi, setIncludeAi, 'AI insights', 'Model-written evidence summaries, marked as unconfirmed.')}
-            {toggle(
-              includeCustody || custodyForced,
-              setIncludeCustody,
-              'Custody ledger',
-              custodyForced ? 'Always part of the chain of custody audit.' : 'Every upload, view, change and export of the evidence.',
-              custodyForced
-            )}
+          <fieldset>
+            <legend className={legend}>Include</legend>
+            <div className="rounded-md border border-line divide-y divide-line">
+              {toggle(includeAi, setIncludeAi, 'AI insights', 'Model-written evidence summaries, marked as unconfirmed.')}
+              {toggle(
+                includeCustody || custodyForced,
+                setIncludeCustody,
+                'Custody ledger',
+                custodyForced ? 'Always part of the chain of custody audit.' : 'Every upload, view, change and export of the evidence.',
+                custodyForced
+              )}
+            </div>
           </fieldset>
-          <button onClick={generate} disabled={create.isPending} className={`${primaryButtonClass} w-full justify-center`}>
-            {create.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+          <button onClick={generate} disabled={create.isPending} className={`${primaryButtonClass} w-full`}>
+            {create.isPending && <Loader2 className="size-3.5 animate-spin" />}
             Generate report
           </button>
-          {create.isError && <p className="text-red-300" role="alert">{(create.error as Error).message}</p>}
+          {create.isError && (
+            <p className="text-xs text-danger" role="alert">
+              {(create.error as Error).message}
+            </p>
+          )}
         </section>
 
-        <section className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-2" aria-label="Report history">
-          <h3 className="text-xs font-bold text-slate-200 uppercase">Report history</h3>
+        <section className="space-y-2" aria-label="Report history">
+          <SectionHeader title="Report history" count={history.data?.length} />
           {history.isPending && <LoadingState />}
           {history.isError && <ErrorState error={history.error} onRetry={() => history.refetch()} />}
-          {history.data?.length === 0 && <p className="text-[11px] text-slate-500">No reports for this case yet.</p>}
-          <ul className="space-y-1.5">
-            {history.data?.map((r) => (
-              <li key={r.id}>
-                <button
-                  onClick={() => setSelectedId(r.id)}
-                  aria-current={r.id === shownId || undefined}
-                  className={`w-full text-left p-2.5 rounded-xl border ${
-                    r.id === shownId ? 'bg-cyan-500/10 border-cyan-500/40' : 'bg-slate-950 border-slate-800 hover:border-slate-700'
-                  }`}
-                >
-                  <span className="flex items-center justify-between gap-2">
-                    <span className="font-bold text-slate-200">
-                      #{r.id} {TEMPLATE_LABELS[r.template]}
+          {history.data?.length === 0 && <p className="text-body text-ink-muted">No reports for this case yet.</p>}
+          {!!history.data?.length && (
+            <ul className="rounded-md border border-line divide-y divide-line">
+              {history.data.map((r) => (
+                <li key={r.id}>
+                  <button
+                    onClick={() => setSelectedId(r.id)}
+                    aria-current={r.id === shownId || undefined}
+                    className={`w-full text-left px-3 py-2 transition-colors ${r.id === shownId ? 'bg-accent/10' : 'hover:bg-surface'}`}
+                  >
+                    <span className="flex items-baseline justify-between gap-2">
+                      <span className="text-body text-ink">
+                        <span className="font-mono text-xs text-ink-muted mr-1.5">#{r.id}</span>
+                        {TEMPLATE_LABELS[r.template]}
+                      </span>
+                      <span className="text-2xs text-ink-muted font-mono">{shortHash(r.sha256)}</span>
                     </span>
-                    <span className="text-[10px] text-slate-500 font-mono">{shortHash(r.sha256)}</span>
-                  </span>
-                  <span className="block text-[10px] text-slate-400">
-                    {formatDateTime(r.created_at)} · {investigators.data?.find((i) => i.id === r.created_by)?.name ?? 'Unknown'}
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
+                    <span className="block text-xs text-ink-muted">
+                      <span className="font-mono">{formatDateTime(r.created_at)}</span> ·{' '}
+                      {investigators.data?.find((i) => i.id === r.created_by)?.name ?? 'Unknown'}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
       </div>
 
       <div className="xl:col-span-8 space-y-3 min-w-0">
         {shownId === null && !history.isPending && (
-          <EmptyState title="No report selected" message="Choose a template and generate a report, or open one from the history." />
+          <EmptyState title="No report yet" message="Choose a template and generate a report, or open one from the history." className="py-16" />
         )}
         {shownId !== null && reportQuery.isPending && <LoadingState label="Loading report…" />}
         {reportQuery.isError && <ErrorState error={reportQuery.error} onRetry={() => reportQuery.refetch()} />}
         {report && (
           <>
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-[11px] text-slate-400 flex items-center gap-1.5">
-                <FileText className="w-3.5 h-3.5 text-cyan-400" />
-                Report #{report.id}, generated {formatDateTime(report.created_at)}. Print or save it as PDF from the browser.
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-xs text-ink-muted">
+                Report <span className="font-mono">#{report.id}</span>, generated <span className="font-mono">{formatDateTime(report.created_at)}</span>.
+                Print it, or save it as a PDF from the print dialog.
               </p>
               <button onClick={print} className={secondaryButtonClass}>
-                <Printer className="w-3.5 h-3.5" /> Print / PDF
+                <Printer className="size-3.5" aria-hidden /> Print or save PDF
               </button>
             </div>
             <ReportDocument report={report} investigators={investigators.data} />

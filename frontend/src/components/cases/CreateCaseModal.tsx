@@ -1,23 +1,16 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
+import { X, UploadCloud, Plus, Trash2, CheckCircle2, AlertTriangle, Loader2, Circle, Check } from 'lucide-react';
+import { useFocusTrap } from '@/components/shared/Dialog';
 import {
-  X,
-  UploadCloud,
-  FileText,
-  Plus,
-  Trash2,
-  FolderPlus,
-  Zap,
-  ArrowRight,
-  ArrowLeft,
-  CheckCircle2,
-  AlertTriangle,
-  Loader2,
-  Circle,
-  Car,
-  UserPlus
-} from 'lucide-react';
+  iconButtonClass,
+  inputClass,
+  labelClass,
+  primaryButtonClass,
+  secondaryButtonClass,
+  smallButtonClass
+} from '@/components/shared/formStyles';
 import { useInvestigators } from '@/hooks/useCases';
 import { invalidateCase } from '@/hooks/queryKeys';
 import { useInvestigatorStore } from '@/stores/investigator';
@@ -57,11 +50,7 @@ interface VehicleDraft {
 const EMPTY_PERSON: PersonDraft = { name: '', role: 'witness', age: '', condition: '', contact: '', notes: '' };
 const EMPTY_VEHICLE: VehicleDraft = { label: '', plate: '', make: '', colour: '' };
 
-const labelClass = 'block text-xs font-mono text-slate-300 font-semibold mb-1.5 uppercase';
-const inputClass =
-  'w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-100 placeholder-slate-600 font-mono focus:outline-none focus:border-cyan-500';
-const smallInputClass =
-  'w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-200 placeholder-slate-600 font-mono focus:outline-none focus:border-cyan-500';
+const smallInputClass = inputClass;
 
 const STEP_TITLES = ['Case details', 'Location & evidence', 'People & vehicles'] as const;
 
@@ -77,6 +66,8 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({ isOpen, onClos
   const { data: investigators } = useInvestigators();
   const currentInvestigatorId = useInvestigatorStore((s) => s.investigatorId);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(panelRef, isOpen);
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [stepError, setStepError] = useState<string | null>(null);
@@ -260,89 +251,81 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({ isOpen, onClos
   const investigatorName = (id: Id) => investigators?.find((i) => i.id === id)?.name ?? `#${id}`;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="create-case-title"
-    >
-      <div className="w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-        {/* Modal Header */}
-        <div className="px-6 py-4 border-b border-slate-800 bg-slate-950/60 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
-              <FolderPlus className="w-5 h-5" />
-            </div>
-            <div>
-              <h2 id="create-case-title" className="text-sm font-mono font-bold text-slate-100 uppercase tracking-wider">
-                New Investigation
-              </h2>
-              <p className="text-[11px] text-slate-400 font-mono">
-                {progress ? 'Saving' : `Step ${step} of 3 • ${STEP_TITLES[step - 1]}`}
-              </p>
-            </div>
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/60">
+      <div
+        ref={panelRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="create-case-title"
+        className="w-full max-w-2xl bg-surface border border-line-strong rounded-t-lg sm:rounded-lg shadow-overlay overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[90vh] focus:outline-none"
+      >
+        <div className="pl-6 pr-3 h-14 border-b border-line flex items-center justify-between gap-3 shrink-0">
+          <div className="min-w-0">
+            <h2 id="create-case-title" className="text-sm font-semibold text-ink">
+              New case
+            </h2>
+            <p className="text-xs text-ink-muted">{progress ? 'Saving the case' : `Step ${step} of 3: ${STEP_TITLES[step - 1]}`}</p>
           </div>
 
-          <button
-            onClick={close}
-            disabled={submitting}
-            className="p-2 rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors disabled:opacity-40"
-            aria-label="Close"
-          >
-            <X className="w-4 h-4" />
+          <button onClick={close} disabled={submitting} className={iconButtonClass} aria-label="Close">
+            <X className="size-4" />
           </button>
         </div>
 
         {/* Step Progress Indicator */}
         {!progress && (
-          <div className="px-6 py-3 bg-slate-950/90 border-b border-slate-800/80 flex items-center justify-between font-mono text-xs">
+          <ol className="px-6 h-11 border-b border-line flex items-center gap-3 text-xs shrink-0 overflow-x-auto" aria-label="Steps">
             {STEP_TITLES.map((label, i) => {
               const n = i + 1;
               return (
                 <React.Fragment key={label}>
-                  {i > 0 && <div className="w-8 h-px bg-slate-800"></div>}
-                  <div className={`flex items-center gap-2 ${step === n ? 'text-cyan-400 font-bold' : 'text-slate-500'}`}>
+                  {i > 0 && <li className="w-6 h-px bg-line-strong shrink-0" aria-hidden />}
+                  <li
+                    className={`flex items-center gap-2 whitespace-nowrap ${step === n ? 'text-ink font-medium' : 'text-ink-muted'}`}
+                    aria-current={step === n ? 'step' : undefined}
+                  >
                     <span
-                      className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${
-                        step === n ? 'bg-cyan-500 text-slate-950' : 'bg-slate-800'
+                      className={`size-5 rounded-full flex items-center justify-center font-mono text-2xs border ${
+                        step === n ? 'bg-accent border-accent text-accent-fg' : step > n ? 'border-ok/60 text-ok' : 'border-line-strong'
                       }`}
                     >
-                      {n}
+                      {step > n ? <Check className="size-3" aria-label="Done" /> : n}
                     </span>
                     <span>{label}</span>
-                  </div>
+                  </li>
                 </React.Fragment>
               );
             })}
-          </div>
+          </ol>
         )}
 
         <div className="p-6 overflow-y-auto space-y-5 flex-1">
           {/* SUBMISSION PROGRESS */}
           {progress && (
-            <div className="space-y-3 font-mono">
-              <ul className="space-y-2">
+            <div className="space-y-3">
+              <ul className="rounded-md border border-line divide-y divide-line" aria-live="polite">
                 {progress.map((s) => (
-                  <li key={s.key} className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs">
+                  <li key={s.key} className="px-3 py-2 text-body">
                     <div className="flex items-center gap-2">
-                      {s.status === 'done' && <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
-                      {s.status === 'running' && <Loader2 className="w-4 h-4 text-cyan-400 animate-spin" />}
-                      {s.status === 'failed' && <AlertTriangle className="w-4 h-4 text-red-400" />}
-                      {s.status === 'pending' && <Circle className="w-4 h-4 text-slate-600" />}
-                      <span className={s.status === 'failed' ? 'text-red-200' : 'text-slate-200'}>{s.label}</span>
+                      {s.status === 'done' && <CheckCircle2 className="size-4 text-ok" />}
+                      {s.status === 'running' && <Loader2 className="size-4 text-accent-text animate-spin" />}
+                      {s.status === 'failed' && <AlertTriangle className="size-4 text-danger" />}
+                      {s.status === 'pending' && <Circle className="size-4 text-ink-faint" />}
+                      <span className={s.status === 'pending' ? 'text-ink-muted' : 'text-ink'}>{s.label}</span>
                     </div>
-                    {s.error && <p className="text-[11px] text-red-300 mt-1 pl-6">{s.error}</p>}
+                    {s.error && <p className="text-xs text-danger mt-1 pl-6">{s.error}</p>}
                   </li>
                 ))}
               </ul>
 
               {submitError && (
-                <div className="p-3 rounded-xl bg-red-950/30 border border-red-500/30 text-xs text-red-200">
+                <div className="px-3 py-2.5 rounded-md bg-danger/10 border border-danger/40 text-body text-ink" role="alert">
                   The case was not created: {submitError}
                 </div>
               )}
               {createdCase && (
-                <div className="p-3 rounded-xl bg-amber-950/30 border border-amber-500/30 text-xs text-amber-100">
+                <div className="px-3 py-2.5 rounded-md bg-warn/10 border border-warn/40 text-body text-ink" role="status">
                   Case {createdCase.case_number} was created, but the items marked above didn't save. You can add them
                   from the case workspace.
                 </div>
@@ -355,7 +338,7 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({ isOpen, onClos
             <div className="space-y-4">
               <div>
                 <label htmlFor="case-title" className={labelClass}>
-                  Case Title *
+                  Case title *
                 </label>
                 <input
                   id="case-title"
@@ -371,7 +354,7 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({ isOpen, onClos
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <label htmlFor="case-type" className={labelClass}>
-                    Incident Type
+                    Incident type
                   </label>
                   <select
                     id="case-type"
@@ -405,7 +388,7 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({ isOpen, onClos
                 </div>
                 <div>
                   <label htmlFor="case-incident-at" className={labelClass}>
-                    Incident Date & Time
+                    Incident date and time
                   </label>
                   <input
                     id="case-incident-at"
@@ -419,7 +402,7 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({ isOpen, onClos
 
               <div>
                 <label htmlFor="case-lead" className={labelClass}>
-                  Lead Investigator
+                  Lead investigator
                 </label>
                 <select
                   id="case-lead"
@@ -442,7 +425,7 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({ isOpen, onClos
                   {investigators?.map((inv) => (
                     <label
                       key={inv.id}
-                      className="flex items-center gap-2 p-2 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-300 cursor-pointer"
+                      className="flex items-center gap-2 px-2.5 py-1.5 rounded border border-line text-body text-ink-soft cursor-pointer hover:border-control"
                     >
                       <input
                         type="checkbox"
@@ -451,10 +434,9 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({ isOpen, onClos
                         onChange={(e) =>
                           setTeamIds(e.target.checked ? [...teamIds, inv.id] : teamIds.filter((id) => id !== inv.id))
                         }
-                        className="accent-cyan-500"
                       />
                       <span className="truncate">{inv.name}</span>
-                      {inv.id === leadInvestigatorId && <span className="text-[10px] text-cyan-400">lead</span>}
+                      {inv.id === leadInvestigatorId && <span className="text-2xs text-ink-muted">lead</span>}
                     </label>
                   ))}
                 </div>
@@ -462,7 +444,7 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({ isOpen, onClos
 
               <div>
                 <label htmlFor="case-description" className={labelClass}>
-                  Incident Summary
+                  Incident summary
                 </label>
                 <textarea
                   id="case-description"
@@ -481,7 +463,7 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({ isOpen, onClos
             <div className="space-y-4">
               <div>
                 <label htmlFor="case-address" className={labelClass}>
-                  Incident Location
+                  Incident location
                 </label>
                 <input
                   id="case-address"
@@ -532,23 +514,17 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({ isOpen, onClos
                   setIsDragging(false);
                   addFiles(e.dataTransfer.files);
                 }}
-                className={`border-2 border-dashed rounded-2xl p-6 text-center transition-all ${
-                  isDragging ? 'border-cyan-400 bg-cyan-500/10' : 'border-slate-800 bg-slate-950/60'
+                className={`border border-dashed rounded-md px-4 py-6 text-center transition-colors ${
+                  isDragging ? 'border-accent bg-accent/10' : 'border-control/60'
                 }`}
               >
-                <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 flex items-center justify-center mx-auto mb-3">
-                  <UploadCloud className="w-6 h-6" />
-                </div>
-                <p className="text-xs font-mono font-bold text-slate-200 uppercase">Drag & drop evidence files here</p>
-                <p className="text-[11px] text-slate-400 mt-1">
-                  PDFs, Word documents, text, photos, audio and short videos. The original is stored and hashed.
+                <UploadCloud className="size-5 text-ink-muted mx-auto mb-2" aria-hidden />
+                <p className="text-body text-ink">{isDragging ? 'Drop to add' : 'Drop evidence files here, or choose them'}</p>
+                <p className="text-xs text-ink-muted mt-0.5">
+                  PDF, Word, text, photos, audio and short video. Each original is stored and hashed.
                 </p>
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="mt-3 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-mono rounded-lg border border-slate-700 inline-block"
-                >
-                  Select Files
+                <button type="button" onClick={() => fileInputRef.current?.click()} className={`${secondaryButtonClass} mt-3`}>
+                  Choose files
                 </button>
                 <input
                   ref={fileInputRef}
@@ -564,33 +540,25 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({ isOpen, onClos
               </div>
 
               <div>
-                <span className="text-xs font-mono text-slate-400 uppercase block mb-2 font-semibold">
-                  Files to upload ({files.length})
+                <span className="text-xs font-medium text-ink-soft block mb-1.5">
+                  Files to upload <span className="font-mono text-ink-muted">{files.length}</span>
                 </span>
-                <div className="space-y-2">
+                <div className="rounded-md border border-line divide-y divide-line">
                   {files.map((file, i) => (
-                    <div
-                      key={`${file.name}-${i}`}
-                      className="p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-3 text-xs font-mono"
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="p-2 rounded-lg bg-slate-900 text-cyan-400 border border-slate-800">
-                          <FileText className="w-4 h-4" />
-                        </div>
-                        <div className="min-w-0">
-                          <span className="text-slate-200 font-semibold block truncate">{file.name}</span>
-                          <span className="text-[10px] text-slate-500">
-                            {formatBytes(file.size)} • {file.type || 'unknown type'}
-                          </span>
-                        </div>
+                    <div key={`${file.name}-${i}`} className="pl-3 pr-1.5 py-1.5 flex items-center justify-between gap-3 text-body">
+                      <div className="min-w-0">
+                        <span className="text-ink block truncate">{file.name}</span>
+                        <span className="text-2xs text-ink-muted">
+                          <span className="font-mono">{formatBytes(file.size)}</span> · {file.type || 'unknown type'}
+                        </span>
                       </div>
                       <button
                         type="button"
                         onClick={() => setFiles(files.filter((_, idx) => idx !== i))}
-                        className="text-slate-500 hover:text-red-400 p-1 transition-colors"
+                        className={`${iconButtonClass} hover:text-danger`}
                         aria-label={`Remove ${file.name}`}
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="size-3.5" />
                       </button>
                     </div>
                   ))}
@@ -602,10 +570,8 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({ isOpen, onClos
           {/* STEP 3: People and Vehicles */}
           {!progress && step === 3 && (
             <div className="space-y-5">
-              <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
-                <span className="text-xs font-mono font-bold text-slate-200 uppercase flex items-center gap-2">
-                  <UserPlus className="w-4 h-4 text-cyan-400" /> Add a person
-                </span>
+              <fieldset className="p-4 rounded-md border border-line space-y-3">
+                <legend className="px-1 -ml-1 text-xs font-medium text-ink-soft">Add a person</legend>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <input
                     aria-label="Person name"
@@ -666,51 +632,46 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({ isOpen, onClos
                   type="button"
                   onClick={addPerson}
                   disabled={!personDraft.name.trim()}
-                  className="px-3 py-1.5 rounded-lg bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 text-xs font-mono flex items-center gap-1.5 disabled:opacity-40"
+                  className={smallButtonClass}
                 >
-                  <Plus className="w-3.5 h-3.5" /> Add person
+                  <Plus className="size-3" aria-hidden /> Add person
                 </button>
-              </div>
+              </fieldset>
 
               {persons.length > 0 && (
-                <div className="space-y-2">
-                  <span className="text-xs font-mono text-slate-400 uppercase block font-semibold">
-                    People ({persons.length})
+                <div>
+                  <span className="text-xs font-medium text-ink-soft block mb-1.5">
+                    People <span className="font-mono text-ink-muted">{persons.length}</span>
                   </span>
-                  {persons.map((p, idx) => (
-                    <div
-                      key={idx}
-                      className="p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-3 text-xs font-mono"
-                    >
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-slate-200">{p.name}</span>
-                          <span className="px-2 py-0.5 rounded text-[10px] bg-blue-500/20 text-blue-300 border border-blue-500/30">
-                            {humanize(p.role)}
-                          </span>
-                          {p.condition && <span className="text-[10px] text-slate-400">{humanize(p.condition)}</span>}
+                  <div className="rounded-md border border-line divide-y divide-line">
+                    {persons.map((p, idx) => (
+                      <div key={idx} className="pl-3 pr-1.5 py-2 flex items-center justify-between gap-3 text-body">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-medium text-ink">{p.name}</span>
+                            <span className="text-xs text-ink-soft">{humanize(p.role)}</span>
+                            {p.condition && <span className="text-xs text-ink-muted">· {humanize(p.condition)}</span>}
+                          </div>
+                          <p className="text-xs text-ink-muted">
+                            {[p.age && `Age ${p.age}`, p.contact, p.notes].filter(Boolean).join(' · ')}
+                          </p>
                         </div>
-                        <p className="text-[11px] text-slate-400 mt-1">
-                          {[p.age && `Age ${p.age}`, p.contact, p.notes].filter(Boolean).join(' • ')}
-                        </p>
+                        <button
+                          type="button"
+                          onClick={() => setPersons(persons.filter((_, i) => i !== idx))}
+                          className={`${iconButtonClass} hover:text-danger shrink-0`}
+                          aria-label={`Remove ${p.name}`}
+                        >
+                          <Trash2 className="size-3.5" />
+                        </button>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => setPersons(persons.filter((_, i) => i !== idx))}
-                        className="text-slate-500 hover:text-red-400 p-1"
-                        aria-label={`Remove ${p.name}`}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               )}
 
-              <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
-                <span className="text-xs font-mono font-bold text-slate-200 uppercase flex items-center gap-2">
-                  <Car className="w-4 h-4 text-cyan-400" /> Add a vehicle
-                </span>
+              <fieldset className="p-4 rounded-md border border-line space-y-3">
+                <legend className="px-1 -ml-1 text-xs font-medium text-ink-soft">Add a vehicle</legend>
                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                   <input
                     aria-label="Vehicle description"
@@ -745,43 +706,43 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({ isOpen, onClos
                   type="button"
                   onClick={addVehicle}
                   disabled={!vehicleDraft.label.trim() && !vehicleDraft.plate.trim()}
-                  className="px-3 py-1.5 rounded-lg bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 text-xs font-mono flex items-center gap-1.5 disabled:opacity-40"
+                  className={smallButtonClass}
                 >
-                  <Plus className="w-3.5 h-3.5" /> Add vehicle
+                  <Plus className="size-3" aria-hidden /> Add vehicle
                 </button>
-              </div>
+              </fieldset>
 
               {vehicles.length > 0 && (
-                <div className="space-y-2">
-                  <span className="text-xs font-mono text-slate-400 uppercase block font-semibold">
-                    Vehicles ({vehicles.length})
+                <div>
+                  <span className="text-xs font-medium text-ink-soft block mb-1.5">
+                    Vehicles <span className="font-mono text-ink-muted">{vehicles.length}</span>
                   </span>
-                  {vehicles.map((v, idx) => (
-                    <div
-                      key={idx}
-                      className="p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-3 text-xs font-mono"
-                    >
-                      <div>
-                        <span className="font-bold text-slate-200">{v.label || v.plate}</span>
-                        <p className="text-[11px] text-slate-400 mt-1">
-                          {[v.plate, v.make, v.colour].filter(Boolean).join(' • ')}
-                        </p>
+                  <div className="rounded-md border border-line divide-y divide-line">
+                    {vehicles.map((v, idx) => (
+                      <div key={idx} className="pl-3 pr-1.5 py-2 flex items-center justify-between gap-3 text-body">
+                        <div className="min-w-0">
+                          <span className="font-medium text-ink">{v.label || v.plate}</span>
+                          <p className="text-xs text-ink-muted">
+                            {v.plate && <span className="font-mono">{v.plate}</span>}
+                            {[v.make, v.colour].filter(Boolean).map((x, i) => `${v.plate || i > 0 ? ' · ' : ''}${x}`)}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setVehicles(vehicles.filter((_, i) => i !== idx))}
+                          className={`${iconButtonClass} hover:text-danger shrink-0`}
+                          aria-label={`Remove ${v.label || v.plate}`}
+                        >
+                          <Trash2 className="size-3.5" />
+                        </button>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => setVehicles(vehicles.filter((_, i) => i !== idx))}
-                        className="text-slate-500 hover:text-red-400 p-1"
-                        aria-label={`Remove ${v.label || v.plate}`}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               )}
 
               {teamIds.length > 0 && (
-                <p className="text-[11px] text-slate-500 font-mono">
+                <p className="text-xs text-ink-muted">
                   Team: {teamIds.map(investigatorName).join(', ')}
                 </p>
               )}
@@ -789,14 +750,14 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({ isOpen, onClos
           )}
 
           {stepError && !progress && (
-            <div className="p-3 rounded-xl bg-red-950/30 border border-red-500/30 text-xs text-red-200 font-mono" role="alert">
+            <div className="px-3 py-2.5 rounded-md bg-danger/10 border border-danger/40 text-body text-ink" role="alert">
               {stepError}
             </div>
           )}
         </div>
 
         {/* Bottom Action Footer */}
-        <div className="px-6 py-4 border-t border-slate-800 flex items-center justify-between font-mono">
+        <div className="px-6 py-3 border-t border-line flex items-center justify-between gap-2 shrink-0">
           {progress ? (
             <>
               <button
@@ -807,9 +768,9 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({ isOpen, onClos
                   setSubmitError(null);
                 }}
                 disabled={submitting || createdCase !== null}
-                className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 text-xs flex items-center gap-1.5 disabled:opacity-0"
+                className={`${secondaryButtonClass} disabled:opacity-0`}
               >
-                <ArrowLeft className="w-3.5 h-3.5" /> Back to form
+                Back to form
               </button>
               {createdCase && (
                 <button
@@ -819,9 +780,9 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({ isOpen, onClos
                     navigate(casePath(createdCase.id));
                     close();
                   }}
-                  className="px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs flex items-center gap-1.5"
+                  className={primaryButtonClass}
                 >
-                  Open case <ArrowRight className="w-3.5 h-3.5" />
+                  Open case
                 </button>
               )}
             </>
@@ -835,9 +796,9 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({ isOpen, onClos
                     setStepError(null);
                     setStep((step - 1) as 1 | 2);
                   }}
-                  className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 text-xs flex items-center gap-1.5"
+                  className={secondaryButtonClass}
                 >
-                  <ArrowLeft className="w-3.5 h-3.5" /> Back
+                  Back
                 </button>
               ) : (
                 <div></div>
@@ -849,19 +810,18 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({ isOpen, onClos
                   key="next"
                   type="button"
                   onClick={goNext}
-                  className="px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-[0_0_15px_rgba(6,182,212,0.3)]"
+                  className={primaryButtonClass}
                 >
-                  Next Step <ArrowRight className="w-3.5 h-3.5" />
+                  Next: {STEP_TITLES[step as 1 | 2].toLowerCase()}
                 </button>
               ) : (
                 <button
                   key="create"
                   type="button"
                   onClick={handleSubmit}
-                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-bold text-xs flex items-center gap-2 shadow-[0_0_20px_rgba(6,182,212,0.4)]"
+                  className={primaryButtonClass}
                 >
-                  <Zap className="w-4 h-4 fill-slate-950" />
-                  CREATE CASE
+                  Create case
                 </button>
               )}
             </>

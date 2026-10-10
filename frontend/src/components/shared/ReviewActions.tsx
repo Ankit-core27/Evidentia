@@ -2,6 +2,7 @@ import React from 'react';
 import { Check, Loader2, Undo2, X } from 'lucide-react';
 import { Origin, ReviewStatus } from '@/types/api';
 import { ReviewBadge } from './Badges';
+import { iconButtonClass } from './formStyles';
 
 interface ReviewActionsProps {
   origin: Origin;
@@ -9,6 +10,8 @@ interface ReviewActionsProps {
   onChange: (status: ReviewStatus) => void;
   busy?: boolean;
 }
+
+const action = 'h-6 px-2 rounded border text-xs font-medium inline-flex items-center gap-1 transition-colors disabled:opacity-50';
 
 /**
  * Confirm or reject an AI proposal. Anything the AI creates stays a proposal until an
@@ -19,36 +22,36 @@ export const ReviewActions: React.FC<ReviewActionsProps> = ({ origin, status, on
   if (origin !== 'ai') return null;
   if (status !== 'pending') {
     return (
-      <span className="inline-flex items-center gap-1.5">
+      <span className="inline-flex items-center gap-1">
         <ReviewBadge status={status} origin={origin} />
         <button
           onClick={() => onChange('pending')}
           disabled={busy}
-          className="p-1 rounded text-slate-500 hover:text-slate-300 disabled:opacity-50"
+          className={`${iconButtonClass} size-6`}
           title="Undo review"
           aria-label="Undo review"
         >
-          {busy ? <Loader2 className="w-3 h-3 animate-spin" /> : <Undo2 className="w-3 h-3" />}
+          {busy ? <Loader2 className="size-3 animate-spin" /> : <Undo2 className="size-3" />}
         </button>
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center gap-1.5">
+    <span className="inline-flex flex-wrap items-center gap-1.5">
       <ReviewBadge status="pending" origin="ai" />
       <button
         onClick={() => onChange('confirmed')}
         disabled={busy}
-        className="px-2 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/25 text-[10px] font-bold flex items-center gap-1 disabled:opacity-50"
+        className={`${action} border-ok/50 text-ok hover:bg-ok/10`}
       >
-        {busy ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />} Confirm
+        {busy ? <Loader2 className="size-3 animate-spin" /> : <Check className="size-3" />} Confirm
       </button>
       <button
         onClick={() => onChange('rejected')}
         disabled={busy}
-        className="px-2 py-0.5 rounded bg-slate-900 border border-slate-700 text-slate-300 hover:text-red-300 hover:border-red-500/40 text-[10px] font-bold flex items-center gap-1 disabled:opacity-50"
+        className={`${action} border-line-strong text-ink-soft hover:text-danger hover:border-danger/50`}
       >
-        <X className="w-3 h-3" /> Reject
+        <X className="size-3" /> Reject
       </button>
     </span>
   );
