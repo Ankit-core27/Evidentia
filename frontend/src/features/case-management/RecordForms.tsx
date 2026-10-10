@@ -58,7 +58,7 @@ const useSave = (onSave: () => Promise<unknown>, onDone: () => void) => {
 
 const ErrorLine: React.FC<{ error: string | null }> = ({ error }) =>
   error ? (
-    <p className="text-[11px] text-red-300" role="alert">
+    <p className="text-xs text-danger" role="alert">
       {error}
     </p>
   ) : null;

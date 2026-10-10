@@ -1,5 +1,4 @@
 import React from 'react';
-import { Quote } from 'lucide-react';
 import { Evidence, EvidenceLink, Id, RecordType } from '@/types/api';
 
 interface SourcePassagesProps {
@@ -11,7 +10,10 @@ interface SourcePassagesProps {
   onOpenEvidence?: (evidenceId: Id, passage: string | null) => void;
 }
 
-/** The evidence passages a record came from (evidence_links), quoted with their source file. */
+/**
+ * The evidence passages a record came from (evidence_links), set like a quotation with its
+ * source underneath. This is how every claim in the app points back to its evidence.
+ */
 export const SourcePassages: React.FC<SourcePassagesProps> = ({ links, evidence, targetType, targetId, onOpenEvidence }) => {
   const sources = links.filter((l) => l.target_type === targetType && l.target_id === targetId);
   if (!sources.length) return null;
@@ -21,23 +23,24 @@ export const SourcePassages: React.FC<SourcePassagesProps> = ({ links, evidence,
         const title = evidence.find((e) => e.id === link.evidence_id)?.title ?? `Evidence #${link.evidence_id}`;
         const body = (
           <>
-            <Quote className="w-3 h-3 text-cyan-500 shrink-0 mt-0.5" />
-            <span className="min-w-0">
-              {link.passage && <span className="text-slate-300 italic">"{link.passage}" </span>}
-              <span className="text-cyan-400 not-italic">— {title}</span>
+            {link.passage && <span className="block italic text-ink-soft">“{link.passage}”</span>}
+            <span className={`block text-xs ${onOpenEvidence ? 'text-accent-text group-hover:underline underline-offset-2' : 'text-ink-muted'}`}>
+              {title}
             </span>
           </>
         );
+        const className = 'block w-full text-left pl-3 border-l-2 border-line-strong text-body leading-snug';
         return onOpenEvidence ? (
           <button
             key={link.id}
             onClick={() => onOpenEvidence(link.evidence_id, link.passage)}
-            className="w-full text-left flex gap-1.5 text-[11px] p-1.5 rounded-lg bg-slate-900/60 border border-slate-800 hover:border-cyan-500/40"
+            className={`${className} group hover:border-accent/70 transition-colors`}
+            title={`Open ${title} at this passage`}
           >
             {body}
           </button>
         ) : (
-          <div key={link.id} className="flex gap-1.5 text-[11px] p-1.5 rounded-lg bg-slate-900/60 border border-slate-800">
+          <div key={link.id} className={className}>
             {body}
           </div>
         );

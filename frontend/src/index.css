@@ -1,4 +1,124 @@
+@import "@fontsource/ibm-plex-sans/400.css";
+@import "@fontsource/ibm-plex-sans/400-italic.css";
+@import "@fontsource/ibm-plex-sans/500.css";
+@import "@fontsource/ibm-plex-sans/600.css";
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/500.css";
 @import "tailwindcss";
+
+/*
+ * Forensix design tokens.
+ *
+ * Surfaces are neutral graphite rather than blue-black, so photos and video under review
+ * keep their colour. Colour is reserved for meaning:
+ *   accent    what you can act on, and the current selection
+ *   pending   AI proposals an investigator has not confirmed yet (always with a dashed edge)
+ *   warn      conflicts, disputed facts, open cases
+ *   danger    failures, flagged links, critical priority, destructive actions
+ *   ok        confirmed and verified states
+ *   info      cases under supervisory review, hypotheses
+ *
+ * Type: IBM Plex Sans for prose and interface text; IBM Plex Mono only for values an
+ * investigator may need to read back exactly (case numbers, hashes, times, plates,
+ * coordinates, file sizes).
+ *
+ * Geometry: 4px for controls and tags (`rounded`), 6px for panels (`rounded-md`), 8px for
+ * menus and dialogs (`rounded-lg`).
+ */
+@theme {
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --text-2xs: 0.6875rem;
+  --text-2xs--line-height: 1rem;
+  --text-body: 0.8125rem;
+  --text-body--line-height: 1.25rem;
+
+  --color-canvas: #0f1113;
+  --color-surface: #16191c;
+  --color-raised: #1e2226;
+  --color-hover: #262b30;
+  --color-well: #0b0d0e;
+  --color-line: #252a2e;
+  --color-line-strong: #343a40;
+  --color-control: #5a636b;
+
+  --color-ink: #e7e9eb;
+  --color-ink-soft: #b4bac0;
+  --color-ink-muted: #8d949b;
+  --color-ink-faint: #727980;
+
+  --color-accent: #37aebd;
+  --color-accent-strong: #4cc0ce;
+  --color-accent-fg: #071214;
+  --color-accent-text: #5ec4cf;
+
+  --color-pending: #b3a6ee;
+  --color-warn: #e2b155;
+  --color-danger: #f07a72;
+  --color-ok: #6cc795;
+  --color-info: #8eaef0;
+
+  /* Entity types on the evidence canvas. Kept apart from the state colours above. */
+  --color-entity-person: #8eaef0;
+  --color-entity-object: #6cc7a8;
+  --color-entity-location: #e0a37a;
+  --color-entity-evidence: #b4bac0;
+
+  /* Menus, popovers and dialogs are the only things that float. */
+  --shadow-overlay: 0 16px 40px -12px rgb(0 0 0 / 0.7), 0 2px 6px rgb(0 0 0 / 0.35);
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+    background-color: var(--color-canvas);
+    scrollbar-color: var(--color-line-strong) transparent;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    line-height: 1.5;
+    color: var(--color-ink);
+    background-color: var(--color-canvas);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::selection {
+    background-color: color-mix(in oklab, var(--color-accent) 40%, transparent);
+    color: var(--color-ink);
+  }
+
+  /* One focus ring for every control that doesn't draw its own. */
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  input[type='checkbox'],
+  input[type='radio'] {
+    accent-color: var(--color-accent);
+  }
+
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']),
+  summary {
+    cursor: pointer;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
 
 /* Report export is the browser's print of the report's print copy (features/reports/ReportBuilder). */
 .print-root {
