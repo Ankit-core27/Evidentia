@@ -432,6 +432,8 @@ export interface CaseWorkspace {
   events: CaseEvent[];
   relationships: Relationship[];
   injuries: Injury[];
+  /** Source passages for every record in the case, so any record can show and open its evidence. */
+  links: EvidenceLink[];
   counts: {
     evidence: number;
     pending_reviews: number;

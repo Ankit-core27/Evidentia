@@ -8,7 +8,8 @@ import {
   Users,
   Bot,
   FileSpreadsheet,
-  Settings
+  Settings,
+  ClipboardCheck
 } from 'lucide-react';
 import type { ElementType } from 'react';
 import { CaseModule } from '@/types';
@@ -17,20 +18,24 @@ export interface CaseModuleInfo {
   id: CaseModule;
   label: string;
   icon: ElementType;
+  /** Reachable by URL but left out of the sidebar. */
+  hidden?: boolean;
 }
 
 // Order is the order of the workspace sidebar.
 export const CASE_MODULES: CaseModuleInfo[] = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard },
-  { id: 'evidence', label: 'Evidence Locker', icon: FolderKanban },
+  { id: 'evidence', label: 'Evidence', icon: FolderKanban },
+  { id: 'people', label: 'People & Vehicles', icon: Users },
+  { id: 'review', label: 'AI Review', icon: ClipboardCheck },
   { id: 'canvas', label: 'Investigation Canvas', icon: Share2 },
-  { id: 'timeline', label: 'Timeline Chronology', icon: Clock },
-  { id: 'autopsy', label: 'Autopsy & Medical', icon: Activity },
-  { id: 'crimescene', label: 'Crime Scene Spatial', icon: Box },
-  { id: 'witnesses', label: 'Witnesses & POIs', icon: Users },
+  { id: 'timeline', label: 'Timeline', icon: Clock },
+  { id: 'reconstruction', label: 'Reconstruction', icon: Box },
   { id: 'copilot', label: 'AI Copilot', icon: Bot },
-  { id: 'reports', label: 'Dossier Reports', icon: FileSpreadsheet },
-  { id: 'settings', label: 'Case Settings', icon: Settings }
+  { id: 'reports', label: 'Reports', icon: FileSpreadsheet },
+  { id: 'settings', label: 'Case Settings', icon: Settings },
+  // The 2D anatomy draft stays until the 3D anatomy explorer (M5, T13).
+  { id: 'autopsy', label: 'Autopsy & Medical', icon: Activity, hidden: true }
 ];
 
 export const isCaseModule = (value: string | undefined): value is CaseModule =>

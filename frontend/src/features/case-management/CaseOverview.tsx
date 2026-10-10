@@ -136,7 +136,7 @@ export const CaseOverview: React.FC<CaseOverviewProps> = ({
             )}
 
             <button
-              onClick={() => onSelectModule('witnesses')}
+              onClick={() => onSelectModule('people')}
               className="w-full py-2 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-800 text-xs text-slate-300 transition-colors"
             >
               View All {forensicCase.personsOfInterest.length} Persons of Interest →
