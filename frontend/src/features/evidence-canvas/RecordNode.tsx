@@ -13,23 +13,22 @@ export interface RecordNodeData extends Record<string, unknown> {
 
 export type RecordFlowNode = Node<RecordNodeData, 'record'>;
 
-const ROLE_COLOURS: Record<PersonRole, string> = {
-  victim: 'border-blue-400 text-blue-300',
-  suspect: 'border-red-400 text-red-300',
-  witness: 'border-emerald-400 text-emerald-300',
-  other: 'border-slate-400 text-slate-300'
-};
-
-const TYPE_COLOURS = {
-  object: 'border-cyan-400 text-cyan-300',
-  location: 'border-pink-400 text-pink-300',
-  evidence: 'border-amber-400 text-amber-300'
+/**
+ * The icon's colour says what kind of record a node is; the border says its review state
+ * (dashed for an AI proposal), the same as everywhere else in the app. Suspects are the
+ * one role marked out.
+ */
+const ENTITY_COLOUR = {
+  person: 'text-entity-person',
+  object: 'text-entity-object',
+  location: 'text-entity-location',
+  evidence: 'text-entity-evidence'
 };
 
 /** A person, vehicle or object, location or evidence item on the canvas. */
 export const RecordNode = memo(({ data, selected }: NodeProps<RecordFlowNode>) => {
   const { node, role, objectKind, readOnly } = data;
-  const colour = node.type === 'person' ? ROLE_COLOURS[role ?? 'other'] : TYPE_COLOURS[node.type];
+  const colour = node.type === 'person' && role === 'suspect' ? 'text-danger' : ENTITY_COLOUR[node.type];
   const Icon =
     node.type === 'person'
       ? User
@@ -48,22 +47,22 @@ export const RecordNode = memo(({ data, selected }: NodeProps<RecordFlowNode>) =
   return (
     <div
       style={{ width: NODE_WIDTH, height: NODE_HEIGHT }}
-      className={`rounded-xl bg-slate-950 border-2 px-3 py-2 flex items-center gap-2.5 font-mono shadow-lg ${colour} ${
-        pending ? 'border-dashed' : ''
-      } ${rejected ? 'opacity-40' : ''} ${selected ? 'ring-2 ring-cyan-400/70' : ''}`}
+      className={`rounded-md bg-surface border px-2.5 flex items-center gap-2.5 ${
+        selected ? 'border-accent ring-1 ring-accent' : pending ? 'border-dashed border-pending/70' : 'border-line-strong'
+      } ${rejected ? 'opacity-40' : ''}`}
       data-testid={`node-${node.id}`}
       title={pending ? 'AI proposal, not yet confirmed' : undefined}
     >
-      <Handle type="target" position={Position.Left} className="!bg-slate-500 !w-2 !h-2" isConnectable={!readOnly} />
-      <Icon className="w-4 h-4 shrink-0" />
+      <Handle type="target" position={Position.Left} className="!bg-ink-faint !border-surface !w-2 !h-2" isConnectable={!readOnly} />
+      <Icon className={`size-4 shrink-0 ${colour}`} aria-hidden />
       <div className="min-w-0">
-        <div className="text-[11px] font-bold text-slate-100 truncate">{node.label}</div>
-        <div className="text-[10px] text-slate-400 truncate">
+        <div className="text-xs font-medium text-ink truncate">{node.label}</div>
+        <div className={`text-2xs truncate ${pending ? 'text-pending' : 'text-ink-muted'}`}>
           {pending ? 'AI proposal · ' : ''}
           {node.sublabel}
         </div>
       </div>
-      <Handle type="source" position={Position.Right} className="!bg-cyan-400 !w-2.5 !h-2.5" isConnectable={!readOnly} />
+      <Handle type="source" position={Position.Right} className="!bg-accent !border-surface !w-2.5 !h-2.5" isConnectable={!readOnly} />
     </div>
   );
 });

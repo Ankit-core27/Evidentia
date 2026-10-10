@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { AlertTriangle, CheckCircle2, Loader2, UploadCloud, X } from 'lucide-react';
 import { useUploadEvidence } from '@/hooks/useEvidence';
+import { secondaryButtonClass } from '@/components/shared/formStyles';
 import { formatBytes } from '@/lib/format';
 import { Id } from '@/types/api';
 
@@ -48,7 +49,7 @@ export const EvidenceUploader: React.FC<{ caseId: Id }> = ({ caseId }) => {
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       <div
         onDragOver={(e) => {
           e.preventDefault();
@@ -60,25 +61,21 @@ export const EvidenceUploader: React.FC<{ caseId: Id }> = ({ caseId }) => {
           setDragging(false);
           void uploadFiles(e.dataTransfer.files);
         }}
-        className={`border-2 border-dashed rounded-2xl p-5 flex flex-col sm:flex-row items-center gap-4 transition-all ${
-          dragging ? 'border-cyan-400 bg-cyan-500/10' : 'border-slate-800 bg-slate-950/60'
+        className={`border border-dashed rounded-md px-4 py-3.5 flex flex-col sm:flex-row sm:items-center gap-3 transition-colors ${
+          dragging ? 'border-accent bg-accent/10' : 'border-control/60'
         }`}
       >
-        <div className="w-11 h-11 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 flex items-center justify-center shrink-0">
-          <UploadCloud className="w-5 h-5" />
-        </div>
-        <div className="flex-1 text-center sm:text-left">
-          <p className="text-xs font-bold text-slate-200 uppercase">Drop evidence files here</p>
-          <p className="text-[11px] text-slate-400">
-            PDFs, Word documents, text, photos, audio and short videos. Each original is stored and hashed, then processed for text and AI proposals.
+        <UploadCloud className="hidden sm:block size-5 text-ink-muted shrink-0" aria-hidden />
+        <div className="flex-1">
+          <p className="text-body text-ink">
+            {dragging ? 'Drop to upload' : 'Drop evidence files here, or choose them'}
+          </p>
+          <p className="text-xs text-ink-muted">
+            PDF, Word, text, photos, audio and short video. Each original is stored and hashed, then read for text and AI proposals.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => inputRef.current?.click()}
-          className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs rounded-lg border border-slate-700 shrink-0"
-        >
-          Select files
+        <button type="button" onClick={() => inputRef.current?.click()} className={`${secondaryButtonClass} shrink-0 self-start sm:self-auto`}>
+          Choose files
         </button>
         <input
           ref={inputRef}
@@ -94,31 +91,29 @@ export const EvidenceUploader: React.FC<{ caseId: Id }> = ({ caseId }) => {
       </div>
 
       {items.length > 0 && (
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between text-[11px] text-slate-400">
+        <div className="rounded-md border border-line">
+          <div className="flex items-center justify-between px-3 h-8 border-b border-line text-xs text-ink-muted">
             <span>Uploads</span>
             {items.every((i) => i.status !== 'uploading') && (
-              <button onClick={() => setItems([])} className="hover:text-slate-200 flex items-center gap-1">
-                <X className="w-3 h-3" /> Clear
+              <button onClick={() => setItems([])} className="hover:text-ink flex items-center gap-1">
+                <X className="size-3" aria-hidden /> Clear
               </button>
             )}
           </div>
-          {items.map((item) => (
-            <div
-              key={item.key}
-              className="px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-xs flex items-center gap-2"
-              data-testid="upload-row"
-            >
-              {item.status === 'uploading' && <Loader2 className="w-3.5 h-3.5 text-cyan-400 animate-spin" />}
-              {item.status === 'done' && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />}
-              {item.status === 'failed' && <AlertTriangle className="w-3.5 h-3.5 text-red-400" />}
-              <span className="text-slate-200 truncate">{item.name}</span>
-              <span className="text-[10px] text-slate-500 shrink-0">{formatBytes(item.size)}</span>
-              <span className={`ml-auto text-[10px] shrink-0 ${item.status === 'failed' ? 'text-red-300' : 'text-slate-400'}`}>
-                {item.status === 'uploading' ? 'Uploading…' : item.status === 'done' ? 'Uploaded' : item.error}
-              </span>
-            </div>
-          ))}
+          <ul className="divide-y divide-line" aria-live="polite">
+            {items.map((item) => (
+              <li key={item.key} className="px-3 py-1.5 text-body flex items-center gap-2" data-testid="upload-row">
+                {item.status === 'uploading' && <Loader2 className="size-3.5 text-accent-text animate-spin shrink-0" aria-hidden />}
+                {item.status === 'done' && <CheckCircle2 className="size-3.5 text-ok shrink-0" aria-hidden />}
+                {item.status === 'failed' && <AlertTriangle className="size-3.5 text-danger shrink-0" aria-hidden />}
+                <span className="text-ink truncate">{item.name}</span>
+                <span className="font-mono text-2xs text-ink-muted shrink-0">{formatBytes(item.size)}</span>
+                <span className={`ml-auto text-xs shrink-0 ${item.status === 'failed' ? 'text-danger' : 'text-ink-muted'}`}>
+                  {item.status === 'uploading' ? 'Uploading…' : item.status === 'done' ? 'Uploaded' : item.error}
+                </span>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
     </div>

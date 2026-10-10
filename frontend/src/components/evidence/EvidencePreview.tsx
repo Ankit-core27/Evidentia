@@ -21,28 +21,28 @@ export const EvidencePreview: React.FC<{ evidence: EvidenceDetail }> = ({ eviden
   }
 
   if (mime === 'application/pdf') {
-    return <iframe src={url} title={evidence.title} className="w-full h-[60vh] rounded-xl border border-slate-800 bg-white" />;
+    return <iframe src={url} title={evidence.title} className="w-full h-[60vh] rounded-md border border-line bg-white" />;
   }
   if (mime.startsWith('image/')) {
     return (
-      <div className="rounded-xl border border-slate-800 bg-slate-950 p-2 flex justify-center">
+      <div className="rounded-md border border-line bg-well p-2 flex justify-center">
         <img src={url} alt={evidence.title} className="max-h-[60vh] object-contain" />
       </div>
     );
   }
   if (mime.startsWith('audio/')) {
     return (
-      <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
+      <div className="rounded-md border border-line bg-well p-4">
         <audio controls src={url} className="w-full" aria-label={evidence.title} />
       </div>
     );
   }
   if (mime.startsWith('video/')) {
-    return <video controls src={url} className="w-full max-h-[60vh] rounded-xl border border-slate-800 bg-black" aria-label={evidence.title} />;
+    return <video controls src={url} className="w-full max-h-[60vh] rounded-md border border-line bg-black" aria-label={evidence.title} />;
   }
   if (evidence.extracted_text) {
     return (
-      <pre className="whitespace-pre-wrap text-xs text-slate-200 leading-relaxed p-4 rounded-xl border border-slate-800 bg-slate-950 max-h-[60vh] overflow-y-auto">
+      <pre className="whitespace-pre-wrap font-mono text-xs text-ink-soft leading-relaxed p-4 rounded-md border border-line bg-well max-h-[60vh] overflow-y-auto">
         {evidence.extracted_text}
       </pre>
     );
@@ -51,8 +51,8 @@ export const EvidencePreview: React.FC<{ evidence: EvidenceDetail }> = ({ eviden
 };
 
 const Unavailable: React.FC<{ message: string }> = ({ message }) => (
-  <div className="p-8 rounded-xl border border-dashed border-slate-700 text-center text-xs text-slate-400 space-y-2">
-    <FileQuestion className="w-6 h-6 mx-auto text-slate-500" />
+  <div className="px-4 py-8 rounded-md border border-line text-center text-body text-ink-muted space-y-2">
+    <FileQuestion className="size-5 mx-auto text-ink-faint" aria-hidden />
     <p>{message}</p>
   </div>
 );
