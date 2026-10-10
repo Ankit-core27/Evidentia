@@ -3,17 +3,11 @@ import { Loader2 } from 'lucide-react';
 import { Dialog } from '@/components/shared/Dialog';
 import { inputClass, labelClass, primaryButtonClass, secondaryButtonClass } from '@/components/shared/formStyles';
 import { useInvestigators, useUpdateCase } from '@/hooks/useCases';
+import { fromLocalInput, toLocalInput } from '@/lib/datetime';
 import { humanize } from '@/lib/format';
 import { CASE_PRIORITIES, CASE_STATUSES, INCIDENT_TYPES } from '@/lib/options';
 import { Case, CasePriority, CaseStatus, Id, IncidentType } from '@/types/api';
 
-/** ISO date-time to the value a datetime-local input expects, in the viewer's time zone. */
-const toLocalInput = (iso: string | null) => {
-  if (!iso) return '';
-  const d = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-};
 
 /** Edits the case record (PATCH /api/cases/{id}). Only changed fields are sent. */
 export const EditCaseDialog: React.FC<{ caseRecord: Case; onClose: () => void }> = ({ caseRecord: c, onClose }) => {
@@ -38,7 +32,7 @@ export const EditCaseDialog: React.FC<{ caseRecord: Case; onClose: () => void }>
       incident_type: incidentType,
       status,
       priority,
-      incident_at: incidentAt ? new Date(incidentAt).toISOString() : null,
+      incident_at: fromLocalInput(incidentAt),
       lead_investigator_id: lead,
       investigator_ids: team,
       description: description.trim()
