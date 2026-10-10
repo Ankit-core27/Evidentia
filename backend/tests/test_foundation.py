@@ -4,7 +4,8 @@ helpers in app/core that every router builds on."""
 import io
 from datetime import UTC, datetime, timedelta, timezone
 
-from fastapi import FastAPI
+import pytest
+from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
@@ -62,6 +63,18 @@ def test_datetimes_round_trip_as_utc(db):
     assert payload["created_at"].endswith("Z")
 
 
+def test_datetimes_are_utc_as_soon_as_assigned():
+    from app.models import Case
+
+    case = Case(incident_at=datetime(2026, 10, 3, 21, 40, tzinfo=timezone(timedelta(hours=5, minutes=30))))
+    assert case.incident_at == datetime(2026, 10, 3, 16, 10, tzinfo=UTC)
+    assert case.incident_at.tzinfo is UTC
+    case.incident_at = datetime(2026, 10, 3, 16, 10)
+    assert case.incident_at.tzinfo is UTC
+    case.incident_at = None
+    assert case.incident_at is None
+
+
 def test_storage_saves_and_hashes(db):
     stored = save_original(7, "../Police report (final).pdf", io.BytesIO(b"hello"))
     assert stored.file_path.startswith("7/")
@@ -101,6 +114,18 @@ def test_apply_update_skips_unchanged_fields(db):
     assert apply_update(db, person, {"name": person.name}, record_type="person", actor_id=None) == {}
     db.commit()
     assert db.scalars(select(AuditLog)).all() == []
+
+
+def test_apply_update_rejects_null_for_required_columns(db):
+    case = make_case(db)
+    person = make_person(db, case)
+    with pytest.raises(HTTPException) as error:
+        apply_update(db, person, {"occupation": "Courier", "name": None}, record_type="person", actor_id=None)
+    assert error.value.status_code == 422
+    assert error.value.detail[0]["loc"] == ["body", "name"]
+    assert (person.occupation, person.name) == ("", "Anita Desai")
+
+    assert apply_update(db, person, {"age": None}, record_type="person", actor_id=None) == {}
 
 
 def test_record_audit_serialises_datetimes(db):
