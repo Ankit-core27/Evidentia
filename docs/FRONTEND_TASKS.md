@@ -52,6 +52,8 @@ PLAN.md doesn't pin these down. The frontend builds against the defaults below; 
 
 Moves the draft into the repo and sets up the skeleton from PLAN.md. Every screen still renders the draft's mock case, so `main` keeps starting.
 
+- Split `CaseWorkspace.tsx` into one file per module under `features/`, so later tasks don't all edit the same file. Drop the CCTV, Phone Records and GPS modules, which PLAN.md removes.
+
 - Copy `ai-forensic-investigation-suite/` from the varaxis repo into `frontend/`, and place files as in PLAN.md's "Where each draft file goes" table.
 - Delete `IndividualCaseView.tsx`, `Sidebar.tsx`, `metadata.json`, the draft's `README.md`, `.env.example` and `bun.lock`. Rename the package to `forensix-frontend`, set the page title to Forensix, and drop "AI FORUM v5.0".
 - Packages: add `react-router-dom`, `@tanstack/react-query`, `zustand`, and `openapi-typescript` as a dev dependency. Remove `express`, `@types/express`, `dotenv`, `tsx`, `@google/genai` and the unused `motion`. Use npm, with one lockfile.
@@ -91,6 +93,7 @@ Routes: `GET /investigators`, `GET /cases?q=&status=&priority=`, `POST /cases`, 
   1. **Case:** title (validated before moving on), incident type, priority, incident date and time, lead investigator, team, description.
   2. **Location and evidence:** incident address with optional lat/lng, and a real multi-file picker and drop zone that keeps every file.
   3. **People and vehicles:** persons with role (victim, witness, suspect, other), name, age, condition, contact and notes; vehicles with label, plate, make and colour.
+- Fixes the draft bug where the second "Next Step" click submits the form and skips step 3.
 - On submit the modal creates the case, then its location, persons, vehicles and uploads, showing progress for each. If a later step fails, the case is kept and the modal says what didn't save. It then opens the new workspace.
 
 Done when a case created in mock mode appears in the directory and opens a workspace showing exactly what was entered.
@@ -99,7 +102,7 @@ Done when a case created in mock mode appears in the directory and opens a works
 
 Routes: `GET /cases/{id}/workspace`, `PATCH /cases/{id}`, `GET`/`POST /cases/{id}/persons|objects|locations`, `PATCH`/`DELETE /persons|objects|locations/{id}`.
 
-- Sidebar modules: Overview, Evidence, People & Vehicles, Review, Canvas, Timeline, Reconstruction, AI Copilot, Reports, Settings. CCTV, Phone Records and GPS are removed; Autopsy stays hidden until T13. Badges show real counts.
+- Sidebar modules: Overview, Evidence, People & Vehicles, Review, Canvas, Timeline, Reconstruction, AI Copilot, Reports, Settings. Autopsy stays hidden until T13. Badges show real counts.
 - Banner: case number, status and priority (saved with `PATCH`), and an edit dialog for title, description, incident type and date, lead and team. The AI confidence score is removed. Progress is reviewed AI items over all AI items, hidden when there are none.
 - Overview: counts, persons by role with their condition, vehicles, incident location, and a link into the canvas. All mock strings listed in PLAN.md and the gap review go.
 - People & Vehicles: persons, objects and locations with add, edit and delete. Rows the AI proposed show a pending badge with Confirm and Reject.
