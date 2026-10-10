@@ -16,7 +16,7 @@ Several people work on this repo at the same time, and each may run several AI s
    git fetch origin
    git switch -c m1/backend-case-api origin/main
    ```
-   Name branches by milestone and track, as in the plan: `m1/backend-case-api`, `m4/3d-scene-loader`. If your tool has already assigned you a branch, use that one. Check `git branch -r` first so you don't reuse a branch someone else is working on.
+   Name branches by milestone and track, as in the plan: `m1/backend-case-api`, `m4/3d-scene-loader`. Don't name branches after your tool (no `claude/` or `codex/` prefixes). Check `git branch -r` first so you don't reuse a branch someone else is working on.
 3. **Check for overlapping work before you start.** Look at open pull requests and remote branches. If another branch is already doing your task or editing the same files, stop and ask before going further.
 4. **Stay inside your task.** Work in the folders your track owns (see the plan). Don't reformat, rename, move or "clean up" code your task doesn't need, and don't upgrade dependencies unless asked.
 5. **Keep changes to shared files small, and list them in the PR.** Shared files include `package.json`, `package-lock.json`, `pyproject.toml`, `.env.example`, the FastAPI schemas and Alembic migrations.
@@ -24,6 +24,8 @@ Several people work on this repo at the same time, and each may run several AI s
    - Use npm only. If `package-lock.json` conflicts, regenerate it with `npm install`; don't edit it by hand.
    - Before adding an Alembic migration, merge `main` so it builds on the current head. Two branches that each add a migration from the same parent leave Alembic with two heads.
 6. **Commit small and often, and push your branch** so other people can see what's in progress.
+   - Commit as the person you're working for, using their git name and email, not your tool's.
+   - Don't add AI attribution to commits or pull requests: no `Co-Authored-By` trailers, session links, "Generated with" footers or model names.
 7. **Before opening a pull request, merge the latest `main` into your branch** (`git fetch origin && git merge origin/main`). When resolving conflicts, keep the other side's work. If you can't tell which version is right, stop and ask. Then run the checks that exist: `npm run lint` and `npm run build` in `frontend/`, and `pytest` in `backend/`.
 8. **Open a draft pull request into `main`.** Say what changed, why and how to test it, and link the issue (`Closes #12`). Don't merge it. Humans merge at the checkpoints in the plan.
 9. **Never rewrite shared history.** Don't force-push, rebase or delete a branch you didn't create, and never rewrite `main`.
