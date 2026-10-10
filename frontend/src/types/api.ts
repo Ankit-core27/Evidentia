@@ -417,6 +417,8 @@ export interface Injury extends Reviewable {
 }
 
 export type InjuryCreate = Pick<Injury, 'body_region' | 'type' | 'severity'> & Partial<CreateOf<Injury>>;
+/** For the proposed PATCH /api/injuries/{id}: injuries are AI proposals too, so they need review. */
+export type InjuryUpdate = UpdateOf<Injury>;
 
 // ---------------------------------------------------------------------------
 // Workspace

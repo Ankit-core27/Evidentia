@@ -37,7 +37,8 @@ const MACRO_TABS = [
 ];
 
 /** The workspace module an alert should open. */
-const alertModule = (alert: Alert): CaseModule => (alert.record_type === 'evidence' ? 'evidence' : 'overview');
+const alertModule = (alert: Alert): CaseModule =>
+  alert.kind === 'processing' ? 'evidence' : alert.kind === 'conflict' || alert.kind === 'review' ? 'review' : 'overview';
 
 const SEVERITY_DOT: Record<Alert['severity'], string> = {
   info: 'bg-cyan-400',
