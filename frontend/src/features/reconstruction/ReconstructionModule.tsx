@@ -185,7 +185,7 @@ export const ReconstructionModule: React.FC<{ workspace: CaseWorkspace }> = ({ w
               {stage && (
                 <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 items-start">
                   {/* Scene host: the 3D track's viewer mounts here (see sceneViewer.ts). */}
-                  <div className="xl:col-span-2 h-[340px] sm:h-[460px] rounded-md overflow-hidden border border-line">
+                  <div className="xl:col-span-2 h-[340px] sm:h-[460px] rounded-md overflow-hidden border border-line bg-surface">
                     <SchematicSceneView
                       reconstruction={detail}
                       stageId={stage.id}
@@ -205,7 +205,7 @@ export const ReconstructionModule: React.FC<{ workspace: CaseWorkspace }> = ({ w
                           </Link>
                         }
                       />
-                      <ul className="rounded-md border border-line divide-y divide-line">
+                      <ul className="rounded-md border border-line bg-surface divide-y divide-line">
                         {eventsOf(stage.event_ids).map((e) => (
                           <li key={e.id} className="px-3 py-2 text-body">
                             <span className="block font-mono text-2xs text-ink-muted">{formatTimeRange(e.time_start, e.time_end, e.time_precision)}</span>
@@ -216,7 +216,7 @@ export const ReconstructionModule: React.FC<{ workspace: CaseWorkspace }> = ({ w
                     </section>
                     <section className="space-y-2" aria-label="Scene objects">
                       <SectionHeader title="Scene objects" count={stage.scene_objects.length} />
-                      <ul className="rounded-md border border-line divide-y divide-line">
+                      <ul className="rounded-md border border-line bg-surface divide-y divide-line">
                         {stage.scene_objects.map((o) => (
                           <li key={o.id}>
                             <button

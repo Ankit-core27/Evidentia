@@ -35,7 +35,7 @@ export const PassageSearch: React.FC<{ caseId: Id }> = ({ caseId }) => {
       {q && query.data?.length === 0 && <EmptyState title={`No passages match “${q}”`} />}
 
       {!!query.data?.length && (
-        <ol className="rounded-md border border-line divide-y divide-line" data-testid="search-results">
+        <ol className="rounded-md border border-line bg-surface divide-y divide-line" data-testid="search-results">
           {query.data.map((hit, i) => (
             <li key={`${hit.chunk_id}-${i}`}>
               <button onClick={() => open(hit.evidence_id, hit.passage)} className="group w-full text-left px-3 py-2.5 hover:bg-surface space-y-1">

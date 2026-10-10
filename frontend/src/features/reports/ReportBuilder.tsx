@@ -78,7 +78,7 @@ export const ReportBuilder: React.FC<{ caseId: Id; caseSelector?: React.ReactNod
           {caseSelector}
           <fieldset>
             <legend className={legend}>Template</legend>
-            <div className="rounded-md border border-line divide-y divide-line">
+            <div className="rounded-md border border-line bg-surface divide-y divide-line">
               {TEMPLATES.map((t) => (
                 <label key={t.value} className={`flex items-start gap-2.5 px-3 py-2 cursor-pointer ${template === t.value ? 'bg-accent/5' : 'hover:bg-surface'}`}>
                   <input
@@ -99,7 +99,7 @@ export const ReportBuilder: React.FC<{ caseId: Id; caseSelector?: React.ReactNod
           </fieldset>
           <fieldset>
             <legend className={legend}>Include</legend>
-            <div className="rounded-md border border-line divide-y divide-line">
+            <div className="rounded-md border border-line bg-surface divide-y divide-line">
               {toggle(includeAi, setIncludeAi, 'AI insights', 'Model-written evidence summaries, marked as unconfirmed.')}
               {toggle(
                 includeCustody || custodyForced,
@@ -127,7 +127,7 @@ export const ReportBuilder: React.FC<{ caseId: Id; caseSelector?: React.ReactNod
           {history.isError && <ErrorState error={history.error} onRetry={() => history.refetch()} />}
           {history.data?.length === 0 && <p className="text-body text-ink-muted">No reports for this case yet.</p>}
           {!!history.data?.length && (
-            <ul className="rounded-md border border-line divide-y divide-line">
+            <ul className="rounded-md border border-line bg-surface divide-y divide-line">
               {history.data.map((r) => (
                 <li key={r.id}>
                   <button

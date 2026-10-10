@@ -1,17 +1,73 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="3840" height="2160" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid slice">
- <!-- Calm backdrop for a data-dense UI: depth, a horizon grid and one slow scan sweep. No detail sits behind content. -->
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="3840" height="2160" viewBox="0 0 1920 1080">
  <defs>
-  <radialGradient id="bg" cx=".5" cy=".35" r=".75"><stop stop-color="#13181a"/><stop offset=".6" stop-color="#0f1113"/><stop offset="1" stop-color="#0b0d0e"/></radialGradient>
-  <linearGradient id="beam" x2="0" y2="1"><stop stop-color="#37aebd" stop-opacity="0"/><stop offset=".5" stop-color="#37aebd" stop-opacity=".07"/><stop offset="1" stop-color="#37aebd" stop-opacity="0"/></linearGradient>
-  <linearGradient id="gridFade" x2="0" y2="1"><stop stop-color="#fff" stop-opacity="0"/><stop offset=".35" stop-color="#fff" stop-opacity=".5"/><stop offset="1" stop-color="#fff"/></linearGradient>
-  <mask id="gm"><rect y="390" width="1920" height="690" fill="url(#gridFade)"/></mask>
+  <radialGradient id="bg"><stop stop-color="#141a1c"/><stop offset=".55" stop-color="#0f1113"/><stop offset="1" stop-color="#090b0d"/></radialGradient>
+  <radialGradient id="shade"><stop offset=".4" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".62"/></radialGradient>
+  <linearGradient id="beam" x2="0" y2="1"><stop stop-color="#37aebd" stop-opacity="0"/><stop offset=".48" stop-color="#37aebd" stop-opacity=".12"/><stop offset=".52" stop-color="#7ce7ed" stop-opacity=".2"/><stop offset="1" stop-color="#37aebd" stop-opacity="0"/></linearGradient>
+  <linearGradient id="fadeLine"><stop stop-color="#37aebd" stop-opacity="0"/><stop offset=".2" stop-color="#37aebd" stop-opacity=".42"/><stop offset=".8" stop-color="#37aebd" stop-opacity=".42"/><stop offset="1" stop-color="#37aebd" stop-opacity="0"/></linearGradient>
+  <pattern id="grid" width="72" height="72" patternUnits="userSpaceOnUse"><path d="M72 0H0V72" fill="none" stroke="#37aebd" stroke-opacity=".11" stroke-width="1"/></pattern>
+  <filter id="glow" x="-200%" y="-200%" width="500%" height="500%"><feGaussianBlur stdDeviation="7" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  <filter id="soft"><feGaussianBlur stdDeviation="24"/></filter>
+  <clipPath id="frame"><rect width="1920" height="1080"/></clipPath>
  </defs>
- <rect width="1920" height="1080" fill="url(#bg)"/>
- <g mask="url(#gm)" fill="none" stroke="#37aebd" stroke-opacity=".09">
-  <path d="M960 390L-500 1080M960 390L-220 1080M960 390L0 1080M960 390L330 1080M960 390L650 1080M960 390L1270 1080M960 390L1590 1080M960 390L1920 1080M960 390L2140 1080M960 390L2420 1080"/>
-  <path d="M0 505H1920M0 595H1920M0 700H1920M0 820H1920M0 960H1920"/>
+ <g clip-path="url(#frame)">
+  <rect width="1920" height="1080" fill="url(#bg)"/>
+  <ellipse cx="960" cy="650" rx="900" ry="410" fill="#10343a" opacity=".13" filter="url(#soft)"/>
+  <!-- Perspective blueprint grid, converging into a quiet central horizon -->
+  <g opacity=".66" transform="translate(0 390)" fill="none" stroke="#37aebd" stroke-opacity=".18">
+   <path d="M0 690L960 0 1920 690M-220 690L960 0 2140 690M-500 690L960 0 2420 690"/>
+   <path d="M0 115H1920M0 205H1920M0 310H1920M0 430H1920M0 570H1920M0 720H1920"/>
+   <path d="M0 115H1920M0 205H1920M0 310H1920M0 430H1920M0 570H1920M0 720H1920" stroke-dasharray="3 10" stroke-opacity=".22"/>
+  </g>
+  <rect y="300" width="1920" height="760" fill="url(#grid)" opacity=".38" transform="perspective(800px) rotateX(48deg)"/>
+  <!-- Faint contour and fingerprint traces at the edges -->
+  <g fill="none" stroke="#37aebd" stroke-width="1.5" opacity=".2">
+   <path d="M-80 260C80 120 280 120 390 250s80 240-50 300-270-25-250-160 210-150 250-30-35 175-130 145-85-145 5-155 100 95 35 125"/>
+   <path d="M-105 245C65 90 300 95 420 235s80 285-65 335-300-35-275-195 235-175 280-35-40 205-155 170-105-175 10-185 130 120 45 160"/>
+   <path d="M1450 760c60-140 210-215 365-175s220 185 165 320-200 180-315 105-110-210 0-250 190 50 145 135-145 90-175 15 65-125 110-80 5 105-45 80"/>
+   <path d="M1430 750c70-165 240-245 405-190s240 205 175 360-225 205-355 115-125-240 5-290 220 55 165 160-170 105-205 10 75-145 130-90 5 120-55 90"/>
+  </g>
+  <!-- Oversized central thumb impression, kept low contrast for interface text -->
+  <g transform="translate(960 545)" fill="none" stroke="#37aebd" stroke-width="2.2" stroke-linecap="round" opacity=".075">
+   <path d="M-12 152C-105 148-160 75-151-17-143-105-87-165-9-171 78-177 145-114 157-31 165 27 151 81 119 116"/>
+   <path d="M-39 128C-104 115-129 60-125-8-121-75-77-127-16-136 46-145 101-100 116-38 126 4 118 44 95 78"/>
+   <path d="M-65 96C-94 76-101 39-99-5-96-51-66-87-25-94 18-101 59-70 69-30 78 5 68 35 49 57"/>
+   <path d="M-85 56C-71 68-56 74-39 75M-78 19C-77-11-61-43-35-51 0-63 34-39 39-8 43 16 33 37 17 48"/>
+   <path d="M-44 18C-43-1-33-18-18-22 1-28 18-13 17 4 16 19 6 28-7 30"/>
+   <path d="M-139 47C-129 91-102 122-69 141M-105-91C-69-134-13-151 38-135M106 87C129 53 137 13 129-24"/>
+   <path d="M-123 76C-108 106-87 125-61 135M-111-56C-82-101-39-121 6-119M89 74C107 45 112 13 105-17"/>
+  </g>
+  <g fill="none" stroke="#37aebd" stroke-width="1.2" opacity=".13">
+   <path d="M115 760c190-90 340-70 450 35s240 95 350 0 230-95 350 5 260 115 500-5"/>
+   <path d="M90 805c215-100 375-80 495 35s255 105 375 0 250-105 375 5 280 130 520-10"/>
+   <path d="M65 850c240-110 410-90 540 35s270 115 400 0 270-115 400 5 300 145 540-15"/>
+  </g>
+  <!-- Slow shifting evidence links -->
+  <g fill="none" stroke="url(#fadeLine)" stroke-width="1.5">
+   <path d="M260 405L485 515 725 405 900 520 1130 400 1390 505 1655 390"/>
+   <path d="M340 695L530 570 755 680 960 520 1180 675 1400 530 1570 700"/>
+   <path d="M485 515L530 570M725 405L755 680M1130 400L1180 675M1390 505L1400 530"/>
+  </g>
+  <g fill="#61d0d7" filter="url(#glow)">
+   <circle cx="260" cy="405" r="3"/><circle cx="485" cy="515" r="3"/><circle cx="725" cy="405" r="3"/><circle cx="900" cy="520" r="3"/><circle cx="1130" cy="400" r="3"/><circle cx="1390" cy="505" r="3"/><circle cx="1655" cy="390" r="3"/>
+   <circle cx="340" cy="695" r="2.5"/><circle cx="530" cy="570" r="3"/><circle cx="755" cy="680" r="2.5"/><circle cx="1180" cy="675" r="3"/><circle cx="1400" cy="530" r="2.5"/><circle cx="1570" cy="700" r="3"/>
+  </g>
+  <g fill="none" stroke="#55d0d7" stroke-width="1" opacity=".35">
+   <circle cx="485" cy="515" r="10"><animate attributeName="r" values="6;18;6" dur="8s" repeatCount="indefinite"/><animate attributeName="opacity" values=".3;0;.3" dur="8s" repeatCount="indefinite"/></circle>
+   <circle cx="1180" cy="675" r="10"><animate attributeName="r" values="5;16;5" dur="10s" repeatCount="indefinite"/><animate attributeName="opacity" values=".4;0;.4" dur="10s" repeatCount="indefinite"/></circle>
+   <circle cx="900" cy="520" r="9"><animate attributeName="r" values="5;15;5" dur="9s" repeatCount="indefinite"/><animate attributeName="opacity" values=".35;0;.35" dur="9s" repeatCount="indefinite"/></circle>
+  </g>
+  <!-- Sparse floating dust -->
+  <g fill="#72dce1">
+   <circle cx="220" cy="580" r="1.4" opacity=".5"><animate attributeName="cy" values="580;550;580" dur="18s" repeatCount="indefinite"/></circle>
+   <circle cx="690" cy="300" r="1" opacity=".4"><animate attributeName="cy" values="300;330;300" dur="22s" repeatCount="indefinite"/></circle>
+   <circle cx="1260" cy="290" r="1.2" opacity=".45"><animate attributeName="cy" values="290;265;290" dur="20s" repeatCount="indefinite"/></circle>
+   <circle cx="1710" cy="600" r="1.5" opacity=".4"><animate attributeName="cy" values="600;570;600" dur="25s" repeatCount="indefinite"/></circle>
+   <circle cx="980" cy="820" r="1" opacity=".32"><animate attributeName="cy" values="820;790;820" dur="21s" repeatCount="indefinite"/></circle>
+  </g>
+  <!-- A restrained scan-light sweeps once per 20 seconds -->
+  <rect x="0" y="-200" width="1920" height="130" fill="url(#beam)" opacity=".55">
+   <animate attributeName="y" values="-200;1180;-200" dur="20s" repeatCount="indefinite"/>
+  </rect>
+  <rect width="1920" height="1080" fill="url(#shade)"/>
  </g>
- <rect y="-160" width="1920" height="160" fill="url(#beam)">
-  <animate attributeName="y" values="-160;1080" dur="14s" repeatCount="indefinite"/>
- </rect>
 </svg>
