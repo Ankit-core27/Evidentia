@@ -12,7 +12,7 @@ from typing import Any, TypeVar
 
 from fastapi import HTTPException
 from pydantic_core import to_jsonable_python
-from sqlalchemy import and_, delete, func, or_, select
+from sqlalchemy import and_, delete, func, inspect, or_, select
 from sqlalchemy.orm import Session
 
 from app.models import (
@@ -95,6 +95,14 @@ def get_or_404(db: Session, model: type[ModelT], record_id: int, name: str | Non
     return row
 
 
+def invalid(field: str, message: str) -> HTTPException:
+    """A 422 shaped like FastAPI's own validation errors, for checks the schemas
+    can't make (a referenced row that doesn't exist, null for a required field)."""
+    return HTTPException(
+        status_code=422, detail=[{"loc": ["body", field], "msg": message, "type": "value_error"}]
+    )
+
+
 def record_audit(
     db: Session,
     actor_id: int | None,
@@ -134,7 +142,14 @@ def apply_update(
     """Applies a PATCH body (`schema.model_dump(exclude_unset=True)`) to a row and
     writes one audit entry with the before and after value of each changed field.
     A change to review_status alone is logged as "reviewed", anything else as
-    "modified". Returns the changes; the caller commits."""
+    "modified". Null for a column that can't be null is a 422, since the update
+    schemas allow null on every optional field. Returns the changes; the caller
+    commits."""
+    columns = inspect(row).mapper.columns
+    for field, after in changes.items():
+        if after is None and field in columns and not columns[field].nullable:
+            raise invalid(field, "Field can't be null")
+
     diff: dict[str, dict[str, Any]] = {}
     for field, after in changes.items():
         before = getattr(row, field)
