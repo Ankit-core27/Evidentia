@@ -188,17 +188,17 @@ export const EventDialog: React.FC<EventDialogProps> = ({ workspace, event, onCl
           </div>
         </div>
         {event?.ai_note && (
-          <div className="p-2.5 rounded-lg bg-cyan-950/30 border border-cyan-500/30 text-[11px] text-cyan-100">
-            <span className="text-[10px] text-cyan-400 font-bold uppercase block">AI note</span>
+          <div className="pl-3 border-l-2 border-dashed border-pending/60 text-body text-ink-soft">
+            <span className="text-xs font-medium text-pending block">AI note</span>
             {event.ai_note}
           </div>
         )}
         {error && (
-          <p className="text-[11px] text-red-300" role="alert">
+          <p className="text-xs text-danger" role="alert">
             {error}
           </p>
         )}
-        {justCreated && <p className="text-[11px] text-emerald-300">Event added. Link the evidence it rests on below.</p>}
+        {justCreated && <p className="text-xs text-ok">Event added. Link the evidence it rests on below.</p>}
       </form>
 
       {savedId !== null && (
