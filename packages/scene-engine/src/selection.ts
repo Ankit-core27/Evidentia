@@ -1,5 +1,6 @@
-import { Euler, Quaternion, Vector3 as ThreeVector3 } from 'three';
+import { Euler, Quaternion } from 'three';
 import { assetRegistry, type AssetRegistryEntry } from './assets/asset-registry.js';
+import { roomLocalToWorld } from './spatial.js';
 import type {
   AssetCalibration,
   EvidenceMarkerDefinition,
@@ -143,10 +144,6 @@ export function createSceneSelection(
               [-roomWidth / 2 + thickness / 2, opening.sillHeight, center];
       const rotationY = opening.wall === 'north' ? 0 :
         opening.wall === 'south' ? 180 : opening.wall === 'east' ? -90 : 90;
-      const localPosition = new ThreeVector3(...position).applyEuler(new Euler(
-        ...((room.rotation ?? [0, 0, 0]).map((degree) => (degree * Math.PI) / 180) as [number, number, number]),
-        scene.coordinateSystem.rotationOrder,
-      ));
       const roomRotation = new Euler(
         ...((room.rotation ?? [0, 0, 0]).map((degree) => (degree * Math.PI) / 180) as [number, number, number]),
         scene.coordinateSystem.rotationOrder,
@@ -163,11 +160,7 @@ export function createSceneSelection(
         category: opening.type,
         roomId: room.id,
         transform: {
-          position: [
-            localPosition.x + (room.position?.[0] ?? 0),
-            localPosition.y + (room.position?.[1] ?? 0),
-            localPosition.z + (room.position?.[2] ?? 0),
-          ],
+          position: roomLocalToWorld(position, room),
           rotation: [
             (worldRotation.x * 180) / Math.PI,
             (worldRotation.y * 180) / Math.PI,

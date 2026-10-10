@@ -82,6 +82,7 @@ export const mockMultiRoomScene: SceneDefinition = {
         wallA: 'east',
         roomB: 'room-bedroom',
         wallB: 'west',
+        openingId: 'opening-bedroom-connection',
       },
     ],
   },

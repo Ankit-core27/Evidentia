@@ -9,7 +9,11 @@ import {
   mockMultiRoomScene,
   mockMurderScene,
   mockRoadAccidentScene,
+  mockRoomLayoutScenes,
   resolveAssetTransform,
+  roomLocalToWorld,
+  worldToRoomLocal,
+  hiddenSharedWalls,
   validateScene,
 } from '../dist/index.js';
 import { buildWallSegments } from '../dist/ProceduralRoom.js';
@@ -18,6 +22,254 @@ test('all supported demonstration fixtures validate using the registry', () => {
   for (const scene of [mockMurderScene, mockMultiRoomScene, mockRoadAccidentScene]) {
     assert.deepEqual(validateScene(scene, assetRegistry).errors, []);
   }
+});
+
+test('one-room fixture validates and 3, 5, and 10 room house fixtures are fully connected', () => {
+  for (const [count, scene] of Object.entries(mockRoomLayoutScenes)) {
+    assert.equal(scene.environment.rooms.length, Number(count));
+    assert.deepEqual(validateScene(scene, assetRegistry).errors, []);
+    const boundaries = scene.environment.sharedBoundaries;
+    assert.equal(boundaries.length, Number(count) === 1 ? 0 : Number(count) === 3 ? 2 : Number(count) === 5 ? 5 : 13);
+    assert.ok(scene.environment.rooms.every(({ rotation, dimensions }) =>
+      rotation?.[1] !== undefined && dimensions.width > 0 && dimensions.depth > 0));
+    assert.ok(!diagnoseScene(scene).some(({ code, severity }) =>
+      code === 'SHARED_BOUNDARY_MISALIGNED' && severity === 'warning'));
+    assert.ok(!diagnoseScene(scene).some(({ code }) =>
+      code === 'ROOM_FOOTPRINT_OVERLAP' || code === 'ROOM_UNREACHABLE_FROM_ENTRANCE'));
+    if (Number(count) === 1) continue;
+    const reachable = new Set([scene.environment.entranceRoomId]);
+    const queue = [scene.environment.entranceRoomId];
+    while (queue.length) {
+      const roomId = queue.shift();
+      for (const boundary of boundaries) {
+        const roomA = scene.environment.rooms.find(({ id }) => id === boundary.roomA);
+        const roomB = scene.environment.rooms.find(({ id }) => id === boundary.roomB);
+        const opening = roomA.openings.find(({ id }) => id === boundary.openingId);
+        assert.ok(opening);
+        assert.equal(opening.type, 'door');
+        assert.equal(opening.wall, boundary.wallA);
+        const span = boundary.wallA === 'north' || boundary.wallA === 'south'
+          ? roomA.dimensions.width
+          : roomA.dimensions.depth;
+        assert.ok(opening.offset >= 0 && opening.offset + opening.width <= span);
+        const wallCenter = (room, wall) => roomLocalToWorld(
+          wall === 'north' ? [0, 0, -room.dimensions.depth / 2] :
+            wall === 'south' ? [0, 0, room.dimensions.depth / 2] :
+              wall === 'east' ? [room.dimensions.width / 2, 0, 0] :
+                [-room.dimensions.width / 2, 0, 0],
+          room,
+        );
+        const centerA = wallCenter(roomA, boundary.wallA);
+        const centerB = wallCenter(roomB, boundary.wallB);
+        assert.ok(Math.hypot(...centerA.map((value, index) => value - centerB[index])) < 0.001);
+        const spanB = boundary.wallB === 'north' || boundary.wallB === 'south'
+          ? roomB.dimensions.width
+          : roomB.dimensions.depth;
+        assert.ok(Math.abs(span - spanB) < 0.001);
+        const wallSegments = buildWallSegments(span, roomA.dimensions.height, [opening]);
+        const openingStart = -span / 2 + opening.offset;
+        const openingEnd = openingStart + opening.width;
+        assert.ok(wallSegments.every(({ center, bottom, height }) =>
+          center < openingStart || center > openingEnd ||
+          bottom >= opening.sillHeight + opening.height || bottom + height <= opening.sillHeight));
+        assert.ok(hiddenSharedWalls(scene, boundary.roomB).includes(boundary.wallB));
+        const neighbor = boundary.roomA === roomId
+          ? boundary.roomB
+          : boundary.roomB === roomId
+            ? boundary.roomA
+            : undefined;
+        if (neighbor && !reachable.has(neighbor)) {
+          reachable.add(neighbor);
+          queue.push(neighbor);
+        }
+      }
+    }
+    assert.equal(reachable.size, Number(count));
+  }
+});
+
+test('shared-boundary suppression hides only room B duplicate walls', () => {
+  const scene = mockRoomLayoutScenes[3];
+  const [boundary] = scene.environment.sharedBoundaries;
+  assert.deepEqual(hiddenSharedWalls(scene, boundary.roomA), []);
+  assert.deepEqual(hiddenSharedWalls(scene, boundary.roomB), [boundary.wallB]);
+  assert.deepEqual(hiddenSharedWalls(scene, 'unconnected-room'), []);
+});
+
+test('rotated room openings render in room-local coordinates and selection reports their world position', () => {
+  const scene = mockRoomLayoutScenes[5];
+  const room = scene.environment.rooms.find(({ openings }) =>
+    openings.some(({ type, wall }) => type === 'door' && wall === 'east'));
+  const door = room.openings.find(({ type, wall }) => type === 'door' && wall === 'east');
+  const span = room.dimensions.depth;
+  const localPosition = [room.dimensions.width / 2 - (room.wallThickness ?? 0.12) / 2,
+    door.sillHeight, -span / 2 + door.offset + door.width / 2];
+  const selection = createSceneSelection(scene, door.id);
+  assert.notEqual(room.rotation[1], 0);
+  assert.deepEqual(selection.transform.position, roomLocalToWorld(localPosition, room));
+  assert.ok(worldToRoomLocal(selection.transform.position, room)
+    .every((value, index) => Math.abs(value - localPosition[index]) < 1e-9));
+  assert.equal(selection.association.roomId, room.id);
+  assert.ok(buildWallSegments(span, room.dimensions.height, [door]).length > 0);
+  const doorSegments = buildWallSegments(span, room.dimensions.height, [door])
+    .filter(({ center }) =>
+      center > -span / 2 + door.offset && center < -span / 2 + door.offset + door.width);
+  assert.ok(doorSegments.every(({ bottom, height }) =>
+    bottom >= door.sillHeight + door.height || bottom + height <= door.sillHeight));
+});
+
+test('room-local window openings leave wall segments above and below the aperture', () => {
+  const room = mockRoomLayoutScenes[5].environment.rooms[0];
+  const window = room.openings.find(({ type }) => type === 'window');
+  const segments = buildWallSegments(room.dimensions.width, room.dimensions.height, [window]);
+  const atWindow = segments.filter(({ center }) =>
+    center > -room.dimensions.width / 2 + window.offset &&
+    center < -room.dimensions.width / 2 + window.offset + window.width);
+  assert.ok(atWindow.some(({ bottom }) => bottom === 0));
+  assert.ok(atWindow.some(({ bottom, height }) => bottom + height === room.dimensions.height));
+  assert.ok(atWindow.every(({ bottom, height }) =>
+    bottom + height <= window.sillHeight || bottom >= window.sillHeight + window.height));
+});
+
+test('world-space object transforms are not changed by rotated room association', () => {
+  const scene = mockRoomLayoutScenes[3];
+  const object = scene.objects[0];
+  const selection = createSceneSelection(scene, object.id);
+  assert.deepEqual(selection.transform.position, object.transform.position);
+  assert.equal(selection.association.roomId, object.roomId);
+  assert.ok(mockRoadAccidentScene.objects.every(({ roomId }) => roomId === undefined));
+  assert.deepEqual(validateScene(mockRoadAccidentScene, assetRegistry).errors, []);
+});
+
+test('spatial diagnostics report missing rooms and marker association inconsistencies', () => {
+  const invalidRoom = structuredClone(mockRoomLayoutScenes[3]);
+  invalidRoom.objects[0].roomId = 'room-does-not-exist';
+  assert.ok(validateScene(invalidRoom).errors.some(({ message }) => message.includes('was not found')));
+
+  const mismatch = structuredClone(mockRoomLayoutScenes[3]);
+  mismatch.evidenceMarkers[0].roomId = mismatch.environment.rooms[1].id;
+  mismatch.evidenceMarkers[0].position = [100, 0, 100];
+  const codes = diagnoseScene(mismatch).map(({ code }) => code);
+  assert.ok(codes.includes('MARKER_OBJECT_ROOM_MISMATCH'));
+  assert.ok(codes.includes('MARKER_OUTSIDE_ROOM'));
+
+  const markerOutsideObjectRoom = structuredClone(mockRoomLayoutScenes[3]);
+  markerOutsideObjectRoom.evidenceMarkers[0].roomId = undefined;
+  markerOutsideObjectRoom.evidenceMarkers[0].position = [100, 0, 100];
+  assert.ok(diagnoseScene(markerOutsideObjectRoom).some(({ code }) =>
+    code === 'MARKER_OBJECT_POSITION_MISMATCH'));
+});
+
+test('misaligned explicit room connections and openings on suppressed walls are warnings', () => {
+  const scene = structuredClone(mockRoomLayoutScenes[3]);
+  const [boundary] = scene.environment.sharedBoundaries;
+  const roomB = scene.environment.rooms.find(({ id }) => id === boundary.roomB);
+  roomB.openings.push({
+    id: 'unexpected-suppressed-opening',
+    type: 'door',
+    wall: boundary.wallB,
+    offset: 1,
+    width: 0.8,
+    height: 2,
+    sillHeight: 0,
+  });
+  roomB.position[0] += 0.4;
+  const diagnostics = diagnoseScene(scene);
+  assert.ok(diagnostics.some(({ code, severity }) =>
+    code === 'SHARED_BOUNDARY_MISALIGNED' && severity === 'warning'));
+  assert.ok(diagnostics.some(({ code, severity }) =>
+    code === 'OPENING_ON_SUPPRESSED_BOUNDARY' && severity === 'warning'));
+  assert.ok(diagnostics.some(({ code, path }) =>
+    code === 'ROOM_UNREACHABLE_FROM_ENTRANCE' && path.includes('room-3-2')));
+});
+
+test('unconnected overlapping room footprints are warned rather than treated as a connection', () => {
+  const scene = structuredClone(mockRoomLayoutScenes[3]);
+  scene.environment.rooms[2].position = [...scene.environment.rooms[0].position];
+  const diagnostic = diagnoseScene(scene).find(({ code }) => code === 'ROOM_FOOTPRINT_OVERLAP');
+  assert.ok(diagnostic);
+  assert.equal(diagnostic.severity, 'warning');
+  assert.match(diagnostic.message, /adjacency is not inferred/);
+});
+
+test('entrance reachability reports disconnected rooms unless explicitly permitted', () => {
+  const scene = structuredClone(mockRoomLayoutScenes[3]);
+  scene.environment.sharedBoundaries.splice(1, 1);
+  const unreachable = diagnoseScene(scene).filter(({ code }) =>
+    code === 'ROOM_UNREACHABLE_FROM_ENTRANCE');
+  assert.equal(unreachable.length, 1);
+  scene.environment.allowDisconnectedRooms = true;
+  assert.equal(diagnoseScene(scene).filter(({ code }) =>
+    code === 'ROOM_UNREACHABLE_FROM_ENTRANCE').length, 0);
+});
+
+test('shared doorway references must identify a door on the owning shared wall', () => {
+  const scene = structuredClone(mockRoomLayoutScenes[3]);
+  scene.environment.sharedBoundaries[0].openingId = 'not-a-door';
+  assert.ok(validateScene(scene).errors.some(({ message }) => message.includes('was not found')));
+  assert.ok(diagnoseScene(scene).some(({ code, severity }) =>
+    code === 'BOUNDARY_DOORWAY_INVALID' && severity === 'error'));
+
+  const raisedThreshold = structuredClone(mockRoomLayoutScenes[3]);
+  const roomA = raisedThreshold.environment.rooms.find(({ id }) =>
+    id === raisedThreshold.environment.sharedBoundaries[0].roomA);
+  roomA.openings.find(({ id }) =>
+    id === raisedThreshold.environment.sharedBoundaries[0].openingId).sillHeight = 0.2;
+  assert.ok(diagnoseScene(raisedThreshold).some(({ code }) =>
+    code === 'BOUNDARY_DOORWAY_BLOCKED'));
+});
+
+test('wall intersections use only explicitly verified metre bounds and respect authored openings', () => {
+  const scene = structuredClone(mockRoomLayoutScenes[1]);
+  const room = scene.environment.rooms[0];
+  const object = scene.objects[0];
+  const registry = structuredClone(assetRegistry);
+  registry.chair_wooden.calibration = {
+    status: 'physical-dimensions-verified',
+    sourceUnits: 'meters',
+    sourceDimensions: [0.8, 1, 0.6],
+    originConvention: 'bottom',
+    physicalDimensions: { width: 0.8, height: 1, depth: 0.6, unit: 'meters' },
+  };
+
+  object.transform.position = [room.position[0] + room.dimensions.width / 2 - 0.05, 0, room.position[2]];
+  assert.ok(diagnoseScene(scene, registry).some(({ code, severity }) =>
+    code === 'OBJECT_WALL_INTERSECTION' && severity === 'warning'));
+
+  room.openings.push({
+    id: 'test-door-opening',
+    type: 'door',
+    wall: 'east',
+    offset: (room.dimensions.depth - 1) / 2,
+    width: 1,
+    height: 2,
+    sillHeight: 0,
+  });
+  object.transform.position = [room.position[0] + room.dimensions.width / 2, 0, room.position[2]];
+  assert.ok(!diagnoseScene(scene, registry).some(({ code }) => code === 'OBJECT_WALL_INTERSECTION'));
+
+  registry.chair_wooden.calibration.status = 'source-bounds-inspected';
+  assert.ok(!diagnoseScene(scene, registry).some(({ code }) => code === 'OBJECT_WALL_INTERSECTION'));
+});
+
+test('schema rejects zero scale and cyclic parent references', () => {
+  const zeroScale = structuredClone(mockRoomLayoutScenes[3]);
+  zeroScale.objects[0].transform.scale[1] = 0;
+  assert.ok(validateScene(zeroScale).errors.some(({ path }) => path.includes('scale')));
+
+  const parentCycle = structuredClone(mockRoomLayoutScenes[3]);
+  parentCycle.objects[0].parentId = parentCycle.objects[1].id;
+  parentCycle.objects[1].parentId = parentCycle.objects[0].id;
+  assert.ok(validateScene(parentCycle).errors.some(({ message }) => message.includes('cycle')));
+});
+
+test('schema rejects openings and shared boundaries that cannot be rendered from authored wall data', () => {
+  const scene = structuredClone(mockRoomLayoutScenes[3]);
+  scene.environment.rooms[0].layoutMode = 'authored';
+  assert.ok(validateScene(scene).errors.some(({ message }) =>
+    message.includes('Room openings require procedural layout mode')));
+  assert.ok(validateScene(scene).errors.some(({ message }) =>
+    message.includes('Shared boundaries require procedural layout mode')));
 });
 
 test('scene loader returns validated murder and road fixtures without changing their scene IDs', () => {
