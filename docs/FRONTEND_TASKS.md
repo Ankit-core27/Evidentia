@@ -19,7 +19,7 @@ A task is done when:
 
 ## Contract assumptions
 
-PLAN.md doesn't pin these down. The frontend builds against the defaults below; the backend session should confirm or correct each one, and the generated `api-types.ts` replaces the hand-written types once the backend is up.
+PLAN.md doesn't pin these down. The frontend builds against the defaults below; the backend session should confirm or correct each one, and the generated `api-types.ts` replaces the hand-written types once the backend is up. The exact request and response shapes are in `frontend/src/types/api.ts`, and `frontend/src/mocks/` implements them.
 
 | Topic | Frontend assumes |
 | --- | --- |
@@ -43,6 +43,8 @@ PLAN.md doesn't pin these down. The frontend builds against the defaults below; 
 | File access | `<img>`, `<video>`, `<audio>` and `<iframe>` can't send headers, so `GET /evidence/{id}/file` takes `?investigator_id=` for the audit entry and `?download=1` to log "exported" instead of "viewed" |
 | Graph | `GET /cases/{id}/graph` returns nodes `{ id: "person:3", type, record_id, label, sublabel, review_status }` and edges `{ id, relationship_id, source, target, kind, label, confidence, flagged, review_status }`, without positions; the frontend lays them out |
 | Ask | Request `{ question, history: [{ role, content }] }`; response `{ answer, citations: [{ chunk_id, evidence_id, evidence_title, page, passage }], follow_ups: [] }`. The conversation is kept in the browser, not stored by the backend |
+| Timestamps | Cases carry `created_at` and `updated_at`; evidence carries `created_at` (upload time, separate from `collected_at`) |
+| Deletes | Deleting a person, object or location also deletes the relationships that point at it |
 | Report history | Needs a new route, `GET /cases/{id}/reports`, to list a case's stored reports |
 | Event and injury titles | Neither table has a title. The timeline shows the first line of `description`; injury markers are placed from `body_region` |
 
