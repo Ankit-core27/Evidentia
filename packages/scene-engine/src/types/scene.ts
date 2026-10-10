@@ -53,6 +53,7 @@ export interface RoomDefinition {
   name: string;
   type: string;
   parentId?: string;
+  position?: Vector3;
   dimensions?: {
     width?: number;
     depth?: number;

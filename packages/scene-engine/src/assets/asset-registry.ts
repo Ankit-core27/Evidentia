@@ -42,6 +42,8 @@ export const assetRegistry: AssetRegistry = {
     category: 'furniture',
     url: '/crime-scenes/library/chair_wooden.glb',
     format: 'glb',
+    dimensions: { width: 0.46, height: 1.1, depth: 0.4425, unit: 'meters' },
+    origin: { x: 0, y: 0, z: 0, pivot: 'bottom' },
     tags: ['chair', 'wood', 'indoor'],
   },
   cupboard_wooden: {
@@ -74,6 +76,8 @@ export const assetRegistry: AssetRegistry = {
     category: 'structural',
     url: '/crime-scenes/library/door_wooden.glb',
     format: 'glb',
+    dimensions: { width: 0.9, height: 2, depth: 0.0875, unit: 'meters' },
+    origin: { x: 0, y: 0, z: 0, pivot: 'bottom' },
     tags: ['door', 'wood', 'structural', 'indoor'],
   },
   evidence_marker: {
@@ -82,6 +86,8 @@ export const assetRegistry: AssetRegistry = {
     category: 'evidence',
     url: '/crime-scenes/library/evidence_marker.glb',
     format: 'glb',
+    dimensions: { width: 0.22, height: 0.325, depth: 0.18, unit: 'meters' },
+    origin: { x: 0, y: 0, z: 0, pivot: 'custom' },
     tags: ['marker', 'evidence'],
   },
   floor_tile: {
@@ -90,6 +96,8 @@ export const assetRegistry: AssetRegistry = {
     category: 'structural',
     url: '/crime-scenes/library/floor_tile.glb',
     format: 'glb',
+    dimensions: { width: 3, height: 0.1, depth: 3, unit: 'meters' },
+    origin: { x: 0, y: 0, z: 0, pivot: 'bottom' },
     tags: ['floor', 'tile', 'structural', 'indoor'],
   },
   knife: {
@@ -98,6 +106,8 @@ export const assetRegistry: AssetRegistry = {
     category: 'weapon',
     url: '/crime-scenes/library/knife.glb',
     format: 'glb',
+    dimensions: { width: 0.28, height: 0.025, depth: 0.035, unit: 'meters' },
+    origin: { x: 0, y: 0, z: 0, pivot: 'custom' },
     tags: ['weapon', 'knife'],
   },
   motorcycle: {
@@ -162,6 +172,8 @@ export const assetRegistry: AssetRegistry = {
     category: 'furniture',
     url: '/crime-scenes/library/table_wooden.glb',
     format: 'glb',
+    dimensions: { width: 1.4, height: 0.78, depth: 0.8, unit: 'meters' },
+    origin: { x: 0, y: 0, z: 0, pivot: 'bottom' },
     tags: ['table', 'furniture', 'wood', 'indoor'],
   },
   tire_skid_mark: {
@@ -186,6 +198,8 @@ export const assetRegistry: AssetRegistry = {
     category: 'body',
     url: '/crime-scenes/library/victim_body.glb',
     format: 'glb',
+    dimensions: { width: 1.91, height: 0.462, depth: 0.93, unit: 'meters' },
+    origin: { x: 0, y: 0, z: 0, pivot: 'custom' },
     tags: ['body', 'victim', 'indoor'],
   },
   wall_section: {
@@ -194,6 +208,8 @@ export const assetRegistry: AssetRegistry = {
     category: 'structural',
     url: '/crime-scenes/library/wall_section.glb',
     format: 'glb',
+    dimensions: { width: 3, height: 2.5, depth: 0.15, unit: 'meters' },
+    origin: { x: 0, y: 0, z: 0, pivot: 'bottom' },
     tags: ['wall', 'structural', 'indoor'],
   },
 };

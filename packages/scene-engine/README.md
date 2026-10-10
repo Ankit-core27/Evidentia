@@ -1,17 +1,18 @@
 # Forensix Scene Engine
 
-This package defines the contract for the future Forensix crime-scene visualization layer. It intentionally stays focused on scene data, asset metadata, runtime validation and demo fixtures. It does not implement a full 3D renderer yet.
+This package defines the reusable scene contract, asset metadata and first working React Three Fiber renderer for Forensix. It deliberately does not own case navigation, evidence upload, backend APIs or forensic workflows.
 
 ## Responsibilities
 
 This package owns:
 
-- the versioned scene JSON schema used by the app and any future 3D viewer
+- the versioned scene JSON schema used by the app and renderer
 - the registry of reusable GLB asset IDs and browser URLs
 - TypeScript definitions and runtime validation for valid scene data
 - synthetic fixture data used for local development and testing
+- the reusable `CrimeSceneEngine` React Three Fiber viewer, controls, asset loading and selection
 
-The frontend should consume this package for type-safe scene input, but the actual rendering behavior belongs in the future React + Three.js viewer layer.
+The frontend consumes this package for type-safe scene input and the reusable React Three Fiber viewer, while keeping application navigation and case workflows in the frontend.
 
 ## Scene JSON format
 
@@ -50,9 +51,9 @@ The top-level scene object is versioned and deliberately sparse enough to suppor
 - Up axis is `Y`.
 - Forward axis is `-Z`.
 - Rotation is stored as `[x, y, z]` in degrees, using the `XYZ` rotation order.
-- Position and scale are world-space unless a child object is explicitly parented.
-- A scene object may optionally set `parentId` to indicate a hierarchical relationship, but the eventual engine must interpret that relationship consistently.
-- Asset origins are not assumed to be identical across GLB files. Each asset entry in the registry should document its expected origin or pivot when known; otherwise the asset stays unscaled and its transform remains explicit at the scene level.
+- Position, rotation and scale are world-space. `parentId` records a hierarchy/reference only; this renderer does not compound child transforms relative to a parent.
+- A room's optional `position` is the world-space center of its floor footprint. Structural placements and scene objects still use their own explicit world-space transforms.
+- Asset origins are not assumed to be identical across GLB files. When bounds were inspected from the GLB accessors, the registry records source-coordinate dimensions and the model-local origin/pivot. No automatic origin or scale correction is applied by the loader.
 
 ## Asset registry conventions
 
@@ -81,7 +82,7 @@ The registry is separate from the scene data itself. The scene stores the asset 
 
 ## Validation
 
-Use the exported `validateScene` API to test a scene before sending it to the renderer:
+Use the exported `validateScene` API to test a scene before sending it to the renderer. `CrimeSceneEngine` also validates its input and presents the specific schema or registry issues instead of silently rendering invalid data.
 
 ```ts
 import { validateScene, assetRegistry } from '@forensix/scene-engine';
@@ -96,7 +97,7 @@ The validator checks:
 
 - schema version and required fields
 - valid scene type and vector lengths
-- unique object and room IDs
+- unique room IDs and renderable element IDs
 - room and parent references
 - evidence-marker references
 - known asset IDs when a registry is supplied
@@ -112,7 +113,7 @@ Use it for schema checks, smoke tests and future rendering tests, but do not tre
 
 ## Frontend integration plan
 
-The future frontend can import the package as:
+The frontend imports the package as:
 
 ```ts
 import {
@@ -122,7 +123,13 @@ import {
 } from '@forensix/scene-engine';
 ```
 
-The first rendering phase will pass a validated scene to a `CrimeSceneEngine` component with a `scene` prop and an optional `onObjectSelect` callback. This phase only reserves the API; it does not yet render the scene.
+The frontend passes a scene to the `CrimeSceneEngine` component with a `scene` prop and optional `onObjectSelect` callback. The viewer provides orbit/zoom controls, camera reset and overhead view, evidence-marker visibility, and object selection. Selection callbacks receive the stable `id`, `assetId`, associated `evidenceIds` and object `metadata`.
+
+The current package loads models using `useGLTF` from the registry URL, clones the cached scene and clones materials per instance before applying highlights. Geometry remains shared with the GLTF cache. When a known asset URL fails, a labelled placeholder keeps the remaining scene usable.
+
+### Asset measurement note
+
+For the fixture's floor tile, wall, door, table, chair, knife, body and evidence marker, the recorded dimensions were read from GLB accessor bounds, with node translations included for the multi-part body. GLB itself does not declare a physical unit; source coordinates are interpreted as metres to match this scene format. These values are useful renderer defaults, not certified survey measurements. Model-local transforms are preserved as authored; the engine does not normalize different origins automatically.
 
 ## Boundaries
 
@@ -131,6 +138,6 @@ This package intentionally does not include:
 - backend routes or database migrations
 - AI scene generation or evidence upload logic
 - UI page redesign work
-- a full 3D renderer implementation
+- physics, forensic verification or scene-generation logic
 
-The next phase will layer rendering on top of this package rather than replace the contract.
+Future phases can extend the renderer while preserving this package's scene contract.

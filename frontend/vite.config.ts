@@ -6,11 +6,12 @@ import {defineConfig} from 'vite';
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
+    dedupe: ['react', 'react-dom', 'three'],
     alias: {
       '@': path.resolve(__dirname, 'src'),
     },
   },
-  // Both apps read the repo-root .env, and GLB files are served from /3d/... (see docs/PLAN.md).
+  // Both apps read the repo-root .env; the repo assets directory is served from the URL root.
   envDir: '..',
   publicDir: '../assets',
   server: {
