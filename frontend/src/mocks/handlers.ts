@@ -1068,6 +1068,24 @@ export const buildRoutes = () => {
     return created(injury);
   });
 
+  // Proposed addition to the contract: injuries are AI proposals and need review.
+  r.on('PATCH', '/injuries/:id', (req) => {
+    const injury = req.db.injuries.find((x) => x.id === idParam(req)) ?? notFound('Injury');
+    return ok(
+      patchRecord(req, injury, 'injury', [
+        'person_id',
+        'body_region',
+        'structure_id',
+        'type',
+        'severity',
+        'depth',
+        'estimated_time',
+        'description',
+        'review_status'
+      ])
+    );
+  });
+
   // buildings (M6, M7) ------------------------------------------------------
 
   r.on('GET', '/buildings/:id', () => notFound('Building (the building viewer arrives in M6)'));

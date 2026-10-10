@@ -10,6 +10,7 @@ import { useEvidenceInspector } from '@/hooks/useEvidenceInspector';
 import { useObservations } from '@/hooks/useReview';
 import { fileUrl } from '@/lib/api';
 import { casePath } from '@/lib/caseModules';
+import { recordLabel } from '@/lib/recordNames';
 import { formatBytes, formatDateTime, humanize } from '@/lib/format';
 import { EVIDENCE_TYPES } from '@/lib/options';
 import { CaseModule } from '@/types';
@@ -330,29 +331,7 @@ const LinkedRecords: React.FC<{ evidence: EvidenceDetail }> = ({ evidence }) => 
     return <p className="text-xs text-slate-500">No records cite this evidence yet.</p>;
   }
 
-  const describe = (link: EvidenceLink): string => {
-    const id = link.target_id;
-    switch (link.target_type) {
-      case 'person':
-        return workspace?.persons.find((p) => p.id === id)?.name ?? `Person #${id}`;
-      case 'object':
-        return workspace?.objects.find((o) => o.id === id)?.label ?? `Object #${id}`;
-      case 'location':
-        return workspace?.locations.find((l) => l.id === id)?.address ?? `Location #${id}`;
-      case 'event':
-        return workspace?.events.find((e) => e.id === id)?.description ?? `Event #${id}`;
-      case 'relationship':
-        return workspace?.relationships.find((r) => r.id === id)?.label ?? `Link #${id}`;
-      case 'injury': {
-        const injury = workspace?.injuries.find((i) => i.id === id);
-        return injury ? `${injury.type}, ${humanize(injury.body_region).toLowerCase()}` : `Injury #${id}`;
-      }
-      case 'observation':
-        return observations?.find((o) => o.id === id)?.statement ?? `Statement #${id}`;
-      default:
-        return `${humanize(link.target_type)} #${id}`;
-    }
-  };
+  const describe = (link: EvidenceLink) => recordLabel(workspace, link.target_type, link.target_id, observations);
 
   return (
     <ul className="space-y-2">
