@@ -42,10 +42,20 @@ const router = createBrowserRouter([
   },
 ]);
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
-    </QueryClientProvider>
-  </StrictMode>,
-);
+// In `npm run dev:mock` the API is served from memory by src/mocks. The dynamic
+// import keeps the mock backend out of normal builds.
+async function enableMocks() {
+  if (import.meta.env.MODE !== 'mock') return;
+  const {installMockBackend} = await import('@/mocks');
+  await installMockBackend();
+}
+
+enableMocks().then(() => {
+  createRoot(document.getElementById('root')!).render(
+    <StrictMode>
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>
+    </StrictMode>,
+  );
+});
