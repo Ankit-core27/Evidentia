@@ -1,0 +1,48 @@
+{
+  "name": "@forensix/scene-engine",
+  "version": "0.1.0",
+  "description": "Reusable scene schema, validation and mock fixtures for the Forensix crime-scene engine.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "check": "tsc --noEmit -p tsconfig.json",
+    "prepare": "npm run build"
+  },
+  "keywords": [
+    "forensix",
+    "crime-scene",
+    "three",
+    "scene-engine",
+    "zod"
+  ],
+  "peerDependencies": {
+    "react": "^19.0.1",
+    "three": "^0.170.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    },
+    "three": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "typescript": "~5.8.2",
+    "zod": "^3.23.8"
+  },
+  "license": "MIT"
+}

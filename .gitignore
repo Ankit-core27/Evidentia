@@ -12,6 +12,7 @@ __pycache__/
 
 # Node (frontend/.gitignore has the rest)
 node_modules/
+packages/scene-engine/dist/
 
 # Blender sources; commit GLB exports only
 *.blend
