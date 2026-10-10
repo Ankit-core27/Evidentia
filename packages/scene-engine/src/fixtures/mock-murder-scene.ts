@@ -21,6 +21,7 @@ export const mockMurderScene: SceneDefinition = {
         id: 'room-living-room',
         name: 'Living Room',
         type: 'living_room',
+        position: [0, 0, 0],
         dimensions: {
           width: 6.5,
           depth: 5.2,
@@ -28,47 +29,35 @@ export const mockMurderScene: SceneDefinition = {
           area: 33.8,
         },
         structural: {
-          floorTiles: [
-            {
-              id: 'floor-tile-01',
-              assetId: 'floor_tile',
-              label: 'Floor tile 01',
-              transform: {
-                position: [-2.5, 0, -2.2],
-                rotation: [0, 0, 0],
-                scale: [1, 1, 1],
-              },
+          floorTiles: Array.from({ length: 6 }, (_, index) => ({
+            id: `floor-tile-${String(index + 1).padStart(2, '0')}`,
+            assetId: 'floor_tile',
+            label: `Floor tile ${index + 1}`,
+            transform: {
+              position: [-2.167 + (index % 3) * 2.167, 0, index < 3 ? -1.3 : 1.3] as [number, number, number],
+              rotation: [0, 0, 0] as [number, number, number],
+              scale: [0.722, 1, 0.867] as [number, number, number],
             },
-            {
-              id: 'floor-tile-02',
-              assetId: 'floor_tile',
-              label: 'Floor tile 02',
-              transform: {
-                position: [0, 0, -2.2],
-                rotation: [0, 0, 0],
-                scale: [1, 1, 1],
-              },
-            },
-            {
-              id: 'floor-tile-03',
-              assetId: 'floor_tile',
-              label: 'Floor tile 03',
-              transform: {
-                position: [2.5, 0, -2.2],
-                rotation: [0, 0, 0],
-                scale: [1, 1, 1],
-              },
-            },
-          ],
+          })),
           walls: [
             {
               id: 'wall-north',
               assetId: 'wall_section',
               label: 'North wall',
               transform: {
-                position: [0, 1.6, -2.6],
+                position: [0, 0, -2.6],
                 rotation: [0, 0, 0],
-                scale: [6.5, 3.2, 0.25],
+                scale: [2.167, 1.28, 1.667],
+              },
+            },
+            {
+              id: 'wall-south',
+              assetId: 'wall_section',
+              label: 'South wall',
+              transform: {
+                position: [0, 0, 2.6],
+                rotation: [0, 180, 0],
+                scale: [2.167, 1.28, 1.667],
               },
             },
             {
@@ -76,9 +65,29 @@ export const mockMurderScene: SceneDefinition = {
               assetId: 'wall_section',
               label: 'West wall',
               transform: {
-                position: [-3.2, 1.6, 0],
+                position: [-3.25, 0, 0],
                 rotation: [0, 90, 0],
-                scale: [5.2, 3.2, 0.25],
+                scale: [1.733, 1.28, 1.667],
+              },
+            },
+            {
+              id: 'wall-east-north',
+              assetId: 'wall_section',
+              label: 'East wall, north section',
+              transform: {
+                position: [3.25, 0, -1.55],
+                rotation: [0, 90, 0],
+                scale: [0.7, 1.28, 1.667],
+              },
+            },
+            {
+              id: 'wall-east-south',
+              assetId: 'wall_section',
+              label: 'East wall, south section',
+              transform: {
+                position: [3.25, 0, 1.55],
+                rotation: [0, 90, 0],
+                scale: [0.7, 1.28, 1.667],
               },
             },
           ],
@@ -88,8 +97,8 @@ export const mockMurderScene: SceneDefinition = {
               assetId: 'door_wooden',
               label: 'Entry door',
               transform: {
-                position: [3.2, 1.1, 0],
-                rotation: [0, -90, 0],
+                position: [3.25, 0, 0],
+                rotation: [0, 90, 0],
                 scale: [1, 1, 1],
               },
             },
@@ -107,7 +116,7 @@ export const mockMurderScene: SceneDefinition = {
       category: 'furniture',
       roomId: 'room-living-room',
       transform: {
-        position: [0, 0.45, 0],
+        position: [0, 0, 0],
         rotation: [0, 0, 0],
         scale: [1.4, 1, 1.3],
       },
@@ -158,7 +167,7 @@ export const mockMurderScene: SceneDefinition = {
       category: 'body',
       roomId: 'room-living-room',
       transform: {
-        position: [0.4, 0.05, -0.2],
+        position: [-1.25, 0.05, -1.2],
         rotation: [0, 18, 0],
         scale: [1, 1, 1],
       },
@@ -175,30 +184,14 @@ export const mockMurderScene: SceneDefinition = {
       category: 'weapon',
       roomId: 'room-living-room',
       transform: {
-        position: [1.1, 0.82, -0.75],
-        rotation: [60, 15, 78],
+        position: [1.1, 0.025, -0.75],
+        rotation: [0, 15, 78],
         scale: [1, 1, 1],
       },
       evidenceIds: ['evidence-knife-001'],
       provenance: {
         source: 'manual',
         confidence: 0.8,
-      },
-    },
-    {
-      id: 'door-structural',
-      name: 'Door to hallway',
-      assetId: 'door_wooden',
-      category: 'structural',
-      roomId: 'room-living-room',
-      transform: {
-        position: [3.0, 1.1, 0],
-        rotation: [0, -90, 0],
-        scale: [1, 1, 1],
-      },
-      provenance: {
-        source: 'manual',
-        confidence: 0.9,
       },
     },
   ],
@@ -209,7 +202,7 @@ export const mockMurderScene: SceneDefinition = {
       evidenceId: 'evidence-knife-001',
       objectId: 'knife-weapon',
       roomId: 'room-living-room',
-      position: [1.05, 0.9, -0.62],
+      position: [1.05, 0.05, -0.62],
       rotation: [0, 0, 0],
       scale: [1, 1, 1],
       color: '#f59e0b',
@@ -223,7 +216,7 @@ export const mockMurderScene: SceneDefinition = {
       evidenceId: 'evidence-body-001',
       objectId: 'body-victim',
       roomId: 'room-living-room',
-      position: [0.35, 0.52, -0.2],
+      position: [-1.55, 0.25, -1.2],
       rotation: [0, 0, 0],
       scale: [1, 1, 1],
       color: '#ef4444',
@@ -233,7 +226,7 @@ export const mockMurderScene: SceneDefinition = {
     },
   ],
   camera: {
-    position: [8, 6, 8],
+    position: [8, 12, 8],
     target: [0, 0, 0],
     fov: 50,
     near: 0.1,
@@ -242,7 +235,7 @@ export const mockMurderScene: SceneDefinition = {
   metadata: {
     synthetic: true,
     purpose: 'phase-1-2-schema-demo',
-    notes: 'This fixture is intentionally synthetic and not a forensic reconstruction.',
+    notes: 'This fixture is intentionally synthetic and not a forensic reconstruction. GLB bounds were read from the included model metadata; model origins remain asset-local and are not normalized at load time.',
   },
 };
 

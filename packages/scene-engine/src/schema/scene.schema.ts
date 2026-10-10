@@ -23,6 +23,7 @@ const roomSchema = z.object({
   name: z.string().min(1),
   type: z.string().min(1),
   parentId: z.string().min(1).optional(),
+  position: vector3Schema.optional(),
   dimensions: z
     .object({
       width: z.number().finite().positive().optional(),
@@ -139,6 +140,19 @@ export const sceneSchema = z.object({
   const roomIds = new Set(scene.environment.rooms.map((room) => room.id));
   const objectIds = new Set(scene.objects.map((object) => object.id));
   const markerIds = new Set(scene.evidenceMarkers.map((marker) => marker.id));
+  const renderableIds = new Set<string>();
+
+  const registerRenderableId = (id: string, path: (string | number)[]) => {
+    if (renderableIds.has(id)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path,
+        message: `Scene element ID "${id}" must be unique across objects, structural placements, and evidence markers.`,
+      });
+      return;
+    }
+    renderableIds.add(id);
+  };
 
   if (new Set(scene.environment.rooms.map((room) => room.id)).size !== scene.environment.rooms.length) {
     ctx.addIssue({
@@ -155,6 +169,7 @@ export const sceneSchema = z.object({
       message: 'Object IDs must be unique.',
     });
   }
+  scene.objects.forEach((object, index) => registerRenderableId(object.id, ['objects', index, 'id']));
 
   if (markerIds.size !== scene.evidenceMarkers.length) {
     ctx.addIssue({
@@ -163,6 +178,20 @@ export const sceneSchema = z.object({
       message: 'Evidence marker IDs must be unique.',
     });
   }
+  scene.evidenceMarkers.forEach((marker, index) =>
+    registerRenderableId(marker.id, ['evidenceMarkers', index, 'id']),
+  );
+
+  scene.environment.rooms.forEach((room, roomIndex) => {
+    for (const layoutKey of ['floorTiles', 'walls', 'doors', 'windows'] as const) {
+      room.structural?.[layoutKey]?.forEach((placement, placementIndex) => {
+        registerRenderableId(
+          placement.id,
+          ['environment', 'rooms', roomIndex, 'structural', layoutKey, placementIndex, 'id'],
+        );
+      });
+    }
+  });
 
   for (const room of scene.environment.rooms) {
     if (room.parentId && !roomIds.has(room.parentId)) {

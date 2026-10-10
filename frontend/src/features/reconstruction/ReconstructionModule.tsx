@@ -14,6 +14,11 @@ import { SceneObjectPanel } from './SceneObjectPanel';
 import { SchematicSceneView } from './SchematicSceneView';
 
 const PLAYBACK_MS = 2500;
+const CrimeSceneDemo = React.lazy(() =>
+  import('@/features/crime-scene/CrimeSceneDemo').then((module) => ({
+    default: module.CrimeSceneDemo,
+  })),
+);
 
 /**
  * Reconstruction scenarios and their stages. The active scenario, stage and scene object
@@ -27,6 +32,7 @@ export const ReconstructionModule: React.FC<{ workspace: CaseWorkspace }> = ({ w
   const [mode, setMode] = useState<'stages' | 'compare'>('stages');
   const [dialog, setDialog] = useState<'scenario' | 'stage' | null>(null);
   const [playing, setPlaying] = useState(false);
+  const [viewerKind, setViewerKind] = useState<'stage' | 'demo'>('demo');
 
   const scenarios = listQuery.data ?? [];
   const detail = detailQuery.data?.case_id === caseId ? detailQuery.data : undefined;
@@ -183,14 +189,46 @@ export const ReconstructionModule: React.FC<{ workspace: CaseWorkspace }> = ({ w
 
               {stage && (
                 <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 items-start">
-                  {/* Scene host: the 3D track's viewer mounts here (see sceneViewer.ts). */}
-                  <div className="xl:col-span-2 h-[460px] rounded-2xl overflow-hidden border border-slate-800">
-                    <SchematicSceneView
-                      reconstruction={detail}
-                      stageId={stage.id}
-                      selectedSceneObjectId={sceneObjectId}
-                      onSelectSceneObject={selectSceneObject}
-                    />
+                  <div className="xl:col-span-2 rounded-2xl overflow-hidden border border-slate-800 bg-slate-950">
+                    <div className="flex items-center justify-between gap-3 px-3 py-2 border-b border-slate-800">
+                      <span className="text-xs text-slate-300">
+                        {viewerKind === 'demo' ? '3D engine preview · synthetic scene' : `${stage.label} · stage schematic`}
+                      </span>
+                      <div className="flex gap-1" aria-label="Scene viewer mode">
+                        <button
+                          type="button"
+                          aria-pressed={viewerKind === 'demo'}
+                          onClick={() => setViewerKind('demo')}
+                          className={`px-2 py-1 rounded-md text-[11px] ${viewerKind === 'demo' ? 'bg-cyan-500/20 text-cyan-200' : 'text-slate-400 hover:text-slate-200'}`}
+                        >
+                          3D demo
+                        </button>
+                        <button
+                          type="button"
+                          aria-pressed={viewerKind === 'stage'}
+                          onClick={() => setViewerKind('stage')}
+                          className={`px-2 py-1 rounded-md text-[11px] ${viewerKind === 'stage' ? 'bg-cyan-500/20 text-cyan-200' : 'text-slate-400 hover:text-slate-200'}`}
+                        >
+                          Stage schematic
+                        </button>
+                      </div>
+                    </div>
+                    <div className="h-[460px]">
+                      {viewerKind === 'demo' ? (
+                        <React.Suspense
+                          fallback={<div className="p-4 text-xs text-slate-400">Loading 3D scene…</div>}
+                        >
+                          <CrimeSceneDemo />
+                        </React.Suspense>
+                      ) : (
+                        <SchematicSceneView
+                          reconstruction={detail}
+                          stageId={stage.id}
+                          selectedSceneObjectId={sceneObjectId}
+                          onSelectSceneObject={selectSceneObject}
+                        />
+                      )}
+                    </div>
                   </div>
                   <div className="space-y-4">
                     {sceneObject && <SceneObjectPanel workspace={workspace} sceneObject={sceneObject} onClose={() => selectSceneObject(null)} />}
