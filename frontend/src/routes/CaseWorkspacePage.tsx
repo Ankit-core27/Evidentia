@@ -11,6 +11,8 @@ import { CaseWorkspaceBanner } from '@/features/case-management/CaseWorkspaceBan
 import { PeopleModule } from '@/features/case-management/PeopleModule';
 import { PersonsModule } from '@/features/case-management/PersonsModule';
 import { CaseSettings } from '@/features/case-management/CaseSettings';
+import { SettingsModule } from '@/features/case-management/SettingsModule';
+import { EvidenceModule } from '@/features/evidence-management/EvidenceModule';
 import { CaseEvidenceModule } from '@/features/evidence-management/CaseEvidenceModule';
 import { CanvasModule } from '@/features/evidence-canvas/CanvasModule';
 import { TimelineModule } from '@/features/incident-timeline/TimelineModule';
@@ -58,15 +60,13 @@ const CaseNotFound: React.FC<{ caseId: string | undefined }> = ({ caseId }) => (
 
 /** Which task in docs/FRONTEND_TASKS.md wires each module to the API. */
 const PENDING_MODULES: Partial<Record<CaseModule, string>> = {
-  evidence: 'T5',
   review: 'T7',
   canvas: 'T8',
   timeline: 'T9',
   reconstruction: 'T10',
   autopsy: 'T13',
   copilot: 'T6',
-  reports: 'T11',
-  settings: 'T5 and T11'
+  reports: 'T11'
 };
 
 const kept = <T extends { review_status: string }>(rows: T[]) => rows.filter((r) => r.review_status !== 'rejected');
@@ -113,7 +113,9 @@ const CaseWorkspace: React.FC<{ caseId: number; activeModule: CaseModule }> = ({
       <main className="flex-1 p-4 lg:p-6 overflow-y-auto space-y-6 min-w-0">
         <CaseWorkspaceBanner workspace={workspace} />
         {activeModule === 'overview' && <CaseSummary workspace={workspace} />}
+        {activeModule === 'evidence' && <EvidenceModule caseId={c.id} />}
         {activeModule === 'people' && <PeopleModule workspace={workspace} />}
+        {activeModule === 'settings' && <SettingsModule caseId={c.id} />}
         {pendingTask && <NotWiredYet module={caseModuleLabel(activeModule)} task={pendingTask} />}
       </main>
     </div>

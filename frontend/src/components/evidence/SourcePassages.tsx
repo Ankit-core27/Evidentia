@@ -8,7 +8,7 @@ interface SourcePassagesProps {
   targetType: RecordType;
   targetId: Id;
   /** Opens the evidence at the passage. */
-  onOpenEvidence?: (evidenceId: Id) => void;
+  onOpenEvidence?: (evidenceId: Id, passage: string | null) => void;
 }
 
 /** The evidence passages a record came from (evidence_links), quoted with their source file. */
@@ -31,7 +31,7 @@ export const SourcePassages: React.FC<SourcePassagesProps> = ({ links, evidence,
         return onOpenEvidence ? (
           <button
             key={link.id}
-            onClick={() => onOpenEvidence(link.evidence_id)}
+            onClick={() => onOpenEvidence(link.evidence_id, link.passage)}
             className="w-full text-left flex gap-1.5 text-[11px] p-1.5 rounded-lg bg-slate-900/60 border border-slate-800 hover:border-cyan-500/40"
           >
             {body}

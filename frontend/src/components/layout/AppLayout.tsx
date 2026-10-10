@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Outlet, ScrollRestoration, useMatch, useOutletContext } from 'react-router-dom';
 import { Header } from './Header';
 import { CreateCaseModal } from '@/components/cases/CreateCaseModal';
+import { EvidenceInspector } from '@/components/evidence/EvidenceInspector';
 import { EvidencePreviewModal } from '@/components/evidence/EvidencePreviewModal';
 import { MockModeBanner } from '@/components/shared/MockModeBanner';
 import { mockCases } from '@/data/mockData';
@@ -55,7 +56,10 @@ export const AppLayout: React.FC = () => {
       {/* "+ Create Case" Pop-up Modal */}
       <CreateCaseModal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} />
 
-      {/* Evidence Preview Modal */}
+      {/* Evidence inspector, opened by ?evidence=<id> from anywhere */}
+      <EvidenceInspector />
+
+      {/* The UI draft's preview, for draft mock cases only */}
       <EvidencePreviewModal
         evidence={previewEvidence}
         onClose={() => setPreviewEvidence(null)}
