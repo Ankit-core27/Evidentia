@@ -11,6 +11,7 @@ import { useObservations } from '@/hooks/useReview';
 import { fileUrl } from '@/lib/api';
 import { casePath } from '@/lib/caseModules';
 import { recordLabel } from '@/lib/recordNames';
+import { AUDIT_ACTION_STYLES, describeAuditDetail } from '@/lib/audit';
 import { formatBytes, formatDateTime, humanize } from '@/lib/format';
 import { EVIDENCE_TYPES } from '@/lib/options';
 import { CaseModule } from '@/types';
@@ -363,29 +364,6 @@ const LinkedRecords: React.FC<{ evidence: EvidenceDetail }> = ({ evidence }) => 
 
 // ---------------------------------------------------------------------------
 
-const describeDetail = (entry: AuditEntry): string => {
-  const detail = entry.detail;
-  if (!detail) return '';
-  return Object.entries(detail)
-    .map(([key, value]) => {
-      if (value && typeof value === 'object' && 'before' in value && 'after' in value) {
-        const v = value as { before: unknown; after: unknown };
-        return `${humanize(key)}: ${String(v.before ?? '—')} → ${String(v.after ?? '—')}`;
-      }
-      if (key === 'sha256') return `SHA-256 ${String(value).slice(0, 12)}…`;
-      return `${humanize(key)}: ${typeof value === 'object' ? JSON.stringify(value) : String(value)}`;
-    })
-    .join(' • ');
-};
-
-const ACTION_STYLES: Record<AuditEntry['action'], string> = {
-  uploaded: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30',
-  viewed: 'bg-slate-800 text-slate-300 border-slate-700',
-  modified: 'bg-amber-500/10 text-amber-300 border-amber-500/30',
-  reviewed: 'bg-purple-500/10 text-purple-300 border-purple-500/30',
-  exported: 'bg-cyan-500/10 text-cyan-300 border-cyan-500/30'
-};
-
 const CustodyLedger: React.FC<{ entries: AuditEntry[] }> = ({ entries }) => {
   if (!entries.length) return <p className="text-xs text-slate-500">No custody entries.</p>;
   const sorted = [...entries].sort((a, b) => a.at.localeCompare(b.at));
@@ -393,7 +371,7 @@ const CustodyLedger: React.FC<{ entries: AuditEntry[] }> = ({ entries }) => {
     <ol className="space-y-2">
       {sorted.map((entry) => (
         <li key={entry.id} className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs flex gap-3">
-          <span className={`px-2 py-0.5 h-fit rounded text-[10px] font-bold border ${ACTION_STYLES[entry.action]}`}>
+          <span className={`px-2 py-0.5 h-fit rounded text-[10px] font-bold border ${AUDIT_ACTION_STYLES[entry.action]}`}>
             {humanize(entry.action)}
           </span>
           <div className="flex-1 min-w-0">
@@ -401,7 +379,7 @@ const CustodyLedger: React.FC<{ entries: AuditEntry[] }> = ({ entries }) => {
               <span className="text-slate-200 font-bold">{entry.actor_name ?? 'Unknown investigator'}</span>
               <span className="text-[10px] text-slate-500 shrink-0">{formatDateTime(entry.at)}</span>
             </div>
-            {entry.detail && <p className="text-[11px] text-slate-400 mt-0.5 break-words">{describeDetail(entry)}</p>}
+            {entry.detail && <p className="text-[11px] text-slate-400 mt-0.5 break-words">{describeAuditDetail(entry)}</p>}
           </div>
         </li>
       ))}

@@ -1,1 +1,31 @@
 @import "tailwindcss";
+
+/* Report export is the browser's print of the report's print copy (features/reports/ReportBuilder). */
+.print-root {
+  display: none;
+}
+
+@media print {
+  @page {
+    margin: 14mm;
+  }
+  html,
+  body {
+    background: white !important;
+  }
+  body > #root {
+    display: none !important;
+  }
+  .print-root {
+    display: block;
+  }
+  .print-report {
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+  }
+  .print-report tr,
+  .print-report li {
+    break-inside: avoid;
+  }
+}

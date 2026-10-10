@@ -1,14 +1,15 @@
 import React from 'react';
 import { AlertTriangle, Loader2, Settings as SettingsIcon, ShieldCheck } from 'lucide-react';
-import { NotWiredYet } from '@/components/shared/NotWiredYet';
 import { primaryButtonClass } from '@/components/shared/formStyles';
 import { useVerifyCase } from '@/hooks/useEvidence';
 import { useEvidenceInspector } from '@/hooks/useEvidenceInspector';
 import { formatDateTime } from '@/lib/format';
-import { Id } from '@/types/api';
+import { CaseWorkspace } from '@/types/api';
+import { AuditTrail } from './AuditTrail';
 
-/** Case settings: the file integrity check (POST /api/cases/{id}/verify); the audit trail arrives in T11. */
-export const SettingsModule: React.FC<{ caseId: Id }> = ({ caseId }) => {
+/** Case settings: the file integrity check (POST /api/cases/{id}/verify) and the case audit trail. */
+export const SettingsModule: React.FC<{ workspace: CaseWorkspace }> = ({ workspace }) => {
+  const caseId = workspace.case.id;
   const verify = useVerifyCase(caseId);
   const { open } = useEvidenceInspector();
   const result = verify.data;
@@ -68,7 +69,7 @@ export const SettingsModule: React.FC<{ caseId: Id }> = ({ caseId }) => {
         )}
       </section>
 
-      <NotWiredYet module="The case audit trail" task="T11" />
+      <AuditTrail workspace={workspace} />
     </div>
   );
 };
