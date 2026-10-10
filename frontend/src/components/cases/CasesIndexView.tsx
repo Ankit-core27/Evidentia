@@ -15,7 +15,7 @@ import {
   ChevronRight,
   Flame
 } from 'lucide-react';
-import { ForensicCase, CaseStatus, CasePriority } from '../types';
+import { ForensicCase, CaseStatus, CasePriority } from '@/types';
 
 interface CasesIndexViewProps {
   cases: ForensicCase[];

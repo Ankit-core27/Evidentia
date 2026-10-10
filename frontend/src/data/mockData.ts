@@ -4,7 +4,7 @@ import {
   IncidentMapPoint,
   SystemAlert,
   EvidenceItem
-} from '../types';
+} from '@/types';
 
 export const mockInvestigators: Investigator[] = [
   {

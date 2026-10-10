@@ -1,6 +1,0 @@
-{
-  "name": "AI Forensic Investigation Suite",
-  "description": "Professional dark-mode high-tech forensic suite for digital evidence analysis, autopsy 3D breakdown, relationship graphs, and case management.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}

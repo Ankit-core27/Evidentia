@@ -9,7 +9,7 @@ import {
   CheckCircle2,
   Filter
 } from 'lucide-react';
-import { NetworkNode, NetworkLink } from '../types';
+import { NetworkNode, NetworkLink } from '@/types';
 
 interface NetworkGraphViewerProps {
   nodes: NetworkNode[];

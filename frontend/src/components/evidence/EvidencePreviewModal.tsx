@@ -14,7 +14,7 @@ import {
   Sliders,
   CheckCircle2
 } from 'lucide-react';
-import { EvidenceItem } from '../types';
+import { EvidenceItem } from '@/types';
 
 interface EvidencePreviewModalProps {
   evidence: EvidenceItem | null;

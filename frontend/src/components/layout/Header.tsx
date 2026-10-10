@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
 import {
   Search,
   Bell,
@@ -15,81 +16,46 @@ import {
   ArrowLeft,
   ChevronDown
 } from 'lucide-react';
-import { SystemAlert, ForensicCase, CaseModule } from '../types';
+import { SystemAlert, ForensicCase, CaseModule } from '@/types';
+import { caseModuleLabel, casePath } from '@/lib/caseModules';
 
 interface HeaderProps {
-  macroView: 'dashboard' | 'cases' | 'evidence' | 'reports';
-  onMacroViewChange: (view: 'dashboard' | 'cases' | 'evidence' | 'reports') => void;
   activeCase: ForensicCase | null;
   activeModule: CaseModule;
-  onExitCaseWorkspace: () => void;
   searchTerm: string;
   onSearchChange: (term: string) => void;
   onOpenCreateModal: () => void;
   alerts: SystemAlert[];
   allCases: ForensicCase[];
-  onSelectCase: (caseId: string) => void;
 }
 
+const MACRO_TABS = [
+  { to: '/', label: 'Home', icon: LayoutDashboard },
+  { to: '/cases', label: 'Cases Directory', icon: FolderKanban },
+  { to: '/evidence', label: 'Global Evidence', icon: Fingerprint },
+  { to: '/reports', label: 'Intelligence Hub', icon: Cpu }
+];
+
 export const Header: React.FC<HeaderProps> = ({
-  macroView,
-  onMacroViewChange,
   activeCase,
   activeModule,
-  onExitCaseWorkspace,
   searchTerm,
   onSearchChange,
   onOpenCreateModal,
   alerts,
-  allCases,
-  onSelectCase
+  allCases
 }) => {
+  const navigate = useNavigate();
   const [showAlertsMenu, setShowAlertsMenu] = useState(false);
   const [showCaseSelector, setShowCaseSelector] = useState(false);
-
-  const getModuleName = (moduleKey: CaseModule) => {
-    switch (moduleKey) {
-      case 'overview':
-        return 'Overview';
-      case 'evidence':
-        return 'Evidence Locker';
-      case 'canvas':
-        return 'Investigation Canvas';
-      case 'timeline':
-        return 'Timeline Chronology';
-      case 'cctv':
-        return 'CCTV Analysis';
-      case 'autopsy':
-        return 'Autopsy Findings';
-      case 'crimescene':
-        return 'Crime Scene Spatial';
-      case 'phonerecords':
-        return 'Phone Records & CDR';
-      case 'gps':
-        return 'GPS & Telemetry';
-      case 'witnesses':
-        return 'Witnesses & POIs';
-      case 'copilot':
-        return 'AI Forensic Copilot';
-      case 'reports':
-        return 'Official Dossiers';
-      case 'settings':
-        return 'Case Settings';
-      default:
-        return 'Overview';
-    }
-  };
 
   return (
     <header className="h-16 border-b border-slate-800 bg-slate-950/95 backdrop-blur-xl px-4 lg:px-6 flex items-center justify-between sticky top-0 z-40 font-mono">
       {/* LEFT SECTION: Logo or Workspace Breadcrumb */}
       <div className="flex items-center gap-4 lg:gap-6 shrink-0">
         {/* Brand Logo */}
-        <button
-          onClick={() => {
-            onExitCaseWorkspace();
-            onMacroViewChange('dashboard');
-          }}
+        <Link
+          to="/"
           className="flex items-center gap-2.5 hover:opacity-90 transition-opacity focus:outline-none"
         >
           <div className="w-8 h-8 rounded bg-cyan-600 text-white flex items-center justify-center font-bold shadow-[0_0_15px_rgba(8,145,178,0.4)]">
@@ -99,11 +65,8 @@ export const Header: React.FC<HeaderProps> = ({
             <span className="font-bold text-sm text-slate-100 tracking-wider uppercase font-mono leading-tight">
               FORENSIX
             </span>
-            <span className="text-[9px] text-cyan-400 tracking-widest uppercase font-mono">
-              AI FORUM v5.0
-            </span>
           </div>
-        </button>
+        </Link>
 
         {/* Separator */}
         <div className="h-6 w-px bg-slate-800 hidden md:block"></div>
@@ -112,13 +75,13 @@ export const Header: React.FC<HeaderProps> = ({
         {activeCase ? (
           /* Case Workspace Breadcrumbs */
           <div className="flex items-center gap-2 text-xs font-mono">
-            <button
-              onClick={onExitCaseWorkspace}
+            <Link
+              to="/cases"
               className="text-slate-400 hover:text-cyan-300 transition-colors flex items-center gap-1"
             >
               <LayoutDashboard className="w-3.5 h-3.5" />
               <span>Cases</span>
-            </button>
+            </Link>
 
             <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
 
@@ -142,7 +105,7 @@ export const Header: React.FC<HeaderProps> = ({
                       <button
                         key={c.id}
                         onClick={() => {
-                          onSelectCase(c.id);
+                          navigate(casePath(c.id));
                           setShowCaseSelector(false);
                         }}
                         className={`w-full text-left p-2 rounded-lg text-xs font-mono transition-colors flex items-center justify-between ${
@@ -163,33 +126,30 @@ export const Header: React.FC<HeaderProps> = ({
             <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
 
             <span className="text-slate-200 font-bold px-2 py-1 rounded bg-slate-900 border border-slate-800 text-xs">
-              {getModuleName(activeModule)}
+              {caseModuleLabel(activeModule)}
             </span>
           </div>
         ) : (
           /* Top Navigation Bar Tabs for Macro Agency Views */
           <nav className="hidden md:flex items-center gap-1 text-xs font-mono">
-            {[
-              { id: 'dashboard', label: 'Home', icon: LayoutDashboard },
-              { id: 'cases', label: 'Cases Directory', icon: FolderKanban },
-              { id: 'evidence', label: 'Global Evidence', icon: Fingerprint },
-              { id: 'reports', label: 'Intelligence Hub', icon: Cpu }
-            ].map((tab) => {
+            {MACRO_TABS.map((tab) => {
               const Icon = tab.icon;
-              const isActive = macroView === tab.id;
               return (
-                <button
-                  key={tab.id}
-                  onClick={() => onMacroViewChange(tab.id as any)}
-                  className={`px-3 py-1.5 rounded-lg flex items-center gap-2 transition-all ${
-                    isActive
-                      ? 'bg-slate-800 text-cyan-400 border border-slate-700 font-bold shadow-[0_0_12px_rgba(6,182,212,0.15)]'
-                      : 'text-slate-400 hover:text-slate-100 hover:bg-slate-900'
-                  }`}
+                <NavLink
+                  key={tab.to}
+                  to={tab.to}
+                  end={tab.to === '/'}
+                  className={({ isActive }) =>
+                    `px-3 py-1.5 rounded-lg flex items-center gap-2 transition-all ${
+                      isActive
+                        ? 'bg-slate-800 text-cyan-400 border border-slate-700 font-bold shadow-[0_0_12px_rgba(6,182,212,0.15)]'
+                        : 'text-slate-400 hover:text-slate-100 hover:bg-slate-900'
+                    }`
+                  }
                 >
                   <Icon className="w-3.5 h-3.5" />
                   <span>{tab.label}</span>
-                </button>
+                </NavLink>
               );
             })}
           </nav>
@@ -273,7 +233,7 @@ export const Header: React.FC<HeaderProps> = ({
                   <div
                     key={alert.id}
                     onClick={() => {
-                      onSelectCase(alert.caseId);
+                      navigate(casePath(alert.caseId));
                       setShowAlertsMenu(false);
                     }}
                     className="p-2.5 rounded-lg bg-slate-950/60 border border-slate-800 hover:border-cyan-500/50 cursor-pointer transition-all group"

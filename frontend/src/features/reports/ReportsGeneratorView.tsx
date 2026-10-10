@@ -11,7 +11,7 @@ import {
   UserCheck,
   Calendar
 } from 'lucide-react';
-import { ForensicCase } from '../types';
+import { ForensicCase } from '@/types';
 
 interface ReportsGeneratorViewProps {
   cases: ForensicCase[];

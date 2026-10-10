@@ -10,7 +10,7 @@ import {
   Info,
   CheckCircle2
 } from 'lucide-react';
-import { AnatomicalInjury } from '../types';
+import { AnatomicalInjury } from '@/types';
 
 interface AnatomicalViewerProps {
   injuries: AnatomicalInjury[];

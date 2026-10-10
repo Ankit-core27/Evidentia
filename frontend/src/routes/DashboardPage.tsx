@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   FolderKanban,
   Activity,
@@ -19,25 +20,19 @@ import {
   SlidersHorizontal,
   ChevronRight
 } from 'lucide-react';
-import { ForensicCase, IncidentMapPoint, SystemAlert, Investigator } from '../types';
+import { IncidentMapPoint } from '@/types';
+import { useAppContext } from '@/components/layout/AppLayout';
+import { mockInvestigators, mockMapIncidents, mockSystemAlerts } from '@/data/mockData';
+import { casePath } from '@/lib/caseModules';
 
-interface DashboardViewProps {
-  cases: ForensicCase[];
-  mapPoints: IncidentMapPoint[];
-  alerts: SystemAlert[];
-  investigators: Investigator[];
-  onSelectCase: (caseId: string) => void;
-  onOpenCreateModal: () => void;
-}
+export const DashboardPage: React.FC = () => {
+  const navigate = useNavigate();
+  const { cases, openCreateCaseModal: onOpenCreateModal } = useAppContext();
+  const mapPoints = mockMapIncidents;
+  const alerts = mockSystemAlerts;
+  const investigators = mockInvestigators;
+  const onSelectCase = (caseId: string) => navigate(casePath(caseId));
 
-export const DashboardView: React.FC<DashboardViewProps> = ({
-  cases,
-  mapPoints,
-  alerts,
-  investigators,
-  onSelectCase,
-  onOpenCreateModal
-}) => {
   const [mapTypeFilter, setMapTypeFilter] = useState<string>('All');
   const [selectedMapPoint, setSelectedMapPoint] = useState<IncidentMapPoint | null>(mapPoints[0] || null);
 

@@ -16,7 +16,7 @@ import {
   ArrowRight,
   ArrowLeft
 } from 'lucide-react';
-import { ForensicCase, Investigator, PersonOfInterest, CasePriority } from '../types';
+import { ForensicCase, Investigator, PersonOfInterest, CasePriority } from '@/types';
 
 interface CreateCaseModalProps {
   isOpen: boolean;

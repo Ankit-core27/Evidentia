@@ -1,62 +1,37 @@
 import React from 'react';
-import {
-  LayoutDashboard,
-  FolderKanban,
-  Share2,
-  Clock,
-  Video,
-  Activity,
-  Box,
-  PhoneCall,
-  Navigation,
-  Users,
-  Bot,
-  FileSpreadsheet,
-  Settings,
-  ChevronLeft
-} from 'lucide-react';
-import { CaseModule, ForensicCase } from '../types';
+import { Link } from 'react-router-dom';
+import { ChevronLeft } from 'lucide-react';
+import { CaseModule, ForensicCase } from '@/types';
+import { CASE_MODULES, casePath } from '@/lib/caseModules';
 
 interface CaseWorkspaceSidebarProps {
   activeCase: ForensicCase;
   activeModule: CaseModule;
-  onSelectModule: (module: CaseModule) => void;
-  onExitWorkspace: () => void;
 }
 
 export const CaseWorkspaceSidebar: React.FC<CaseWorkspaceSidebarProps> = ({
   activeCase,
-  activeModule,
-  onSelectModule,
-  onExitWorkspace
+  activeModule
 }) => {
-  const modulesList: { id: CaseModule; label: string; icon: React.ElementType; badge?: string | number }[] = [
-    { id: 'overview', label: 'Overview', icon: LayoutDashboard },
-    { id: 'evidence', label: 'Evidence Locker', icon: FolderKanban, badge: activeCase.evidenceList.length || activeCase.evidenceCount },
-    { id: 'canvas', label: 'Investigation Canvas', icon: Share2 },
-    { id: 'timeline', label: 'Timeline Chronology', icon: Clock, badge: activeCase.timeline.length },
-    { id: 'cctv', label: 'CCTV Analysis', icon: Video, badge: activeCase.cctvMatches?.length || 2 },
-    { id: 'autopsy', label: 'Autopsy & Medical', icon: Activity },
-    { id: 'crimescene', label: 'Crime Scene Spatial', icon: Box },
-    { id: 'phonerecords', label: 'Phone Records & CDR', icon: PhoneCall, badge: activeCase.phoneRecords?.length || 2 },
-    { id: 'gps', label: 'GPS Telemetry', icon: Navigation },
-    { id: 'witnesses', label: 'Witnesses & POIs', icon: Users, badge: activeCase.personsOfInterest.length },
-    { id: 'copilot', label: 'AI Copilot', icon: Bot, badge: 'AI' },
-    { id: 'reports', label: 'Dossier Reports', icon: FileSpreadsheet },
-    { id: 'settings', label: 'Case Settings', icon: Settings }
-  ];
+  const badges: Partial<Record<CaseModule, string | number>> = {
+    evidence: activeCase.evidenceList.length || activeCase.evidenceCount,
+    timeline: activeCase.timeline.length,
+    witnesses: activeCase.personsOfInterest.length,
+    copilot: 'AI'
+  };
+  const modulesList = CASE_MODULES.map((m) => ({ ...m, badge: badges[m.id] }));
 
   return (
     <aside className="w-64 shrink-0 bg-slate-950 border-r border-slate-800 flex flex-col h-[calc(100vh-4rem)] sticky top-16 z-30 font-mono select-none">
       {/* Top Case ID & Return Bar */}
       <div className="p-3 border-b border-slate-800 bg-slate-900/60">
-        <button
-          onClick={onExitWorkspace}
+        <Link
+          to="/cases"
           className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-cyan-300 text-xs flex items-center gap-2 transition-all mb-2"
         >
           <ChevronLeft className="w-3.5 h-3.5 text-cyan-400" />
           <span>Exit to Cases Directory</span>
-        </button>
+        </Link>
 
         <div className="px-2 py-1.5 rounded-xl bg-slate-950 border border-slate-800/80">
           <div className="flex items-center justify-between">
@@ -87,9 +62,9 @@ export const CaseWorkspaceSidebar: React.FC<CaseWorkspaceSidebarProps> = ({
           const isActive = activeModule === m.id;
 
           return (
-            <button
+            <Link
               key={m.id}
-              onClick={() => onSelectModule(m.id)}
+              to={casePath(activeCase.id, m.id)}
               className={`w-full px-3 py-2 rounded-xl text-xs font-medium flex items-center justify-between transition-all group ${
                 isActive
                   ? 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/40 font-bold shadow-[0_0_12px_rgba(6,182,212,0.15)]'
@@ -118,7 +93,7 @@ export const CaseWorkspaceSidebar: React.FC<CaseWorkspaceSidebarProps> = ({
                   {m.badge}
                 </span>
               )}
-            </button>
+            </Link>
           );
         })}
       </nav>

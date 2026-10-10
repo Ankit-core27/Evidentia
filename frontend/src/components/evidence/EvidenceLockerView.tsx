@@ -14,7 +14,7 @@ import {
   Download,
   ExternalLink
 } from 'lucide-react';
-import { EvidenceItem } from '../types';
+import { EvidenceItem } from '@/types';
 
 interface EvidenceLockerViewProps {
   evidenceList: EvidenceItem[];
