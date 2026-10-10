@@ -1,0 +1,20 @@
+# Secrets and local data (see AGENTS.md)
+.env
+!.env.example
+storage/
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Node (frontend/.gitignore has the rest)
+node_modules/
+
+# Blender sources; commit GLB exports only
+*.blend
+*.blend1
+
+.DS_Store
