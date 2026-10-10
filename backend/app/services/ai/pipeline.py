@@ -8,9 +8,10 @@ It opens its own session, because the request's session is closed by then.
 The evidence goes to "processing", then its text is extracted (extract.py),
 indexed (services/search/indexing.py) and structured into proposals
 (structure.py), and it finishes as "done". Any error marks it "failed", with the
-reason in its summary. Without GEMINI_API_KEY it extracts what can be read
+reason in its summary. After that, the case's observations are checked for
+conflicts (conflicts.py). Without GEMINI_API_KEY it extracts what can be read
 locally (PDF text layers, Word, plain text), indexes it and finishes without a
-summary or proposals.
+summary, proposals or conflict check.
 """
 
 import logging
@@ -21,6 +22,7 @@ from app.core.db import SessionLocal
 from app.models import Evidence
 from app.models.base import utcnow
 from app.services.ai import client
+from app.services.ai.conflicts import check_case_conflicts
 from app.services.ai.extract import extract_text
 from app.services.ai.passages import ChunkFinder, relink_passages
 from app.services.ai.structure import structure_evidence
@@ -72,6 +74,8 @@ def _process(db: Session, evidence: Evidence) -> None:
     evidence.processing_status = "done"
     evidence.processed_at = utcnow()
     db.commit()
+
+    check_case_conflicts(db, evidence.case_id)
 
 
 def _reason(exc: Exception) -> str:
