@@ -46,6 +46,7 @@ PLAN.md doesn't pin these down. The frontend builds against the defaults below; 
 | Timestamps | Cases carry `created_at` and `updated_at`; evidence carries `created_at` (upload time, separate from `collected_at`) |
 | Deletes | Deleting a person, object or location also deletes the relationships that point at it |
 | Report history | Needs a new route, `GET /cases/{id}/reports`, to list a case's stored reports |
+| Injury review | Needs a new route, `PATCH /injuries/{id}`: injuries carry `review_status` like the other AI-proposed tables, but the contract had no way to confirm or reject them |
 | Event and injury titles | Neither table has a title. The timeline shows the first line of `description`; injury markers are placed from `body_region` |
 
 ## Phase 1: Foundation
