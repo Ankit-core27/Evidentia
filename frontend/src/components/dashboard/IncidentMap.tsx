@@ -1,7 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowUpRight, MapPin } from 'lucide-react';
 import { PriorityBadge } from '@/components/shared/Badges';
+import { FilterChips } from '@/components/shared/Segmented';
+import { SectionHeader } from '@/components/shared/PageHeader';
+import { secondaryButtonClass } from '@/components/shared/formStyles';
 import { casePath } from '@/lib/caseModules';
 import { formatDateTime, humanize } from '@/lib/format';
 import { CasePriority, Id, IncidentPoint, IncidentType } from '@/types/api';
@@ -12,11 +14,20 @@ const PAD = 48;
 const KM_PER_DEGREE = 111.32;
 
 const PRIORITY_FILL: Record<CasePriority, string> = {
-  critical: '#ef4444',
-  high: '#f59e0b',
-  medium: '#22d3ee',
-  low: '#94a3b8'
+  critical: 'fill-danger',
+  high: 'fill-warn',
+  medium: 'fill-info',
+  low: 'fill-ink-muted'
 };
+
+const PRIORITY_HALO: Record<CasePriority, string> = {
+  critical: 'fill-danger/15',
+  high: 'fill-warn/15',
+  medium: 'fill-info/15',
+  low: 'fill-ink-muted/15'
+};
+
+const PRIORITY_LEGEND: CasePriority[] = ['critical', 'high', 'medium', 'low'];
 
 /**
  * Equirectangular projection of the incident sites into the panel, scaled to fit all of
@@ -67,41 +78,29 @@ export const IncidentMap: React.FC<{ points: IncidentPoint[] }> = ({ points }) =
   const bar = scaleBar(projection.kmPerUnit);
   const selected = shown.find((p) => p.case_id === selectedId) ?? null;
 
-  const filterButton = (value: IncidentType | null, label: string, count: number) => (
-    <button
-      key={label}
-      onClick={() => setType(value)}
-      aria-pressed={type === value}
-      className={`px-2.5 py-1 rounded-lg whitespace-nowrap ${
-        type === value ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 font-semibold' : 'text-slate-400 hover:text-slate-200'
-      }`}
-    >
-      {label} ({count})
-    </button>
-  );
-
   return (
-    <section className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 flex flex-col" aria-label="Incident map">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-800">
-        <div>
-          <h2 className="text-sm font-mono font-bold text-slate-200 flex items-center gap-2">
-            <MapPin className="w-4 h-4 text-cyan-400" />
-            INCIDENT MAP
-          </h2>
-          <p className="text-[11px] text-slate-400 mt-0.5">Where each case's incident happened, coloured by priority.</p>
-        </div>
-        {types.length > 0 && (
-          <div className="flex flex-wrap items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 text-[11px] font-mono" role="group" aria-label="Filter by incident type">
-            {filterButton(null, 'All', points.length)}
-            {types.map(([t, n]) => filterButton(t, humanize(t), n))}
-          </div>
-        )}
-      </div>
+    <section className="space-y-2" aria-label="Incident map">
+      <SectionHeader
+        title="Incident sites"
+        count={points.length}
+        as="h2"
+        action={
+          types.length > 1 && (
+            <FilterChips
+              label="Filter by incident type"
+              value={type ?? 'all'}
+              onChange={(v) => setType(v === 'all' ? null : (v as IncidentType))}
+              options={[{ value: 'all', label: 'All', count: points.length }, ...types.map(([t, n]) => ({ value: t, label: humanize(t), count: n }))]}
+            />
+          )
+        }
+      />
 
-      <div className="relative mt-4 h-[340px] w-full rounded-xl bg-slate-950 border border-slate-800/90 overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:16px_16px] opacity-40" />
+      <div className="relative h-[300px] lg:h-[340px] w-full rounded-md bg-well border border-line overflow-hidden">
+        {/* A plain reference grid: there is no base map yet, only true-to-scale positions. */}
+        <div className="absolute inset-0 bg-[linear-gradient(var(--color-line)_1px,transparent_1px),linear-gradient(90deg,var(--color-line)_1px,transparent_1px)] [background-size:40px_40px] opacity-50" />
         {points.length === 0 ? (
-          <p className="absolute inset-0 flex items-center justify-center text-xs text-slate-500 font-mono">No incident sites with coordinates yet.</p>
+          <p className="absolute inset-0 flex items-center justify-center text-body text-ink-muted">No incident sites with coordinates yet.</p>
         ) : (
           <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet" className="absolute inset-0 w-full h-full" data-testid="incident-map">
             {shown.map((p) => {
@@ -123,51 +122,61 @@ export const IncidentMap: React.FC<{ points: IncidentPoint[] }> = ({ points }) =
                       setSelectedId(isSelected ? null : p.case_id);
                     }
                   }}
-                  className="cursor-pointer focus:outline-none"
+                  className="group cursor-pointer outline-none"
                 >
-                  <circle r={16} fill={PRIORITY_FILL[p.priority]} opacity={0.18} />
-                  <circle r={7} fill={PRIORITY_FILL[p.priority]} stroke={isSelected ? '#e2e8f0' : '#020617'} strokeWidth={isSelected ? 3 : 2} />
-                  <text x={13} y={4} className="font-mono" fontSize={11} fill={isSelected ? '#67e8f9' : '#cbd5e1'}>
+                  <circle r={14} strokeWidth={2} className={`${PRIORITY_HALO[p.priority]} stroke-transparent group-focus-visible:stroke-accent`} />
+                  <circle r={6} className={`${PRIORITY_FILL[p.priority]} ${isSelected ? 'stroke-ink' : 'stroke-well'}`} strokeWidth={isSelected ? 2.5 : 2} />
+                  <text x={12} y={4} fontSize={11} className={`font-mono ${isSelected ? 'fill-ink' : 'fill-ink-soft'}`}>
                     {p.case_number}
                   </text>
                   <title>{`${p.case_number}: ${p.title}\n${p.address}`}</title>
                 </g>
               );
             })}
-            <g transform={`translate(${PAD / 2} ${H - PAD / 2})`} aria-label={`Scale: ${formatKm(bar.km)}`}>
-              <line x1={0} x2={bar.width} y1={0} y2={0} stroke="#64748b" strokeWidth={2} />
-              <line x1={0} x2={0} y1={-4} y2={4} stroke="#64748b" strokeWidth={2} />
-              <line x1={bar.width} x2={bar.width} y1={-4} y2={4} stroke="#64748b" strokeWidth={2} />
-              <text x={bar.width / 2} y={-8} textAnchor="middle" fontSize={10} fill="#94a3b8" className="font-mono">
+            <g transform={`translate(${PAD / 2} ${H - PAD / 2})`} aria-label={`Scale: ${formatKm(bar.km)}`} className="stroke-ink-muted">
+              <line x1={0} x2={bar.width} y1={0} y2={0} strokeWidth={1.5} />
+              <line x1={0} x2={0} y1={-4} y2={4} strokeWidth={1.5} />
+              <line x1={bar.width} x2={bar.width} y1={-4} y2={4} strokeWidth={1.5} />
+              <text x={bar.width / 2} y={-8} textAnchor="middle" fontSize={10} className="font-mono fill-ink-muted stroke-none">
                 {formatKm(bar.km)}
               </text>
             </g>
           </svg>
         )}
+        <ul className="absolute right-2 bottom-2 flex gap-3 px-2 py-1 rounded bg-well/90 text-2xs text-ink-muted" aria-label="Pin colour: priority">
+          {PRIORITY_LEGEND.map((pr) => (
+            <li key={pr} className="flex items-center gap-1">
+              <svg className="size-2" viewBox="0 0 8 8" aria-hidden>
+                <circle cx={4} cy={4} r={4} className={PRIORITY_FILL[pr]} />
+              </svg>
+              {humanize(pr)}
+            </li>
+          ))}
+        </ul>
       </div>
 
-      {selected && (
-        <div className="mt-3 bg-slate-950 border border-slate-800 rounded-xl p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3" data-testid="incident-map-selection">
+      {selected ? (
+        <div
+          className="px-3 py-2.5 rounded-md border border-line flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3"
+          data-testid="incident-map-selection"
+        >
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs font-mono font-bold text-slate-100">{selected.title}</span>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-cyan-400">{humanize(selected.incident_type)}</span>
+              <span className="text-body font-medium text-ink">{selected.title}</span>
               <PriorityBadge priority={selected.priority} />
             </div>
-            <div className="text-[11px] text-slate-400 font-mono mt-0.5">
-              {selected.case_number} · {selected.address}
+            <div className="text-xs text-ink-muted mt-0.5">
+              <span className="font-mono">{selected.case_number}</span> · {humanize(selected.incident_type)} · {selected.address}
               {selected.incident_at && ` · ${formatDateTime(selected.incident_at)}`}
             </div>
           </div>
-          <Link
-            to={casePath(selected.case_id)}
-            className="px-3 py-1.5 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-xs font-mono flex items-center gap-1 shrink-0"
-          >
-            Open case <ArrowUpRight className="w-3.5 h-3.5" />
+          <Link to={casePath(selected.case_id)} className={`${secondaryButtonClass} shrink-0`}>
+            Open case
           </Link>
         </div>
+      ) : (
+        points.length > 0 && <p className="text-xs text-ink-muted">Select a pin to see its case.</p>
       )}
-      {!selected && points.length > 0 && <p className="mt-3 text-[11px] text-slate-500 font-mono">Select a pin to see its case.</p>}
     </section>
   );
 };

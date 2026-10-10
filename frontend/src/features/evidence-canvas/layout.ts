@@ -1,8 +1,8 @@
 import dagre from '@dagrejs/dagre';
 import { GraphEdge, GraphNode } from '@/types/api';
 
-export const NODE_WIDTH = 210;
-export const NODE_HEIGHT = 64;
+export const NODE_WIDTH = 200;
+export const NODE_HEIGHT = 50;
 
 /**
  * Positions for the graph, left to right. The backend sends nodes without positions
