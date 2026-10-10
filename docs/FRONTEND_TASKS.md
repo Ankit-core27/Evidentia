@@ -89,7 +89,7 @@ Screens that aren't wired yet show a "not wired yet" placeholder inside the work
 
 Routes: `GET /investigators`, `GET /cases?q=&status=&priority=`, `POST /cases`, then `POST /cases/{id}/locations`, `/persons`, `/objects` and `/evidence`.
 
-- Header: an investigator picker that sets `X-Investigator-Id`, and a global search dropdown that calls `GET /cases?q=` as the user types and opens the chosen case.
+- Header: an investigator picker that sets `X-Investigator-Id`, a global search dropdown that calls `GET /cases?q=` as the user types and opens the chosen case, and the alerts bell on `GET /alerts` (moved up from T12, because the draft's alerts linked to cases that don't exist).
 - Cases directory: filters sent to the server; columns for case number, title, incident type, status, priority, lead, created date and evidence count.
 - Create case modal, rebuilt to save only what the officer enters:
   1. **Case:** title (validated before moving on), incident type, priority, incident date and time, lead investigator, team, description.
@@ -98,6 +98,8 @@ Routes: `GET /investigators`, `GET /cases?q=&status=&priority=`, `POST /cases`, 
 - Fixes the draft bug where the second "Next Step" click submits the form and skips step 3.
 - On submit the modal creates the case, then its location, persons, vehicles and uploads, showing progress for each. If a later step fails, the case is kept and the modal says what didn't save. It then opens the new workspace.
 
+- Workspace shell on `GET /cases/{id}/workspace`: banner with status (`PATCH`), incident details and review progress, a read-only overview of everything recorded, and a placeholder naming the task for each module not yet wired. Draft mock cases, still linked from the dashboard and global evidence pages, keep the draft workspace until T5 and T12.
+
 Done when a case created in mock mode appears in the directory and opens a workspace showing exactly what was entered.
 
 ### T4 Case workspace (`m1/frontend-workspace`)
@@ -105,8 +107,8 @@ Done when a case created in mock mode appears in the directory and opens a works
 Routes: `GET /cases/{id}/workspace`, `PATCH /cases/{id}`, `GET`/`POST /cases/{id}/persons|objects|locations`, `PATCH`/`DELETE /persons|objects|locations/{id}`.
 
 - Sidebar modules: Overview, Evidence, People & Vehicles, Review, Canvas, Timeline, Reconstruction, AI Copilot, Reports, Settings. Autopsy stays hidden until T13. Badges show real counts.
-- Banner: case number, status and priority (saved with `PATCH`), and an edit dialog for title, description, incident type and date, lead and team. The AI confidence score is removed. Progress is reviewed AI items over all AI items, hidden when there are none.
-- Overview: counts, persons by role with their condition, vehicles, incident location, and a link into the canvas. All mock strings listed in PLAN.md and the gap review go.
+- Banner: an edit dialog for title, description, incident type and date, lead and team (T3 already saves status and shows review progress).
+- Overview: builds on T3's read-only overview with links into each module and a graph preview, and deletes the draft overview and its mock strings.
 - People & Vehicles: persons, objects and locations with add, edit and delete. Rows the AI proposed show a pending badge with Confirm and Reject.
 
 Done when the overview shows only data from the workspace call and edits appear everywhere they are used.
@@ -204,7 +206,7 @@ Routes: `GET /dashboard`, `GET /alerts`. The backend schedule builds these at ho
 
 - Metric cards, status gauge and status bars from the response, including Under Review.
 - Incident map: incident lat/lng projected into the existing map panel, with type filters built from the data.
-- Alerts feed and header bell; clicking an alert opens the case at the related module.
+- Alerts feed on the dashboard (the header bell is wired in T3); clicking an alert opens the case at the related module.
 - Investigators with solved and active counts.
 - The fixed numbers (432 cases, "07", 1.2 TB, 84%, 14.2 days, "4 ON DUTY") go.
 
