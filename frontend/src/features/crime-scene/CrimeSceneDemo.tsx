@@ -1,11 +1,13 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
   CrimeSceneEngine,
   mockMultiRoomScene,
   mockMurderScene,
   mockRoadAccidentScene,
   type SceneDefinition,
+  type SceneSelection,
 } from '@forensix/scene-engine';
+import { SceneInspectionPanel } from '@/features/crime-scene/SceneInspectionPanel';
 
 const demoScenes: Record<string, SceneDefinition> = {
   murder: mockMurderScene,
@@ -13,11 +15,27 @@ const demoScenes: Record<string, SceneDefinition> = {
   road: mockRoadAccidentScene,
 };
 
-export function CrimeSceneDemo() {
+interface CrimeSceneDemoProps {
+  onEvidenceNavigate?: (evidenceId: string) => void;
+}
+
+export function CrimeSceneDemo({ onEvidenceNavigate }: CrimeSceneDemoProps) {
   const [sceneId, setSceneId] = useState('murder');
+  const [selection, setSelection] = useState<SceneSelection | null>(null);
+  const handleSelectionChange = useCallback((nextSelection: SceneSelection | null) => {
+    setSelection(nextSelection);
+  }, []);
+  const handleEvidenceNavigate = useCallback((evidenceId: string) => {
+    if (onEvidenceNavigate) {
+      onEvidenceNavigate(evidenceId);
+    } else {
+      console.info('Evidence navigation requested for scene reference:', evidenceId);
+    }
+  }, [onEvidenceNavigate]);
 
   return (
-    <div style={{ position: 'relative', height: '100%' }}>
+    <div className="grid h-full min-h-0 grid-cols-[minmax(0,1fr)_15rem]" data-testid="crime-scene-demo">
+      <div className="relative min-h-0">
       <label
         style={{
           position: 'absolute',
@@ -49,10 +67,16 @@ export function CrimeSceneDemo() {
       </label>
       <CrimeSceneEngine
         scene={demoScenes[sceneId]}
+        onSelectionChange={handleSelectionChange}
         onObjectSelect={(object) => {
           console.info('Selected scene object:', object);
         }}
         style={{ minHeight: 0, height: '100%', borderRadius: 0 }}
+      />
+      </div>
+      <SceneInspectionPanel
+        selection={selection}
+        onEvidenceSelect={handleEvidenceNavigate}
       />
     </div>
   );

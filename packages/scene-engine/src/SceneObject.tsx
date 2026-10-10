@@ -12,10 +12,10 @@ import {
 import { Color, Mesh, type EulerOrder, type Group, type Material, type Object3D } from 'three';
 
 import { getAssetRegistryEntry, resolveAssetTransform } from './assets/asset-registry.js';
-import type { SceneTransform } from './types/scene.js';
-import type { SceneObjectSelection } from './CrimeSceneEngine.js';
+import type { SceneSelection, SceneTransform } from './types/scene.js';
 
-const selectionTint = new Color('#22d3ee');
+const objectSelectionTint = new Color('#22d3ee');
+const evidenceSelectionTint = new Color('#f59e0b');
 
 interface SceneObjectProps {
   id: string;
@@ -23,11 +23,11 @@ interface SceneObjectProps {
   name: string;
   transform: SceneTransform;
   rotationOrder: EulerOrder;
-  evidenceIds?: string[];
-  metadata?: Record<string, unknown>;
   selected?: boolean;
-  onSelect?: (selection: SceneObjectSelection) => void;
+  onSelect?: (selection: SceneSelection) => void;
   markerNumber?: number;
+  markerLabel?: string;
+  selection: SceneSelection | null;
 }
 
 interface ModelProps extends SceneObjectProps {
@@ -70,9 +70,14 @@ function Model({ url, ...props }: ModelProps) {
   useEffect(() => {
     model.tintedMaterials.forEach(({ material, color }) => {
       material.color.copy(color);
-      if (props.selected) material.color.lerp(selectionTint, 0.4);
+      if (props.selected) {
+        material.color.lerp(
+          props.selection?.kind === 'evidence-marker' ? evidenceSelectionTint : objectSelectionTint,
+          0.55,
+        );
+      }
     });
-  }, [model, props.selected]);
+  }, [model, props.selected, props.selection?.kind]);
 
   useEffect(
     () => () => {
@@ -84,7 +89,7 @@ function Model({ url, ...props }: ModelProps) {
   return (
     <>
       <primitive object={model.object} dispose={null} />
-      {props.markerNumber !== undefined && (
+      {(props.markerNumber !== undefined || props.markerLabel !== undefined) && (
         <Text
           position={[0, 0.35, 0]}
           fontSize={0.22}
@@ -94,7 +99,7 @@ function Model({ url, ...props }: ModelProps) {
           anchorX="center"
           anchorY="middle"
         >
-          {props.markerNumber}
+          {props.markerLabel ?? props.markerNumber}
         </Text>
       )}
     </>
@@ -194,12 +199,7 @@ export function SceneObject(props: SceneObjectProps) {
 
   const handleSelect = (event: { stopPropagation: () => void }) => {
     event.stopPropagation();
-    props.onSelect?.({
-      id: props.id,
-      assetId: props.assetId,
-      evidenceIds: props.evidenceIds ?? [],
-      metadata: props.metadata,
-    });
+    if (props.selection) props.onSelect?.(props.selection);
   };
 
   return (

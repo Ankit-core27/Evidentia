@@ -4,9 +4,8 @@ import { Suspense, useEffect, useMemo, useRef } from 'react';
 import type { PerspectiveCamera } from 'three';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 
-import type { SceneObjectSelection } from './CrimeSceneEngine.js';
 import { SceneBuilder } from './SceneBuilder.js';
-import type { SceneDefinition } from './types/scene.js';
+import type { SceneDefinition, SceneSelection } from './types/scene.js';
 
 interface SceneCanvasProps {
   scene: SceneDefinition;
@@ -15,7 +14,7 @@ interface SceneCanvasProps {
   showCeilings: boolean;
   resetVersion: number;
   overheadVersion: number;
-  onObjectSelect?: (selection: SceneObjectSelection) => void;
+  onObjectSelect?: (selection: SceneSelection) => void;
   onClearSelection?: () => void;
 }
 

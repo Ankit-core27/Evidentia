@@ -1,14 +1,15 @@
 import type { EvidenceMarkerDefinition } from './types/scene.js';
 import type { EulerOrder } from 'three';
 import { SceneObject } from './SceneObject.js';
-import type { SceneObjectSelection } from './CrimeSceneEngine.js';
+import type { SceneSelection } from './types/scene.js';
 
 interface EvidenceMarkerProps {
   marker: EvidenceMarkerDefinition;
   number: number;
   rotationOrder: EulerOrder;
   selected: boolean;
-  onSelect?: (selection: SceneObjectSelection) => void;
+  selection: SceneSelection | null;
+  onSelect?: (selection: SceneSelection) => void;
 }
 
 export function EvidenceMarker({
@@ -16,10 +17,12 @@ export function EvidenceMarker({
   number,
   rotationOrder,
   selected,
+  selection,
   onSelect,
 }: EvidenceMarkerProps) {
   return (
     <SceneObject
+      selection={selection}
       id={marker.id}
       assetId="evidence_marker"
       name={marker.label}
@@ -29,16 +32,10 @@ export function EvidenceMarker({
         scale: marker.scale ?? [1, 1, 1],
       }}
       rotationOrder={rotationOrder}
-      evidenceIds={[marker.evidenceId]}
-      metadata={{
-        ...marker.metadata,
-        evidenceId: marker.evidenceId,
-        objectId: marker.objectId,
-        roomId: marker.roomId,
-      }}
       selected={selected}
       onSelect={onSelect}
       markerNumber={number}
+      markerLabel={marker.label}
     />
   );
 }

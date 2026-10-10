@@ -7,18 +7,14 @@ import { diagnoseScene } from './diagnostics/scene-diagnostics.js';
 import { validateScene } from './schema/scene.schema.js';
 import { SceneCanvas } from './SceneCanvas.js';
 import { SceneControls } from './SceneControls.js';
-import type { SceneDefinition } from './types/scene.js';
+import type { SceneDefinition, SceneSelection } from './types/scene.js';
 
-export interface SceneObjectSelection {
-  id: string;
-  assetId: string;
-  evidenceIds: string[];
-  metadata?: Record<string, unknown>;
-}
+export type { SceneObjectSelection, SceneSelection } from './types/scene.js';
 
 export interface CrimeSceneEngineProps {
   scene: SceneDefinition;
-  onObjectSelect?: (object: SceneObjectSelection) => void;
+  onObjectSelect?: (object: SceneSelection) => void;
+  onSelectionChange?: (selection: SceneSelection | null) => void;
   className?: string;
   style?: CSSProperties;
 }
@@ -36,10 +32,12 @@ const viewerStyle: CSSProperties = {
 export function CrimeSceneEngine({
   scene,
   onObjectSelect,
+  onSelectionChange,
   className,
   style,
 }: CrimeSceneEngineProps) {
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selection, setSelection] = useState<SceneSelection | null>(null);
+  const selectedId = selection?.id ?? null;
   const [showEvidenceMarkers, setShowEvidenceMarkers] = useState(true);
   const [showCeilings, setShowCeilings] = useState(false);
   const [resetVersion, setResetVersion] = useState(0);
@@ -49,17 +47,26 @@ export function CrimeSceneEngine({
   const warnings = diagnostics.filter((diagnostic) => diagnostic.severity === 'warning');
 
   useEffect(() => {
-    setSelectedId(null);
+    setSelection(null);
+    onSelectionChange?.(null);
   }, [scene.sceneId]);
 
   const selectObject = useCallback(
-    (selection: SceneObjectSelection) => {
-      setSelectedId(selection.id);
-      onObjectSelect?.(selection);
+    (nextSelection: SceneSelection) => {
+      setSelection(nextSelection);
+      onObjectSelect?.(nextSelection);
+      onSelectionChange?.(nextSelection);
     },
-    [onObjectSelect],
+    [onObjectSelect, onSelectionChange],
   );
-  const clearSelection = useCallback(() => setSelectedId(null), []);
+  const clearSelection = useCallback(() => {
+    setSelection(null);
+    onSelectionChange?.(null);
+  }, [onSelectionChange]);
+
+  useEffect(() => {
+    if (!showEvidenceMarkers && selection?.kind === 'evidence-marker') clearSelection();
+  }, [clearSelection, selection, showEvidenceMarkers]);
 
   if (!validation.success) {
     return (

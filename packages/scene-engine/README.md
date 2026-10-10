@@ -160,6 +160,14 @@ The frontend passes a scene to the `CrimeSceneEngine` component with a `scene` p
 
 The current package loads models using `useGLTF` from the registry URL, clones the cached scene and clones materials per instance before applying highlights. Geometry remains shared with the GLTF cache. When a known asset URL fails, a labelled placeholder keeps the remaining scene usable.
 
+### Selection and inspection API
+
+`onObjectSelect` receives a serializable `SceneSelection` for the clicked scene object or evidence marker. `onSelectionChange` receives the same selection or `null` when selection is cleared (including empty-space clicks, room-floor clicks, scene changes, and hiding a selected marker). The payload discriminates `kind: 'object'` from `kind: 'evidence-marker'` and includes the element ID, display name, asset ID, category, room/environment association, scene-definition transform, evidence ID references, placement provenance when supplied, asset calibration, and available metadata. Transform values are labeled world-space: positions use metres, rotations use degrees, and scale is unitless. Parent-relative transforms are not implied.
+
+Evidence IDs remain references only because this scene schema does not include evidence records. Marker/object relationships are explicit scene fields; the engine does not infer them from names or proximity. Consumers can wire evidence navigation through an `onEvidenceSelect(evidenceId)` callback. The frontend demo currently reports this as a mock action and does not claim the evidence record exists.
+
+The frontend's compact inspection panel shows the selected object's IDs, association, transform, placement provenance/confidence and calibration status. Source GLB dimensions are labeled as uncalibrated source bounds unless the registry explicitly marks physical dimensions verified. A confidence score is displayed as recorded context only, not proof of placement accuracy.
+
 ### Asset measurement note
 
 For the fixture's floor tile, wall, door, table, chair, knife, body and evidence marker, the recorded dimensions were read from GLB accessor bounds, with node translations included for the multi-part body. GLB itself does not declare a physical unit; source coordinates remain unit-unknown and these dimensions are not certified survey measurements. The engine preserves model-local transforms unless explicit registry corrections are configured.
