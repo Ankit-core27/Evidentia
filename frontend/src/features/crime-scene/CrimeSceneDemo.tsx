@@ -4,6 +4,7 @@ import {
   mockMultiRoomScene,
   mockMurderScene,
   mockRoadAccidentScene,
+  mockRoomLayoutScenes,
   loadScene,
   type SceneDefinition,
   type SceneLoadResult,
@@ -15,6 +16,10 @@ const demoScenes: Record<string, SceneDefinition> = {
   murder: mockMurderScene,
   'multi-room': mockMultiRoomScene,
   road: mockRoadAccidentScene,
+  'rooms-1': mockRoomLayoutScenes[1],
+  'rooms-3': mockRoomLayoutScenes[3],
+  'rooms-5': mockRoomLayoutScenes[5],
+  'rooms-10': mockRoomLayoutScenes[10],
 };
 
 interface CrimeSceneDemoProps {
@@ -72,6 +77,10 @@ export function CrimeSceneDemo({ onEvidenceNavigate }: CrimeSceneDemoProps) {
           <option value="murder">Residential murder</option>
           <option value="multi-room">Multi-room house</option>
           <option value="road">Road collision</option>
+          <option value="rooms-1">1-room validation layout</option>
+          <option value="rooms-3">3-room connected house</option>
+          <option value="rooms-5">5-room connected house</option>
+          <option value="rooms-10">10-room connected house</option>
         </select>
       </label>
       {loadResult.success ? (

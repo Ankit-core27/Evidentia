@@ -5,6 +5,7 @@ import { EvidenceMarker } from './EvidenceMarker.js';
 import { ProceduralRoom } from './ProceduralRoom.js';
 import { createSceneSelection } from './selection.js';
 import { SceneObject } from './SceneObject.js';
+import { hiddenSharedWalls } from './spatial.js';
 import type { SceneAssetLoadError, SceneSelection } from './types/scene.js';
 import type { AssetPlacement, RoomDefinition, SceneDefinition } from './types/scene.js';
 
@@ -70,10 +71,7 @@ export function SceneBuilder({
             room={room}
             showCeiling={showCeilings}
             rotationOrder={rotationOrder}
-            hiddenWalls={(scene.environment.sharedBoundaries ?? []).flatMap((boundary) => {
-              if (boundary.roomB === room.id) return [boundary.wallB];
-              return [];
-            })}
+            hiddenWalls={hiddenSharedWalls(scene, room.id)}
             selectedId={selectedId}
             onObjectSelect={onObjectSelect}
             onClearSelection={onClearSelection}

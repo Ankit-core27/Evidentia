@@ -165,6 +165,7 @@ export interface SharedBoundary {
   wallA: RoomWall;
   roomB: string;
   wallB: RoomWall;
+  openingId?: string;
 }
 
 export interface SceneObjectDefinition {
@@ -216,6 +217,8 @@ export interface SceneEnvironment {
   type: EnvironmentType;
   rooms: RoomDefinition[];
   sharedBoundaries?: SharedBoundary[];
+  entranceRoomId?: string;
+  allowDisconnectedRooms?: boolean;
   metadata?: Record<string, unknown>;
 }
 

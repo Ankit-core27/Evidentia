@@ -12,12 +12,18 @@ const vector3Schema = z.tuple([
   z.number().finite(),
 ]);
 
+const positiveVector3Schema = z.tuple([
+  z.number().finite().positive(),
+  z.number().finite().positive(),
+  z.number().finite().positive(),
+]);
+
 const roomWallSchema = z.enum(['north', 'south', 'east', 'west']);
 
 const transformSchema = z.object({
   position: vector3Schema,
   rotation: vector3Schema,
-  scale: vector3Schema,
+  scale: positiveVector3Schema,
 });
 
 const roomSchema = z.object({
@@ -119,7 +125,7 @@ const markerSchema = z.object({
   roomId: z.string().min(1).optional(),
   position: vector3Schema,
   rotation: vector3Schema.optional(),
-  scale: vector3Schema.optional(),
+  scale: positiveVector3Schema.optional(),
   color: z.string().optional(),
   metadata: z.record(z.unknown()).optional(),
 });
@@ -160,6 +166,7 @@ const sharedBoundarySchema = z.object({
   wallA: roomWallSchema,
   roomB: z.string().min(1),
   wallB: roomWallSchema,
+  openingId: z.string().min(1).optional(),
 });
 
 export const sceneSchema = z.object({
@@ -179,6 +186,8 @@ export const sceneSchema = z.object({
     type: z.string().min(1),
     rooms: z.array(roomSchema),
     sharedBoundaries: z.array(sharedBoundarySchema).optional(),
+    entranceRoomId: z.string().min(1).optional(),
+    allowDisconnectedRooms: z.boolean().optional(),
     metadata: z.record(z.unknown()).optional(),
   }),
   objects: z.array(objectSchema),
@@ -240,12 +249,30 @@ export const sceneSchema = z.object({
         message: 'Procedural rooms require positive width, depth, and height dimensions.',
       });
     }
+    if (
+      room.dimensions?.width !== undefined &&
+      room.dimensions.length !== undefined &&
+      room.dimensions.width !== room.dimensions.length
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['environment', 'rooms', roomIndex, 'dimensions', 'length'],
+        message: 'Room width and length cannot disagree; omit one or make them equal.',
+      });
+    }
     if (room.layoutMode === 'procedural' && room.rotation &&
       (room.rotation[0] !== 0 || room.rotation[2] !== 0)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['environment', 'rooms', roomIndex, 'rotation'],
         message: 'Procedural rooms support horizontal rotation around the Y axis only.',
+      });
+    }
+    if (room.layoutMode !== 'procedural' && room.openings?.length) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['environment', 'rooms', roomIndex, 'openings'],
+        message: 'Room openings require procedural layout mode so wall geometry can be cut from scene data.',
       });
     }
     for (const layoutKey of ['floorTiles', 'walls', 'doors', 'windows'] as const) {
@@ -343,6 +370,31 @@ export const sceneSchema = z.object({
         message: 'A shared boundary must connect two different rooms in this scene.',
       });
     }
+    const roomA = scene.environment.rooms.find(({ id }) => id === boundary.roomA);
+    const roomB = scene.environment.rooms.find(({ id }) => id === boundary.roomB);
+    if (roomA && roomB && (roomA.layoutMode !== 'procedural' || roomB.layoutMode !== 'procedural')) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path,
+        message: 'Shared boundaries require procedural layout mode on both rooms so duplicate wall geometry can be suppressed.',
+      });
+    }
+    if (boundary.openingId && roomA) {
+      const opening = roomA.openings?.find(({ id }) => id === boundary.openingId);
+      if (!opening) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [...path, 'openingId'],
+          message: `Shared boundary opening "${boundary.openingId}" was not found in room "${roomA.id}".`,
+        });
+      } else if (opening.type !== 'door' || opening.wall !== boundary.wallA) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [...path, 'openingId'],
+          message: `Shared boundary opening "${opening.id}" must be a door on room "${roomA.id}" wall "${boundary.wallA}".`,
+        });
+      }
+    }
     if (!roomIds.has(boundary.roomA)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -372,6 +424,14 @@ export const sceneSchema = z.object({
     }
   });
 
+  if (scene.environment.entranceRoomId && !roomIds.has(scene.environment.entranceRoomId)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['environment', 'entranceRoomId'],
+      message: `Entrance room "${scene.environment.entranceRoomId}" was not found in the scene.`,
+    });
+  }
+
   for (const room of scene.environment.rooms) {
     if (room.parentId && !roomIds.has(room.parentId)) {
       ctx.addIssue({
@@ -381,6 +441,34 @@ export const sceneSchema = z.object({
       });
     }
   }
+
+  const reportParentCycles = (
+    items: Array<{ id: string; parentId?: string }>,
+    path: string[],
+  ) => {
+    const reported = new Set<string>();
+    for (const item of items) {
+      const chain = new Set<string>();
+      let current: string | undefined = item.id;
+      while (current) {
+        if (chain.has(current)) {
+          if (!reported.has(current)) {
+            reported.add(current);
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: [...path, item.id, 'parentId'],
+              message: `Parent references form a cycle containing "${current}".`,
+            });
+          }
+          break;
+        }
+        chain.add(current);
+        current = items.find((candidate) => candidate.id === current)?.parentId;
+      }
+    }
+  };
+  reportParentCycles(scene.environment.rooms, ['environment', 'rooms']);
+  reportParentCycles(scene.objects, ['objects']);
 
   for (const object of scene.objects) {
     if (object.roomId && !roomIds.has(object.roomId)) {

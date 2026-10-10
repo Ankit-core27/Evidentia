@@ -66,26 +66,43 @@ The top-level scene object is versioned and deliberately sparse enough to suppor
 
 ## Procedural rooms and openings
 
-Rooms with `layoutMode: 'procedural'` are built from their dimensions, world-space center position and horizontal Y-axis rotation. The engine generates a floor (unless disabled), four wall planes and optional ceilings. Door and window openings are cut from the specified wall using metre offsets measured from that wall's start edge; windows retain the wall below their sill and above their top. An opening may reference a registry asset, for example a door GLB. `sharedBoundaries` explicitly pairs opposite walls of two rooms; room A owns the shared wall and any connecting opening on that wall, and room B's duplicate wall is suppressed. Diagnostics report shared walls whose planes, heights or spans do not align. Authored structural placements remain supported for existing scenes.
+Rooms with `layoutMode: 'procedural'` are built from their dimensions, world-space center position and horizontal Y-axis rotation. The engine generates a floor (unless disabled), four wall planes and optional ceilings. Door and window openings are cut from the specified wall using metre offsets measured from that wall's start edge; windows retain the wall below their sill and above their top. `sharedBoundaries` explicitly pairs opposite walls of two rooms. An optional `openingId` must reference a door on room A's shared wall: room A generates the one shared wall surface with its doorway cut, while room B's coincident wall is suppressed. This avoids duplicate solids across the passage. Diagnostics report boundaries whose planes, heights or spans do not align. Authored structural placements remain supported for existing scenes.
 
-Procedural rooms require width, depth and height. Openings must fit within their wall and room height, and openings on a wall cannot overlap. Room object transforms remain world-space; setting `roomId` associates an object and enables center-point containment diagnostics without changing its transform.
+Procedural rooms require positive width, depth and height. Openings must fit within their wall and room height, and openings on a wall cannot overlap. Their `offset` is measured from the negative end of the selected room-local wall span. Openings and shared boundaries require procedural layout on their room(s), because authored structural wall placements do not expose enough wall identity to reliably cut or suppress duplicate walls. Room object transforms remain world-space; setting `roomId` associates an object and enables center-point containment diagnostics without changing its transform. `entranceRoomId` enables reachability warnings through explicitly opened shared boundaries; set `allowDisconnectedRooms` when disconnected spaces are intentional. An opening authored only on the suppressed wall is diagnosed.
+
+```ts
+environment: {
+  rooms: [livingRoom, bedroom],
+  sharedBoundaries: [{
+    id: 'living-bedroom',
+    roomA: 'living-room',
+    wallA: 'east',
+    roomB: 'bedroom',
+    wallB: 'west',
+    openingId: 'living-bedroom-door'
+  }],
+  entranceRoomId: 'living-room',
+  allowDisconnectedRooms: false
+}
+```
 
 ## Calibration and diagnostics
 
 Registry calibration status is explicit. `source-bounds-inspected` means source-coordinate bounds were inspected only; it is not a physical measurement. The legacy `dimensions` values on inspected entries are source-coordinate extents, not metres, and calibration records these as `sourceDimensions` with `sourceUnits: 'unknown'`. `demo-scale-estimate` records a demonstration estimate, `physical-dimensions-verified` is reserved for measured physical dimensions, and `not-inspected` indicates missing measurements. Optional `positionCorrection` is interpreted in model-local source units, `rotationCorrection` is composed in the configured scene rotation order, and scale corrections are applied by the shared `resolveAssetTransform` helper rather than model-specific offsets in components.
 
-`diagnoseScene(scene)` returns actionable errors and warnings for schema/registry issues, non-browser asset URLs, unverified asset scale, suspicious object scales, object centers outside their associated room, and misaligned shared boundaries. Outdoor objects without a room are valid. Diagnostics do not claim forensic accuracy.
+`diagnoseScene(scene)` returns actionable errors and warnings for schema/registry issues, non-browser asset URLs, unverified asset scale, suspicious object scales, object and evidence-marker centers outside their associated room, mismatched marker/object room associations, overlapping room footprints, misaligned shared boundaries, invalid or blocked door references, and rooms unreachable from a configured entrance. Intentional disconnection can be allowed explicitly. Outdoor objects without a room are valid. Containment checks are center-point checks. A conservative wall-intersection advisory is emitted only when an asset has verified metre dimensions and a known center/bottom origin; source GLB bounds are never treated as physical. This bounding-box check is not physics or a complete collision test. Diagnostics do not claim forensic accuracy.
 
-The package exports `mockMurderScene`, `mockMultiRoomScene`, and `mockRoadAccidentScene` as synthetic regression/demo fixtures. The existing reconstruction viewer's demo selector lets you switch between all three without creating a second frontend. Run `npm test` in `packages/scene-engine` for schema, diagnostics and calibration tests.
+The package exports `mockMurderScene`, `mockMultiRoomScene`, `mockRoadAccidentScene`, and deterministic `mockRoomLayoutScenes` for 1, 3, 5 and 10 room counts. The three-, five-, and ten-room fixtures are connected house floor plans with aligned shared boundaries and centered door openings; the five-room plan also exercises a uniform 90-degree room rotation. The existing reconstruction viewer selector exposes these layouts for regression inspection. Run `npm test` in `packages/scene-engine` for schema, diagnostics and calibration tests.
 
 ## Coordinate conventions
 
 - Units are metres.
 - Up axis is `Y`.
 - Forward axis is `-Z`.
-- Rotation is stored as `[x, y, z]` in degrees, using the `XYZ` rotation order.
-- Position, rotation and scale are world-space. `parentId` records a hierarchy/reference only; this renderer does not compound child transforms relative to a parent.
-- A room's optional `position` is the world-space center of its floor footprint. Structural placements and scene objects still use their own explicit world-space transforms.
+- Rotation is stored as `[x, y, z]` in degrees using the scene's declared `coordinateSystem.rotationOrder`.
+- Scene object position, rotation and scale are world-space. `roomId` associates an object with a room for diagnostics only; it does not transform the object. `parentId` is a validated hierarchy/reference only; this renderer does not compound child transforms relative to a parent.
+- A room's optional `position` is the world-space origin at the center of its floor plane (floor elevation), and its optional rotation is a room-local-to-world yaw about Y. Procedural floors, walls, ceilings and openings inherit that room transform.
+- Opening offsets, widths, heights and sill heights are room-local metres. Structural placements, scene objects, evidence-marker positions, camera position and camera target use explicit world-space values. Rotating a room does not rotate or translate these independently positioned elements.
 - Asset origins are not assumed to be identical across GLB files. Registry calibration records whether only source bounds were inspected, a demo-scale estimate was applied, physical dimensions were verified, or the model remains uninspected. GLB source bounds do not prove physical units. Optional position, rotation, and scale corrections are centralized in the registry and applied without mutating scene transforms.
 
 ## Asset registry conventions
