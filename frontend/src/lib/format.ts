@@ -2,11 +2,13 @@
 import { IsoDateTime, TimePrecision } from '@/types/api';
 
 const dateFormat = new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
-const timeFormat = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' });
+// Times use the 24-hour clock, as police records and the evidence passages do ("21:40:12").
+const timeFormat = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
 const timeWithSecondsFormat = new Intl.DateTimeFormat(undefined, {
   hour: '2-digit',
   minute: '2-digit',
-  second: '2-digit'
+  second: '2-digit',
+  hourCycle: 'h23'
 });
 
 const parse = (iso: IsoDateTime | null | undefined): Date | null => {

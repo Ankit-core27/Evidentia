@@ -12,6 +12,7 @@ import {
 import '@xyflow/react/dist/style.css';
 import { LayoutGrid } from 'lucide-react';
 import { EmptyState, ErrorState, LoadingState } from '@/components/shared/QueryState';
+import { smallButtonClass } from '@/components/shared/formStyles';
 import { useCaseGraph } from '@/hooks/useGraph';
 import { CaseWorkspace, GraphEdge, ReviewStatus } from '@/types/api';
 import { CreateLinkDialog } from './CreateLinkDialog';
@@ -21,8 +22,17 @@ import { SelectionPanel, CanvasSelection } from './SelectionPanel';
 
 const NODE_TYPES = { record: RecordNode };
 
+// Links are coloured by state only: confirmed links stay neutral so proposals and flags stand out.
+const EDGE = {
+  confirmed: 'var(--color-ink-muted)',
+  pending: 'var(--color-pending)',
+  rejected: 'var(--color-ink-faint)',
+  flagged: 'var(--color-danger)',
+  selected: 'var(--color-accent)'
+};
+
 const edgeColour = (edge: GraphEdge) =>
-  edge.flagged ? '#f87171' : edge.review_status === 'pending' ? '#a78bfa' : edge.review_status === 'rejected' ? '#475569' : '#22d3ee';
+  edge.flagged ? EDGE.flagged : edge.review_status === 'pending' ? EDGE.pending : edge.review_status === 'rejected' ? EDGE.rejected : EDGE.confirmed;
 
 interface EvidenceCanvasProps {
   workspace: CaseWorkspace;
@@ -83,24 +93,23 @@ export const EvidenceCanvas: React.FC<EvidenceCanvasProps> = ({ workspace, readO
   const edges: Edge[] = useMemo(
     () =>
       (visible?.edges ?? []).map((e) => {
-        const colour = edgeColour(e);
         const isSelected = selection?.kind === 'edge' && selection.id === e.id;
+        const colour = isSelected ? EDGE.selected : edgeColour(e);
         return {
           id: e.id,
           source: e.source,
           target: e.target,
           label: e.label,
           type: 'smoothstep',
-          animated: e.review_status === 'pending',
           style: {
             stroke: colour,
-            strokeWidth: isSelected ? 3 : e.flagged ? 2 : 1.5,
+            strokeWidth: isSelected ? 2.5 : e.flagged ? 2 : 1.25,
             strokeDasharray: e.review_status === 'confirmed' ? undefined : '6 4',
             opacity: e.review_status === 'rejected' ? 0.5 : 1
           },
           markerEnd: { type: MarkerType.ArrowClosed, color: colour },
-          labelStyle: { fill: '#cbd5e1', fontSize: 10, fontFamily: 'monospace' },
-          labelBgStyle: { fill: '#020617' },
+          labelStyle: { fill: 'var(--color-ink-soft)', fontSize: 10, fontFamily: 'var(--font-sans)' },
+          labelBgStyle: { fill: 'var(--color-well)' },
           labelBgPadding: [4, 2] as [number, number],
           labelBgBorderRadius: 4,
           data: { edge: e }
@@ -130,34 +139,38 @@ export const EvidenceCanvas: React.FC<EvidenceCanvasProps> = ({ workspace, readO
   return (
     <div className="space-y-3">
       {!readOnly && (
-        <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-300">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-ink-soft">
           <label className="flex items-center gap-1.5 cursor-pointer">
-            <input type="checkbox" checked={flaggedOnly} onChange={(e) => setFlaggedOnly(e.target.checked)} className="accent-red-500" />
-            Flagged links only ({flaggedCount})
+            <input type="checkbox" checked={flaggedOnly} onChange={(e) => setFlaggedOnly(e.target.checked)} />
+            Flagged links only <span className="font-mono text-ink-muted">{flaggedCount}</span>
           </label>
           <label className="flex items-center gap-1.5 cursor-pointer">
-            <input type="checkbox" checked={showRejected} onChange={(e) => setShowRejected(e.target.checked)} className="accent-cyan-500" />
-            Show rejected ({rejectedCount})
+            <input type="checkbox" checked={showRejected} onChange={(e) => setShowRejected(e.target.checked)} />
+            Show rejected <span className="font-mono text-ink-muted">{rejectedCount}</span>
           </label>
           <button
             onClick={() => {
               dragged.current.clear();
               setLayoutVersion((v) => v + 1);
             }}
-            className="px-2 py-1 rounded-lg bg-slate-900 border border-slate-800 hover:text-cyan-300 flex items-center gap-1"
+            className={smallButtonClass}
           >
-            <LayoutGrid className="w-3 h-3" /> Tidy layout
+            <LayoutGrid className="size-3" aria-hidden /> Tidy layout
           </button>
-          <span className="ml-auto flex items-center gap-3 text-[10px] text-slate-400">
-            <Legend colour="#22d3ee" label="Confirmed" />
-            <Legend colour="#a78bfa" label="AI proposal" dashed />
-            <Legend colour="#f87171" label="Flagged" />
-            <span>Drag from a node's right handle to another node to link them.</span>
-          </span>
+          <div className="lg:ml-auto flex flex-wrap items-center gap-x-3 gap-y-1 text-2xs text-ink-muted" aria-label="Key">
+            <EntityKey colour="bg-entity-person" label="Person" />
+            <EntityKey colour="bg-entity-object" label="Vehicle or object" />
+            <EntityKey colour="bg-entity-location" label="Location" />
+            <EntityKey colour="bg-entity-evidence" label="Evidence" />
+            <span className="w-px h-3 bg-line-strong" aria-hidden />
+            <Legend colour={EDGE.confirmed} label="Confirmed" />
+            <Legend colour={EDGE.pending} label="AI proposal" dashed />
+            <Legend colour={EDGE.flagged} label="Flagged" />
+          </div>
         </div>
       )}
 
-      <div className={`flex rounded-2xl overflow-hidden border border-slate-800 bg-slate-950 ${heightClass}`}>
+      <div className={`flex rounded-md overflow-hidden border border-line bg-well ${heightClass}`}>
         <div className="flex-1 min-w-0" data-testid={readOnly ? 'canvas-preview' : 'canvas'}>
           <ReactFlow<RecordFlowNode, Edge>
             nodes={nodes}
@@ -176,13 +189,22 @@ export const EvidenceCanvas: React.FC<EvidenceCanvasProps> = ({ workspace, readO
             panOnDrag={!readOnly}
             deleteKeyCode={null}
             colorMode="dark"
+            style={{ background: 'var(--color-well)' }}
             fitView
             fitViewOptions={{ padding: 0.15 }}
             minZoom={0.2}
           >
-            <Background color="#1e293b" gap={18} />
+            <Background color="var(--color-line)" gap={20} size={1.5} />
             {!readOnly && <Controls showInteractive={false} />}
-            {!readOnly && <MiniMap pannable zoomable nodeColor="#334155" maskColor="rgba(2,6,23,0.7)" />}
+            {!readOnly && (
+              <MiniMap
+                pannable
+                zoomable
+                nodeColor="var(--color-line-strong)"
+                maskColor="rgb(11 13 14 / 0.7)"
+                style={{ background: 'var(--color-surface)' }}
+              />
+            )}
           </ReactFlow>
         </div>
         {!readOnly && selection && (
@@ -194,6 +216,7 @@ export const EvidenceCanvas: React.FC<EvidenceCanvasProps> = ({ workspace, readO
           />
         )}
       </div>
+      {!readOnly && <p className="text-xs text-ink-muted">Drag from a node’s right handle onto another node to record a link between them.</p>}
 
       {newLink && (
         <CreateLinkDialog
@@ -208,10 +231,17 @@ export const EvidenceCanvas: React.FC<EvidenceCanvasProps> = ({ workspace, readO
 };
 
 const Legend: React.FC<{ colour: string; label: string; dashed?: boolean }> = ({ colour, label, dashed }) => (
-  <span className="flex items-center gap-1">
+  <span className="flex items-center gap-1.5">
     <svg width="18" height="6" aria-hidden>
-      <line x1="0" y1="3" x2="18" y2="3" stroke={colour} strokeWidth="2" strokeDasharray={dashed ? '4 3' : undefined} />
+      <line x1="0" y1="3" x2="18" y2="3" style={{ stroke: colour }} strokeWidth="2" strokeDasharray={dashed ? '4 3' : undefined} />
     </svg>
+    {label}
+  </span>
+);
+
+const EntityKey: React.FC<{ colour: string; label: string }> = ({ colour, label }) => (
+  <span className="flex items-center gap-1.5">
+    <span className={`size-2 rounded-full ${colour}`} aria-hidden />
     {label}
   </span>
 );

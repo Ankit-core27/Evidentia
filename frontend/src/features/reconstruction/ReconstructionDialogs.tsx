@@ -89,7 +89,7 @@ export const ScenarioDialog: React.FC<{ caseId: Id; onClose: () => void; onCreat
             className={inputClass}
           />
         </div>
-        {create.isError && <p className="text-[11px] text-red-300">{(create.error as Error).message}</p>}
+        {create.isError && <p className="text-xs text-danger">{(create.error as Error).message}</p>}
       </form>
     </Dialog>
   );
@@ -164,21 +164,21 @@ export const StageDialog: React.FC<StageDialogProps> = ({ caseId, reconstruction
           <legend className={labelClass}>Events in this stage ({eventIds.length})</legend>
           <div className="space-y-1 max-h-72 overflow-y-auto pr-1">
             {events.map((e) => (
-              <label key={e.id} className="flex items-start gap-2 p-2 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-300 cursor-pointer">
+              <label key={e.id} className="flex items-start gap-2 px-2 py-1.5 rounded hover:bg-raised text-body text-ink-soft cursor-pointer">
                 <input
                   type="checkbox"
                   checked={eventIds.includes(e.id)}
                   onChange={(ev) => setEventIds(ev.target.checked ? [...eventIds, e.id] : eventIds.filter((id) => id !== e.id))}
-                  className="accent-cyan-500 mt-0.5"
+                  className="mt-0.5"
                 />
                 <span>
-                  <span className="text-cyan-300">{formatTimeRange(e.time_start, e.time_end, e.time_precision)}</span> · {e.description}
+                  <span className="font-mono text-xs text-ink-muted">{formatTimeRange(e.time_start, e.time_end, e.time_precision)}</span> {e.description}
                 </span>
               </label>
             ))}
           </div>
         </fieldset>
-        {add.isError && <p className="text-[11px] text-red-300">{(add.error as Error).message}</p>}
+        {add.isError && <p className="text-xs text-danger">{(add.error as Error).message}</p>}
       </form>
     </Dialog>
   );

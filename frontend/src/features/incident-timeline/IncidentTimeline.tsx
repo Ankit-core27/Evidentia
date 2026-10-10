@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { Clock, Layers, MapPin, Pencil, Plus, X } from 'lucide-react';
+import { Pencil, Plus, X } from 'lucide-react';
 import { SourcePassages } from '@/components/evidence/SourcePassages';
 import { CertaintyBadge } from '@/components/shared/Badges';
 import { DeleteButton } from '@/components/shared/DeleteButton';
+import { PageHeader } from '@/components/shared/PageHeader';
 import { EmptyState, ErrorState, LoadingState } from '@/components/shared/QueryState';
 import { ReviewActions } from '@/components/shared/ReviewActions';
-import { primaryButtonClass } from '@/components/shared/formStyles';
+import { FilterChips } from '@/components/shared/Segmented';
+import { iconButtonClass, inlineSelectClass, primaryButtonClass } from '@/components/shared/formStyles';
 import { useEvidenceInspector } from '@/hooks/useEvidenceInspector';
 import { useReconstruction } from '@/hooks/useReconstruction';
 import { useDeleteEvent, useEvents, useUpdateEvent } from '@/hooks/useTimeline';
@@ -15,14 +17,6 @@ import { useStageStore } from '@/stores/stage';
 import { CaseEvent, CaseWorkspace, Certainty, EventCategory } from '@/types/api';
 import { EventDialog } from './EventDialog';
 
-const CATEGORY_COLOURS: Partial<Record<EventCategory, string>> = {
-  collision: 'bg-red-500 shadow-[0_0_10px_#ef4444]',
-  movement: 'bg-cyan-400',
-  witness: 'bg-emerald-400',
-  emergency: 'bg-amber-400',
-  medical: 'bg-pink-400',
-  investigation: 'bg-blue-400'
-};
 
 const byTime = (a: CaseEvent, b: CaseEvent) => {
   if (!a.time_start && !b.time_start) return a.id - b.id;
@@ -64,46 +58,41 @@ export const IncidentTimeline: React.FC<{ workspace: CaseWorkspace }> = ({ works
 
   let lastDay = '';
 
-  return (
-    <div className="space-y-4 max-w-5xl">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-3 pb-3 border-b border-slate-800">
-        <div>
-          <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2">
-            <Clock className="w-5 h-5 text-cyan-400" />
-            Incident Timeline
-          </h2>
-          <p className="text-xs text-slate-400">
-            Events in order, each at the precision and certainty the evidence supports, with the passages it rests on.
-          </p>
-        </div>
-        <button onClick={() => setEditing('new')} className={primaryButtonClass}>
-          <Plus className="w-3.5 h-3.5" /> Add event
-        </button>
-      </div>
+  /** The marker on the rail: the impact stands out, AI proposals keep their dashed edge, the stage's events take the accent. */
+  const marker = (event: CaseEvent, highlighted: boolean) => {
+    if (highlighted) return 'bg-accent border-accent';
+    if (event.review_status === 'pending') return 'bg-canvas border-pending border-dashed';
+    if (event.category === 'collision') return 'bg-danger border-danger';
+    return 'bg-canvas border-ink-muted';
+  };
 
-      <div className="flex flex-wrap items-center gap-2 text-xs">
-        <div className="flex items-center gap-1 overflow-x-auto p-1 bg-slate-950 rounded-xl border border-slate-800" role="group" aria-label="Category">
-          <button
-            onClick={() => setCategory(undefined)}
-            className={`px-3 py-1 rounded-lg whitespace-nowrap ${!category ? 'bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-500/40' : 'text-slate-400 hover:text-slate-200'}`}
-          >
-            All
+  return (
+    <div className="space-y-5 max-w-5xl">
+      <PageHeader
+        title="Incident timeline"
+        description="Events in order, each at the precision and certainty the evidence supports, with the passages it rests on."
+        actions={
+          <button onClick={() => setEditing('new')} className={primaryButtonClass}>
+            <Plus className="size-4" aria-hidden /> Add event
           </button>
-          {categories.map((c) => (
-            <button
-              key={c}
-              onClick={() => setCategory(c)}
-              className={`px-3 py-1 rounded-lg whitespace-nowrap ${category === c ? 'bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-500/40' : 'text-slate-400 hover:text-slate-200'}`}
-            >
-              {humanize(c)} ({counts[c]})
-            </button>
-          ))}
-        </div>
+        }
+      />
+
+      <div className="flex flex-wrap items-center gap-2">
+        <FilterChips
+          label="Category"
+          value={category ?? 'all'}
+          onChange={(v) => setCategory(v === 'all' ? undefined : v)}
+          options={[
+            { value: 'all', label: 'All' },
+            ...categories.map((c) => ({ value: c, label: humanize(c), count: counts[c] }))
+          ]}
+        />
         <select
           value={certainty}
           onChange={(e) => setCertainty(e.target.value as Certainty | '')}
           aria-label="Certainty"
-          className="py-1.5 px-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
+          className={`${inlineSelectClass} h-7 py-0 text-xs`}
         >
           <option value="">Any certainty</option>
           {CERTAINTIES.map((c) => (
@@ -113,19 +102,22 @@ export const IncidentTimeline: React.FC<{ workspace: CaseWorkspace }> = ({ works
           ))}
         </select>
         {rejectedCount > 0 && (
-          <label className="flex items-center gap-1.5 text-[11px] text-slate-400 cursor-pointer">
-            <input type="checkbox" checked={showRejected} onChange={(e) => setShowRejected(e.target.checked)} className="accent-cyan-500" />
+          <label className="flex items-center gap-1.5 text-xs text-ink-muted cursor-pointer">
+            <input type="checkbox" checked={showRejected} onChange={(e) => setShowRejected(e.target.checked)} />
             Show {rejectedCount} rejected
           </label>
         )}
       </div>
 
       {stage && reconstruction && (
-        <div className="p-2.5 rounded-xl bg-purple-950/30 border border-purple-500/30 text-xs text-purple-100 flex items-center gap-2">
-          <Layers className="w-4 h-4 text-purple-300" />
-          Highlighting the {stage.event_ids.length} events of stage <strong>{stage.label}</strong> in "{reconstruction.scenario}".
-          <button onClick={() => setStage(null)} className="ml-auto p-1 rounded hover:bg-purple-500/20" aria-label="Stop highlighting">
-            <X className="w-3.5 h-3.5" />
+        <div className="pl-3 pr-1.5 py-1.5 rounded-md border border-accent/40 bg-accent/5 text-body text-ink-soft flex items-center gap-2" role="status">
+          <span className="size-2 rounded-full bg-accent shrink-0" aria-hidden />
+          <span>
+            Highlighting the {stage.event_ids.length} events of stage <strong className="font-medium text-ink">{stage.label}</strong> in “
+            {reconstruction.scenario}”.
+          </span>
+          <button onClick={() => setStage(null)} className={`${iconButtonClass} ml-auto`} aria-label="Stop highlighting">
+            <X className="size-3.5" />
           </button>
         </div>
       )}
@@ -136,34 +128,49 @@ export const IncidentTimeline: React.FC<{ workspace: CaseWorkspace }> = ({ works
         <EmptyState title="No events" message={category || certainty ? 'Nothing matches these filters.' : 'Add the first event, or let processing propose them.'} />
       )}
 
-      <ol className="relative pl-8 space-y-3 before:absolute before:left-3 before:top-2 before:bottom-2 before:w-0.5 before:bg-gradient-to-b before:from-cyan-500 before:via-blue-500 before:to-slate-800">
+      {/* Times sit in a gutter left of the rail, like a log; below sm they move above each event. */}
+      <ol className="relative">
+        <span className="absolute top-2 bottom-2 left-[5px] sm:left-[calc(10rem+5px)] w-px bg-line-strong" aria-hidden />
         {events.map((event) => {
           const day = event.time_start ? formatDate(event.time_start) : 'Time unknown';
           const showDay = day !== lastDay;
           lastDay = day;
           const highlighted = stageEvents.has(event.id);
+          const place = event.location_id ? location(event.location_id) : undefined;
           return (
             <React.Fragment key={event.id}>
-              {showDay && <li className="text-[10px] text-slate-500 uppercase font-bold -ml-8 pl-8 pt-1">{day}</li>}
-              <li className="relative" data-testid={`event-${event.id}`} data-highlighted={highlighted || undefined}>
+              {showDay && (
+                <li className="relative pl-6 sm:pl-[calc(10rem+1.5rem)] pt-1 pb-3 text-xs font-medium text-ink-muted">
+                  {day}
+                </li>
+              )}
+              <li
+                className={`relative grid sm:grid-cols-[10rem_1fr] pb-5 ${event.review_status === 'rejected' ? 'opacity-50' : ''}`}
+                data-testid={`event-${event.id}`}
+                data-highlighted={highlighted || undefined}
+              >
+                <div className="pl-6 sm:pl-0 sm:pr-5 sm:text-right font-mono text-xs leading-5 text-ink-soft tabular-nums">
+                  {formatTimeRange(event.time_start, event.time_end, event.time_precision)}
+                </div>
                 <span
-                  className={`absolute -left-[26px] top-4 w-3.5 h-3.5 rounded-full border-2 border-slate-950 ${CATEGORY_COLOURS[event.category] ?? 'bg-slate-500'}`}
+                  className={`absolute left-0 sm:left-40 top-1 size-[11px] rounded-full border-2 ${marker(event, highlighted)}`}
                   aria-hidden
                 />
                 <div
-                  className={`p-4 rounded-2xl border space-y-2 transition-colors ${
-                    highlighted ? 'bg-purple-950/30 border-purple-400/60' : 'bg-slate-900/80 border-slate-800'
-                  } ${event.review_status === 'rejected' ? 'opacity-50' : ''}`}
+                  className={`pl-6 min-w-0 space-y-2 ${highlighted ? 'sm:-my-2 sm:py-2 sm:pr-3 rounded-md bg-accent/5 ring-1 ring-accent/30' : ''}`}
                 >
                   <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-2 flex-wrap text-xs">
-                      <span className="text-cyan-300 font-bold">{formatTimeRange(event.time_start, event.time_end, event.time_precision)}</span>
-                      <span className="text-[10px] text-slate-400 uppercase">{humanize(event.category)}</span>
-                      <CertaintyBadge certainty={event.certainty} />
+                    <div className="min-w-0">
+                      <p className="text-sm text-ink leading-5">{event.description}</p>
+                      <div className="flex items-center gap-x-2 gap-y-1 flex-wrap text-xs text-ink-muted mt-1">
+                        <span>{humanize(event.category)}</span>
+                        <CertaintyBadge certainty={event.certainty} />
+                        {place && <span>· {place}</span>}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1 shrink-0">
-                      <button onClick={() => setEditing(event)} className="p-1 rounded text-slate-500 hover:text-cyan-300" aria-label="Edit event">
-                        <Pencil className="w-3.5 h-3.5" />
+                    <div className="flex items-center shrink-0 -mt-1">
+                      <button onClick={() => setEditing(event)} className={iconButtonClass} aria-label="Edit event">
+                        <Pencil className="size-3.5" />
                       </button>
                       <DeleteButton
                         label="event"
@@ -172,16 +179,11 @@ export const IncidentTimeline: React.FC<{ workspace: CaseWorkspace }> = ({ works
                       />
                     </div>
                   </div>
-                  <p className="text-sm text-slate-100">{event.description}</p>
-                  {event.location_id && (
-                    <p className="text-[11px] text-slate-400 flex items-center gap-1">
-                      <MapPin className="w-3 h-3" /> {location(event.location_id)}
-                    </p>
-                  )}
                   {event.ai_note && (
-                    <div className="p-2.5 rounded-xl bg-cyan-950/30 border border-cyan-500/30 text-[11px] text-cyan-100">
-                      <strong className="text-cyan-300">AI note:</strong> {event.ai_note}
-                    </div>
+                    <p className="pl-3 border-l-2 border-dashed border-pending/60 text-body text-ink-soft">
+                      <span className="text-xs font-medium text-pending mr-1.5">AI note</span>
+                      {event.ai_note}
+                    </p>
                   )}
                   <SourcePassages
                     links={workspace.links}

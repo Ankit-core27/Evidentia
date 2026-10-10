@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Box, ChevronLeft, ChevronRight, Pause, Play, Plus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Pause, Play, Plus } from 'lucide-react';
+import { PageHeader, SectionHeader } from '@/components/shared/PageHeader';
 import { EmptyState, ErrorState, LoadingState } from '@/components/shared/QueryState';
-import { primaryButtonClass, smallButtonClass } from '@/components/shared/formStyles';
+import { Tabs } from '@/components/shared/Segmented';
+import { linkClass, primaryButtonClass, smallButtonClass } from '@/components/shared/formStyles';
 import { useReconstruction, useReconstructions } from '@/hooks/useReconstruction';
 import { casePath } from '@/lib/caseModules';
 import { formatTimeRange } from '@/lib/format';
@@ -64,33 +66,25 @@ export const ReconstructionModule: React.FC<{ workspace: CaseWorkspace }> = ({ w
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-3 pb-3 border-b border-slate-800">
-        <div>
-          <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2">
-            <Box className="w-5 h-5 text-cyan-400" />
-            Reconstruction
-          </h2>
-          <p className="text-xs text-slate-400">Competing scenarios of what happened, stage by stage, with the scene at each stage.</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="flex gap-1 p-1 bg-slate-950 rounded-xl border border-slate-800 text-xs" role="tablist">
-            {(['stages', 'compare'] as const).map((m) => (
-              <button
-                key={m}
-                role="tab"
-                aria-selected={mode === m}
-                onClick={() => setMode(m)}
-                className={`px-3 py-1 rounded-lg whitespace-nowrap ${mode === m ? 'bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-500/40' : 'text-slate-400 hover:text-slate-200'}`}
-              >
-                {m === 'stages' ? 'Stages' : 'Compare scenarios'}
-              </button>
-            ))}
-          </div>
+      <PageHeader
+        title="Reconstruction"
+        description="Competing scenarios of what happened, stage by stage, with the scene at each stage."
+        actions={
           <button onClick={() => setDialog('scenario')} className={primaryButtonClass}>
-            <Plus className="w-3.5 h-3.5" /> New scenario
+            <Plus className="size-4" aria-hidden /> New scenario
           </button>
-        </div>
-      </div>
+        }
+      />
+
+      <Tabs
+        label="Reconstruction views"
+        value={mode}
+        onChange={setMode}
+        options={[
+          { value: 'stages', label: 'Stages' },
+          { value: 'compare', label: 'Compare scenarios' }
+        ]}
+      />
 
       {scenarios.length === 0 && (
         <EmptyState title="No scenarios yet" message="Create a scenario, then add its stages from the timeline's events." />
@@ -100,69 +94,76 @@ export const ReconstructionModule: React.FC<{ workspace: CaseWorkspace }> = ({ w
 
       {mode === 'stages' && scenarios.length > 0 && (
         <>
-          <div className="flex gap-2 overflow-x-auto pb-1" role="tablist" aria-label="Scenarios">
-            {scenarios.map((s) => (
-              <button
-                key={s.id}
-                role="tab"
-                aria-selected={s.id === reconstructionId}
-                onClick={() => {
-                  setPlaying(false);
-                  setReconstruction(s.id);
-                }}
-                className={`px-3 py-2 rounded-xl border text-left text-xs shrink-0 ${
-                  s.id === reconstructionId ? 'bg-cyan-500/15 border-cyan-500/40 text-cyan-200' : 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-600'
-                }`}
-              >
-                <div className="font-bold">{s.scenario}</div>
-                <div className="text-[10px] text-slate-400">Version {s.version}</div>
-              </button>
-            ))}
+          <div className="flex gap-2 overflow-x-auto" role="tablist" aria-label="Scenarios">
+            {scenarios.map((s) => {
+              const active = s.id === reconstructionId;
+              return (
+                <button
+                  key={s.id}
+                  role="tab"
+                  aria-selected={active}
+                  onClick={() => {
+                    setPlaying(false);
+                    setReconstruction(s.id);
+                  }}
+                  className={`px-3 py-1.5 rounded border text-left shrink-0 transition-colors ${
+                    active ? 'border-accent/60 bg-accent/10' : 'border-line-strong hover:border-control'
+                  }`}
+                >
+                  <span className={`block text-body ${active ? 'text-ink font-medium' : 'text-ink-soft'}`}>{s.scenario}</span>
+                  <span className="block text-2xs text-ink-muted">Version {s.version}</span>
+                </button>
+              );
+            })}
           </div>
 
           {detailQuery.isPending && <LoadingState label="Loading scenario…" />}
           {detailQuery.isError && <ErrorState error={detailQuery.error} onRetry={() => detailQuery.refetch()} />}
 
           {detail && (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {detail.assumptions && (
-                <p className="text-xs text-slate-300 p-3 rounded-xl bg-slate-900/80 border border-slate-800">
-                  <span className="text-[10px] text-slate-500 uppercase font-bold block">Assumptions</span>
-                  {detail.assumptions}
-                </p>
+                <div className="pl-3 border-l-2 border-line-strong max-w-4xl">
+                  <div className="text-xs font-medium text-ink-muted">Assumptions</div>
+                  <p className="text-body text-ink-soft">{detail.assumptions}</p>
+                </div>
               )}
 
-              <div className="flex flex-wrap items-center gap-2" aria-label="Stages">
+              <div className="flex flex-wrap items-center gap-1.5" aria-label="Stages">
                 <button
                   onClick={() => stageIndex > 0 && setStage(stages[stageIndex - 1].id)}
                   disabled={stageIndex <= 0}
-                  className={smallButtonClass}
+                  className={`${smallButtonClass} px-1.5`}
                   aria-label="Previous stage"
                 >
-                  <ChevronLeft className="w-3.5 h-3.5" />
+                  <ChevronLeft className="size-3.5" />
                 </button>
-                {stages.map((s) => (
-                  <button
-                    key={s.id}
-                    onClick={() => {
-                      setPlaying(false);
-                      setStage(s.id);
-                    }}
-                    aria-pressed={s.id === stageId}
-                    className={`px-3 py-1.5 rounded-lg border text-xs ${
-                      s.id === stageId ? 'bg-purple-500/20 border-purple-400/60 text-purple-100 font-bold' : 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-600'
-                    }`}
-                  >
-                    {s.stage_order}. {s.label}
-                  </button>
-                ))}
+                {stages.map((s) => {
+                  const active = s.id === stageId;
+                  return (
+                    <button
+                      key={s.id}
+                      onClick={() => {
+                        setPlaying(false);
+                        setStage(s.id);
+                      }}
+                      aria-pressed={active}
+                      className={`h-7 px-2.5 rounded border text-xs whitespace-nowrap transition-colors ${
+                        active ? 'border-accent bg-accent/15 text-ink font-medium' : 'border-line-strong text-ink-muted hover:text-ink'
+                      }`}
+                    >
+                      <span className="font-mono text-2xs mr-1.5 opacity-70">{s.stage_order}</span>
+                      {s.label}
+                    </button>
+                  );
+                })}
                 <button
                   onClick={() => stageIndex < stages.length - 1 && setStage(stages[stageIndex + 1].id)}
                   disabled={stageIndex < 0 || stageIndex >= stages.length - 1}
-                  className={smallButtonClass}
+                  className={`${smallButtonClass} px-1.5`}
                   aria-label="Next stage"
                 >
-                  <ChevronRight className="w-3.5 h-3.5" />
+                  <ChevronRight className="size-3.5" />
                 </button>
                 <button
                   onClick={() => {
@@ -172,10 +173,10 @@ export const ReconstructionModule: React.FC<{ workspace: CaseWorkspace }> = ({ w
                   disabled={stages.length < 2}
                   className={smallButtonClass}
                 >
-                  {playing ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />} {playing ? 'Pause' : 'Play'}
+                  {playing ? <Pause className="size-3.5" /> : <Play className="size-3.5" />} {playing ? 'Pause' : 'Play stages'}
                 </button>
                 <button onClick={() => setDialog('stage')} className={`${smallButtonClass} ml-auto`}>
-                  <Plus className="w-3 h-3" /> Add stage
+                  <Plus className="size-3" aria-hidden /> Add stage
                 </button>
               </div>
 
@@ -184,7 +185,7 @@ export const ReconstructionModule: React.FC<{ workspace: CaseWorkspace }> = ({ w
               {stage && (
                 <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 items-start">
                   {/* Scene host: the 3D track's viewer mounts here (see sceneViewer.ts). */}
-                  <div className="xl:col-span-2 h-[460px] rounded-2xl overflow-hidden border border-slate-800">
+                  <div className="xl:col-span-2 h-[340px] sm:h-[460px] rounded-md overflow-hidden border border-line">
                     <SchematicSceneView
                       reconstruction={detail}
                       stageId={stage.id}
@@ -192,35 +193,44 @@ export const ReconstructionModule: React.FC<{ workspace: CaseWorkspace }> = ({ w
                       onSelectSceneObject={selectSceneObject}
                     />
                   </div>
-                  <div className="space-y-4">
+                  <div className="space-y-5">
                     {sceneObject && <SceneObjectPanel workspace={workspace} sceneObject={sceneObject} onClose={() => selectSceneObject(null)} />}
-                    <section className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-2" aria-label="Stage events">
-                      <div className="flex items-center justify-between">
-                        <h3 className="text-xs font-bold text-slate-200 uppercase">
-                          {stage.label}: events ({stage.event_ids.length})
-                        </h3>
-                        <Link to={casePath(caseId, 'timeline')} className="text-[10px] text-cyan-400 hover:underline">
-                          Show in timeline
-                        </Link>
-                      </div>
-                      {eventsOf(stage.event_ids).map((e) => (
-                        <div key={e.id} className="p-2 rounded-lg bg-slate-950 border border-slate-800 text-[11px]">
-                          <span className="text-cyan-300">{formatTimeRange(e.time_start, e.time_end, e.time_precision)}</span>{' '}
-                          <span className="text-slate-200">{e.description}</span>
-                        </div>
-                      ))}
-                      <h3 className="text-xs font-bold text-slate-200 uppercase pt-2">Scene objects ({stage.scene_objects.length})</h3>
-                      {stage.scene_objects.map((o) => (
-                        <button
-                          key={o.id}
-                          onClick={() => selectSceneObject(o.id)}
-                          className={`w-full text-left p-2 rounded-lg border text-[11px] ${
-                            o.id === sceneObjectId ? 'bg-cyan-500/10 border-cyan-500/40 text-cyan-200' : 'bg-slate-950 border-slate-800 text-slate-300 hover:border-slate-600'
-                          }`}
-                        >
-                          {o.label}
-                        </button>
-                      ))}
+                    <section className="space-y-2" aria-label="Stage events">
+                      <SectionHeader
+                        title={`${stage.label}: events`}
+                        count={stage.event_ids.length}
+                        action={
+                          <Link to={casePath(caseId, 'timeline')} className={`text-xs ${linkClass}`}>
+                            Show in timeline
+                          </Link>
+                        }
+                      />
+                      <ul className="rounded-md border border-line divide-y divide-line">
+                        {eventsOf(stage.event_ids).map((e) => (
+                          <li key={e.id} className="px-3 py-2 text-body">
+                            <span className="block font-mono text-2xs text-ink-muted">{formatTimeRange(e.time_start, e.time_end, e.time_precision)}</span>
+                            <span className="text-ink">{e.description}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </section>
+                    <section className="space-y-2" aria-label="Scene objects">
+                      <SectionHeader title="Scene objects" count={stage.scene_objects.length} />
+                      <ul className="rounded-md border border-line divide-y divide-line">
+                        {stage.scene_objects.map((o) => (
+                          <li key={o.id}>
+                            <button
+                              onClick={() => selectSceneObject(o.id)}
+                              aria-pressed={o.id === sceneObjectId}
+                              className={`w-full text-left px-3 py-2 text-body transition-colors ${
+                                o.id === sceneObjectId ? 'bg-accent/10 text-ink' : 'text-ink-soft hover:bg-surface'
+                              }`}
+                            >
+                              {o.label}
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
                     </section>
                   </div>
                 </div>
