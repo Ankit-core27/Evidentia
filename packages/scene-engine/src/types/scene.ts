@@ -56,6 +56,46 @@ export interface SceneTransform {
   scale: Vector3;
 }
 
+export interface SceneSelectionTransform extends SceneTransform {
+  space: 'world';
+  positionUnit: 'meters';
+  rotationUnit: 'degrees';
+  scaleUnit: 'unitless';
+}
+
+export interface SceneSelectionAssociation {
+  sceneType: SceneType;
+  environmentType: EnvironmentType;
+  roomId?: string;
+  roomName?: string;
+}
+
+interface SceneSelectionBase {
+  id: string;
+  name: string;
+  assetId: string;
+  category: ObjectCategory | string;
+  association: SceneSelectionAssociation;
+  transform: SceneSelectionTransform;
+  evidenceIds: string[];
+  evidenceRecordAvailability: 'not-included-in-scene-schema';
+  provenance?: SceneObjectDefinition['provenance'];
+  calibration: AssetCalibration;
+  metadata?: Record<string, unknown>;
+}
+
+export interface SceneObjectSelection extends SceneSelectionBase {
+  kind: 'object';
+}
+
+export interface EvidenceMarkerSelection extends SceneSelectionBase {
+  kind: 'evidence-marker';
+  evidenceId: string;
+  objectId?: string;
+}
+
+export type SceneSelection = SceneObjectSelection | EvidenceMarkerSelection;
+
 export interface AssetPlacement {
   id: string;
   assetId: string;

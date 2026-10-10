@@ -2,16 +2,17 @@ import { useMemo } from 'react';
 import type { EulerOrder } from 'three';
 
 import { getAssetRegistryEntry } from './assets/asset-registry.js';
+import { createSceneSelection } from './selection.js';
 import { SceneObject } from './SceneObject.js';
-import type { SceneObjectSelection } from './CrimeSceneEngine.js';
-import type { RoomDefinition, RoomOpening, RoomWall } from './types/scene.js';
+import type { RoomDefinition, RoomOpening, RoomWall, SceneDefinition, SceneSelection } from './types/scene.js';
 
 interface ProceduralRoomProps {
+  scene: SceneDefinition;
   room: RoomDefinition;
   showCeiling: boolean;
   rotationOrder: EulerOrder;
   hiddenWalls: RoomWall[];
-  onObjectSelect?: (selection: SceneObjectSelection) => void;
+  onObjectSelect?: (selection: SceneSelection) => void;
   onClearSelection?: () => void;
   selectedId: string | null;
 }
@@ -73,6 +74,7 @@ export function buildWallSegments(span: number, height: number, openings: RoomOp
 }
 
 export function ProceduralRoom({
+  scene,
   room,
   showCeiling,
   rotationOrder,
@@ -134,13 +136,13 @@ export function ProceduralRoom({
         <OpeningAsset
           key={opening.id}
           opening={opening}
+          selection={createSceneSelection(scene, opening.id)}
           wallSpan={opening.wall === 'north' || opening.wall === 'south' ? width : depth}
           roomWidth={width}
           roomDepth={depth}
           thickness={thickness}
           rotationOrder={rotationOrder}
           selected={selectedId === opening.id}
-          roomId={room.id}
           onSelect={onObjectSelect}
         />
       ))}
@@ -198,7 +200,7 @@ function OpeningAsset({
   thickness,
   rotationOrder,
   selected,
-  roomId,
+  selection,
   onSelect,
 }: {
   opening: RoomOpening;
@@ -208,10 +210,11 @@ function OpeningAsset({
   thickness: number;
   rotationOrder: EulerOrder;
   selected: boolean;
-  roomId: string;
-  onSelect?: (selection: SceneObjectSelection) => void;
+  onSelect?: (selection: SceneSelection) => void;
+  selection: SceneSelection | null;
 }) {
   if (!opening.assetId) return null;
+  if (!selection) return null;
   const entry = getAssetRegistryEntry(opening.assetId);
   const assetWidth = entry?.dimensions?.width ?? opening.width;
   const assetHeight = entry?.dimensions?.height ?? opening.height;
@@ -225,6 +228,7 @@ function OpeningAsset({
   const yaw = opening.wall === 'north' ? 0 : opening.wall === 'south' ? 180 : opening.wall === 'east' ? -90 : 90;
   return (
     <SceneObject
+      selection={selection}
       id={opening.id}
       assetId={opening.assetId}
       name={opening.label ?? opening.type}
@@ -234,7 +238,6 @@ function OpeningAsset({
         scale: [opening.width / assetWidth, opening.height / assetHeight, thickness / assetDepth],
       }}
       rotationOrder={rotationOrder}
-      metadata={{ structural: true, category: opening.type, roomId }}
       selected={selected}
       onSelect={onSelect}
     />

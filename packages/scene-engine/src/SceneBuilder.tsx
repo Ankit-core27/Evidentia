@@ -3,8 +3,9 @@ import type { EulerOrder } from 'three';
 
 import { EvidenceMarker } from './EvidenceMarker.js';
 import { ProceduralRoom } from './ProceduralRoom.js';
+import { createSceneSelection } from './selection.js';
 import { SceneObject } from './SceneObject.js';
-import type { SceneObjectSelection } from './CrimeSceneEngine.js';
+import type { SceneSelection } from './types/scene.js';
 import type { AssetPlacement, RoomDefinition, SceneDefinition } from './types/scene.js';
 
 interface SceneBuilderProps {
@@ -12,7 +13,7 @@ interface SceneBuilderProps {
   selectedId: string | null;
   showEvidenceMarkers: boolean;
   showCeilings: boolean;
-  onObjectSelect?: (selection: SceneObjectSelection) => void;
+  onObjectSelect?: (selection: SceneSelection) => void;
   onClearSelection?: () => void;
 }
 
@@ -43,6 +44,19 @@ export function SceneBuilder({
       ),
     [scene.environment.rooms],
   );
+  const selections = useMemo(() => {
+    const ids = [
+      ...scene.objects.map(({ id }) => id),
+      ...scene.evidenceMarkers.map(({ id }) => id),
+      ...scene.environment.rooms.flatMap((room) => [
+        ...(room.openings ?? []).map(({ id }) => id),
+        ...STRUCTURAL_CATEGORIES.flatMap((category) =>
+          (room.structural?.[category] ?? []).map(({ id }) => id),
+        ),
+      ]),
+    ];
+    return new Map(ids.map((id) => [id, createSceneSelection(scene, id)]));
+  }, [scene]);
 
   return (
     <group>
@@ -50,6 +64,7 @@ export function SceneBuilder({
         room.layoutMode === 'procedural' ? (
           <ProceduralRoom
             key={`procedural-room-${room.id}`}
+            scene={scene}
             room={room}
             showCeiling={showCeilings}
             rotationOrder={rotationOrder}
@@ -65,12 +80,11 @@ export function SceneBuilder({
           <RoomFloor key={`floor-${room.id}`} room={room} onClearSelection={onClearSelection} />
         )
       ))}
-      {roomStructures.map(({ room, category, placement }) => (
+      {roomStructures.map(({ placement }) => (
         <PlacedAsset
           key={placement.id}
+          selection={selections.get(placement.id) ?? null}
           placement={placement}
-          category={category}
-          roomId={room.id}
           rotationOrder={rotationOrder}
           selected={selectedId === placement.id}
           onSelect={onObjectSelect}
@@ -79,13 +93,12 @@ export function SceneBuilder({
       {scene.objects.map((object) => (
         <SceneObject
           key={object.id}
+          selection={selections.get(object.id) ?? null}
           id={object.id}
           assetId={object.assetId}
           name={object.name}
           transform={object.transform}
           rotationOrder={rotationOrder}
-          evidenceIds={object.evidenceIds}
-          metadata={object.metadata}
           selected={selectedId === object.id}
           onSelect={onObjectSelect}
         />
@@ -95,6 +108,7 @@ export function SceneBuilder({
           <EvidenceMarker
             key={marker.id}
             marker={marker}
+            selection={selections.get(marker.id) ?? null}
             number={index + 1}
             rotationOrder={rotationOrder}
             selected={selectedId === marker.id}
@@ -139,27 +153,26 @@ function RoomFloor({
 
 function PlacedAsset({
   placement,
-  category,
-  roomId,
   rotationOrder,
   selected,
+  selection,
   onSelect,
 }: {
   placement: AssetPlacement;
-  category: (typeof STRUCTURAL_CATEGORIES)[number];
-  roomId: string;
   rotationOrder: string;
   selected: boolean;
-  onSelect?: (selection: SceneObjectSelection) => void;
+  onSelect?: (selection: SceneSelection) => void;
+  selection: SceneSelection | null;
 }) {
+  if (!selection) return null;
   return (
     <SceneObject
+      selection={selection}
       id={placement.id}
       assetId={placement.assetId}
       name={placement.label}
       transform={placement.transform}
       rotationOrder={rotationOrder as EulerOrder}
-      metadata={{ structural: true, category, roomId }}
       selected={selected}
       onSelect={onSelect}
     />
