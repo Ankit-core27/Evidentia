@@ -1,7 +1,11 @@
 // Request and response types for the API contract in docs/PLAN.md.
-// Hand-written until the backend publishes /openapi.json; then `npm run gen:api`
-// generates src/lib/api-types.ts and these become aliases of the generated types.
-// Field names and enum values follow the "Contract assumptions" in docs/FRONTEND_TASKS.md.
+// They alias src/lib/api-types.ts, which `npm run gen:api` generates from the
+// backend's /openapi.json (run it with the backend on port 8000 after any schema
+// change). Only what OpenAPI can't express is written by hand here: query
+// filters, the error body, and a few narrower field types noted below.
+import type { components } from '@/lib/api-types';
+
+type Schemas = components['schemas'];
 
 export type Id = number;
 /** ISO 8601 date-time string, such as 2026-10-03T21:40:12Z. */
@@ -11,58 +15,34 @@ export type IsoDateTime = string;
 // Enums
 // ---------------------------------------------------------------------------
 
-export type CaseStatus = 'open' | 'in_progress' | 'under_review' | 'closed';
-export type CasePriority = 'critical' | 'high' | 'medium' | 'low';
-export type IncidentType = 'road_accident' | 'homicide' | 'assault' | 'burglary' | 'fire' | 'other';
-export type EvidenceType = 'document' | 'statement' | 'photo' | 'video' | 'audio' | 'medical' | 'other';
-export type ProcessingStatus = 'queued' | 'processing' | 'done' | 'failed';
-export type Origin = 'ai' | 'investigator';
-export type ReviewStatus = 'pending' | 'confirmed' | 'rejected';
-export type PersonRole = 'victim' | 'witness' | 'suspect' | 'other';
-export type PersonCondition = 'uninjured' | 'injured' | 'deceased';
-export type ObjectKind = 'vehicle' | 'phone' | 'weapon' | 'item';
-export type LocationKind = 'incident_site' | 'witness_position' | 'vehicle_position' | 'zone' | 'boundary';
-export type EventCategory = 'collision' | 'movement' | 'witness' | 'emergency' | 'medical' | 'investigation' | 'other';
-export type TimePrecision = 'exact' | 'minute' | 'approximate' | 'day';
-export type Certainty = 'established' | 'hypothesis' | 'disputed';
-export type RelationshipKind =
-  | 'drove'
-  | 'owns'
-  | 'involved_in'
-  | 'witnessed'
-  | 'located_at'
-  | 'mentions'
-  | 'supports'
-  | 'contradicts'
-  | 'other';
-export type ConflictStatus = 'open' | 'resolved';
-export type AuditAction = 'uploaded' | 'viewed' | 'modified' | 'reviewed' | 'exported';
-export type AnnotationKind = 'note' | 'measurement' | 'viewpoint';
-export type InjurySeverity = 'minor' | 'moderate' | 'severe' | 'fatal';
-export type ReportTemplate = 'court' | 'summary' | 'custody' | 'medical';
-export type AlertSeverity = 'info' | 'warning' | 'critical';
-export type AlertKind = 'conflict' | 'processing' | 'review';
+export type CaseStatus = Schemas['Case']['status'];
+export type CasePriority = Schemas['Case']['priority'];
+export type IncidentType = Schemas['Case']['incident_type'];
+export type EvidenceType = Schemas['Evidence']['type'];
+export type ProcessingStatus = Schemas['Evidence']['processing_status'];
+export type Origin = Schemas['Person']['origin'];
+export type ReviewStatus = Schemas['Person']['review_status'];
+export type PersonRole = Schemas['Person']['role'];
+export type PersonCondition = NonNullable<Schemas['Person']['condition']>;
+export type ObjectKind = Schemas['CaseObject']['kind'];
+export type LocationKind = Schemas['Location']['kind'];
+export type EventCategory = Schemas['CaseEvent']['category'];
+export type TimePrecision = Schemas['CaseEvent']['time_precision'];
+export type Certainty = Schemas['CaseEvent']['certainty'];
+export type RelationshipKind = Schemas['Relationship']['kind'];
+export type ConflictStatus = Schemas['Conflict']['status'];
+export type AuditAction = Schemas['AuditEntry']['action'];
+export type AnnotationKind = Schemas['SceneAnnotation']['kind'];
+export type InjurySeverity = Schemas['Injury']['severity'];
+export type ReportTemplate = Schemas['Report']['template'];
+export type AlertSeverity = Schemas['Alert']['severity'];
+export type AlertKind = Schemas['Alert']['kind'];
 
 /** Record types that relationships, links and audit entries can point at. */
-export type RecordType =
-  | 'case'
-  | 'evidence'
-  | 'person'
-  | 'object'
-  | 'location'
-  | 'event'
-  | 'relationship'
-  | 'observation'
-  | 'conflict'
-  | 'injury'
-  | 'reconstruction'
-  | 'stage'
-  | 'scene_object'
-  | 'annotation'
-  | 'report';
+export type RecordType = Schemas['AuditEntry']['record_type'];
 
 /** Records the graph can draw as nodes. */
-export type GraphNodeType = 'person' | 'object' | 'location' | 'evidence';
+export type GraphNodeType = Schemas['GraphNode']['type'];
 
 // ---------------------------------------------------------------------------
 // Shared
@@ -74,7 +54,7 @@ export interface Reviewable {
   review_status: ReviewStatus;
 }
 
-/** FastAPI error body. */
+/** FastAPI error body: a message for 4xx raised by the app, a list for 422 validation errors. */
 export interface ApiErrorBody {
   detail: string | { loc: (string | number)[]; msg: string; type: string }[];
 }
@@ -83,33 +63,12 @@ export interface ApiErrorBody {
 // Investigators and cases
 // ---------------------------------------------------------------------------
 
-export interface Investigator {
-  id: Id;
-  name: string;
-  badge_number: string;
-  role: string;
-  clearance_level: string;
-}
-
-export interface Case {
-  id: Id;
-  case_number: string;
-  title: string;
-  incident_type: IncidentType;
-  status: CaseStatus;
-  priority: CasePriority;
-  description: string;
-  incident_at: IsoDateTime | null;
-  lead_investigator_id: Id | null;
-  investigator_ids: Id[];
-  created_at: IsoDateTime;
-  updated_at: IsoDateTime;
-}
-
+export type Investigator = Schemas['Investigator'];
+export type Case = Schemas['Case'];
 /** A row of GET /api/cases. */
-export interface CaseListItem extends Case {
-  evidence_count: number;
-}
+export type CaseListItem = Schemas['CaseListItem'];
+export type CaseCreate = Schemas['CaseCreate'];
+export type CaseUpdate = Schemas['CaseUpdate'];
 
 export interface CaseFilters {
   q?: string;
@@ -117,118 +76,36 @@ export interface CaseFilters {
   priority?: CasePriority;
 }
 
-export interface CaseCreate {
-  title: string;
-  incident_type: IncidentType;
-  priority: CasePriority;
-  status?: CaseStatus;
-  description?: string;
-  incident_at?: IsoDateTime | null;
-  lead_investigator_id?: Id | null;
-  investigator_ids?: Id[];
-}
-
-export type CaseUpdate = Partial<CaseCreate>;
-
 // ---------------------------------------------------------------------------
 // Evidence
 // ---------------------------------------------------------------------------
 
-export interface Evidence {
-  id: Id;
-  case_id: Id;
-  type: EvidenceType;
-  title: string;
-  description: string;
-  notes: string;
-  mime_type: string;
-  size_bytes: number;
-  sha256: string;
-  collected_at: IsoDateTime | null;
-  source: string;
-  processing_status: ProcessingStatus;
-  summary: string | null;
-  created_at: IsoDateTime;
-}
-
+export type Evidence = Schemas['Evidence'];
 /** A row of GET /api/evidence, which spans every case. */
-export interface EvidenceListItem extends Evidence {
-  case_number: string;
-  case_title: string;
-}
+export type EvidenceListItem = Schemas['EvidenceListItem'];
+/** GET /api/evidence/{id}. */
+export type EvidenceDetail = Schemas['EvidenceDetail'];
+export type EvidenceUpdate = Schemas['EvidenceUpdate'];
+export type EvidenceLink = Schemas['EvidenceLink'];
+export type EvidenceLinkCreate = Schemas['EvidenceLinkCreate'];
+export type AuditEntry = Schemas['AuditEntry'];
+/** POST /api/cases/{id}/verify. */
+export type VerifyResult = Schemas['VerifyResult'];
 
 export interface EvidenceFilters {
   q?: string;
   type?: EvidenceType;
 }
 
-export interface EvidenceLink {
-  id: Id;
-  evidence_id: Id;
-  chunk_id: Id | null;
-  target_type: RecordType;
-  target_id: Id;
-  passage: string | null;
-}
-
-export interface EvidenceLinkCreate {
-  evidence_id: Id;
-  chunk_id?: Id | null;
-  target_type: RecordType;
-  target_id: Id;
-  passage?: string | null;
-}
-
-export interface AuditEntry {
-  id: Id;
-  actor_id: Id | null;
-  actor_name: string | null;
-  action: AuditAction;
-  record_type: RecordType;
-  record_id: Id;
-  at: IsoDateTime;
-  /** Before and after values for modifications, or other context. */
-  detail: Record<string, unknown> | null;
-}
-
-/** GET /api/evidence/{id}. */
-export interface EvidenceDetail extends EvidenceListItem {
-  extracted_text: string | null;
-  links: EvidenceLink[];
-  custody: AuditEntry[];
-}
-
-export interface EvidenceUpdate {
-  type?: EvidenceType;
-  title?: string;
-  description?: string;
-  notes?: string;
-}
-
-/** POST /api/cases/{id}/verify. */
-export interface VerifyResult {
-  checked: number;
-  mismatches: { evidence_id: Id; title: string; expected: string; actual: string | null }[];
-  verified_at: IsoDateTime;
-}
-
 // ---------------------------------------------------------------------------
 // People, objects and locations
 // ---------------------------------------------------------------------------
 
-export interface Person extends Reviewable {
-  id: Id;
-  case_id: Id;
-  role: PersonRole;
-  name: string;
-  age: number | null;
-  occupation: string;
-  condition: PersonCondition | null;
-  contact: string;
-  notes: string;
-  details: Record<string, unknown>;
-}
+export type Person = Schemas['Person'];
+export type PersonCreate = Schemas['PersonCreate'];
+export type PersonUpdate = Schemas['PersonUpdate'];
 
+/** The keys the UI reads from an object's free-form `details`. */
 export interface ObjectDetails {
   plate?: string;
   number?: string;
@@ -237,213 +114,66 @@ export interface ObjectDetails {
   [key: string]: unknown;
 }
 
-export interface CaseObject extends Reviewable {
-  id: Id;
-  case_id: Id;
-  kind: ObjectKind;
-  label: string;
-  details: ObjectDetails;
-}
+export type CaseObject = Omit<Schemas['CaseObject'], 'details'> & { details: ObjectDetails };
+export type CaseObjectCreate = Schemas['CaseObjectCreate'];
+export type CaseObjectUpdate = Schemas['CaseObjectUpdate'];
 
-export interface Location extends Reviewable {
-  id: Id;
-  case_id: Id;
-  kind: LocationKind;
-  address: string;
-  lat: number | null;
-  lng: number | null;
-  /** GeoJSON geometry for zones and boundaries. */
-  geometry: Record<string, unknown> | null;
-  building_id: Id | null;
-}
-
-type CreateOf<T extends Reviewable & { id: Id; case_id: Id }> = Omit<T, 'id' | 'case_id' | 'origin' | 'review_status'>;
-type UpdateOf<T extends Reviewable & { id: Id; case_id: Id }> = Partial<CreateOf<T>> & { review_status?: ReviewStatus };
-
-export type PersonCreate = Pick<Person, 'role' | 'name'> & Partial<CreateOf<Person>>;
-export type PersonUpdate = UpdateOf<Person>;
-export type CaseObjectCreate = Pick<CaseObject, 'kind' | 'label'> & Partial<CreateOf<CaseObject>>;
-export type CaseObjectUpdate = UpdateOf<CaseObject>;
-export type LocationCreate = Pick<Location, 'kind' | 'address'> & Partial<CreateOf<Location>>;
-export type LocationUpdate = UpdateOf<Location>;
+export type Location = Schemas['Location'];
+export type LocationCreate = Schemas['LocationCreate'];
+export type LocationUpdate = Schemas['LocationUpdate'];
 
 // ---------------------------------------------------------------------------
 // Timeline
 // ---------------------------------------------------------------------------
 
-export interface CaseEvent extends Reviewable {
-  id: Id;
-  case_id: Id;
-  location_id: Id | null;
-  category: EventCategory;
-  time_start: IsoDateTime | null;
-  time_end: IsoDateTime | null;
-  time_precision: TimePrecision;
-  certainty: Certainty;
-  description: string;
-  ai_note: string | null;
-}
-
-export type CaseEventCreate = Pick<CaseEvent, 'category' | 'description'> & Partial<CreateOf<CaseEvent>>;
-export type CaseEventUpdate = UpdateOf<CaseEvent>;
+export type CaseEvent = Schemas['CaseEvent'];
+export type CaseEventCreate = Schemas['CaseEventCreate'];
+export type CaseEventUpdate = Schemas['CaseEventUpdate'];
 
 // ---------------------------------------------------------------------------
 // Graph
 // ---------------------------------------------------------------------------
 
-export interface Relationship extends Reviewable {
-  id: Id;
-  case_id: Id;
-  from_type: GraphNodeType;
-  from_id: Id;
-  to_type: GraphNodeType;
-  to_id: Id;
-  kind: RelationshipKind;
-  label: string;
-  confidence: number | null;
-  flagged: boolean;
-  notes: string;
-}
-
-export type RelationshipCreate = Pick<Relationship, 'from_type' | 'from_id' | 'to_type' | 'to_id' | 'kind'> &
-  Partial<CreateOf<Relationship>>;
-export type RelationshipUpdate = UpdateOf<Relationship>;
-
-export interface GraphNode {
-  /** `${type}:${record_id}`, such as "person:3". */
-  id: string;
-  type: GraphNodeType;
-  record_id: Id;
-  label: string;
-  sublabel: string | null;
-  review_status: ReviewStatus;
-}
-
-export interface GraphEdge {
-  id: string;
-  relationship_id: Id;
-  source: string;
-  target: string;
-  kind: RelationshipKind;
-  label: string;
-  confidence: number | null;
-  flagged: boolean;
-  review_status: ReviewStatus;
-}
-
-export interface CaseGraph {
-  nodes: GraphNode[];
-  edges: GraphEdge[];
-}
+export type Relationship = Schemas['Relationship'];
+export type RelationshipCreate = Schemas['RelationshipCreate'];
+export type RelationshipUpdate = Schemas['RelationshipUpdate'];
+export type GraphNode = Schemas['GraphNode'];
+export type GraphEdge = Schemas['GraphEdge'];
+export type CaseGraph = Schemas['CaseGraph'];
 
 // ---------------------------------------------------------------------------
 // AI review
 // ---------------------------------------------------------------------------
 
-export interface Observation extends Reviewable {
-  id: Id;
-  case_id: Id;
-  subject_type: RecordType;
-  subject_id: Id;
-  statement: string;
-  observed_at: IsoDateTime | null;
-  author_id: Id | null;
-}
-
-export interface ObservationUpdate {
-  statement?: string;
-  review_status?: ReviewStatus;
-}
-
-export interface Conflict {
-  id: Id;
-  case_id: Id;
-  observation_ids: Id[];
-  description: string;
-  status: ConflictStatus;
-}
-
-export interface ConflictUpdate {
-  status: ConflictStatus;
-}
+export type Observation = Schemas['Observation'];
+export type ObservationUpdate = Schemas['ObservationUpdate'];
+export type Conflict = Schemas['Conflict'];
+export type ConflictUpdate = Schemas['ConflictUpdate'];
 
 // ---------------------------------------------------------------------------
 // Search and cited answers
 // ---------------------------------------------------------------------------
 
-export interface AskTurn {
-  role: 'user' | 'assistant';
-  content: string;
-}
-
-export interface AskRequest {
-  question: string;
-  history: AskTurn[];
-}
-
-export interface Citation {
-  chunk_id: Id;
-  evidence_id: Id;
-  evidence_title: string;
-  page: number | null;
-  passage: string;
-}
-
-export interface AskResponse {
-  answer: string;
-  citations: Citation[];
-  follow_ups: string[];
-}
-
-export interface SearchHit extends Citation {
-  score: number;
-}
+export type AskTurn = Schemas['AskTurn'];
+export type AskRequest = Schemas['AskRequest'];
+export type Citation = Schemas['Citation'];
+export type AskResponse = Schemas['AskResponse'];
+export type SearchHit = Schemas['SearchHit'];
 
 // ---------------------------------------------------------------------------
 // Injuries (M5)
 // ---------------------------------------------------------------------------
 
-export interface Injury extends Reviewable {
-  id: Id;
-  case_id: Id;
-  person_id: Id | null;
-  body_region: string;
-  structure_id: string | null;
-  type: string;
-  severity: InjurySeverity;
-  depth: string | null;
-  estimated_time: IsoDateTime | null;
-  description: string;
-}
-
-export type InjuryCreate = Pick<Injury, 'body_region' | 'type' | 'severity'> & Partial<CreateOf<Injury>>;
-/** For the proposed PATCH /api/injuries/{id}: injuries are AI proposals too, so they need review. */
-export type InjuryUpdate = UpdateOf<Injury>;
+export type Injury = Schemas['Injury'];
+export type InjuryCreate = Schemas['InjuryCreate'];
+export type InjuryUpdate = Schemas['InjuryUpdate'];
 
 // ---------------------------------------------------------------------------
 // Workspace
 // ---------------------------------------------------------------------------
 
 /** GET /api/cases/{id}/workspace. Counts are computed by the backend, never stored. */
-export interface CaseWorkspace {
-  case: Case;
-  persons: Person[];
-  objects: CaseObject[];
-  locations: Location[];
-  evidence: Evidence[];
-  events: CaseEvent[];
-  relationships: Relationship[];
-  injuries: Injury[];
-  /** Source passages for every record in the case, so any record can show and open its evidence. */
-  links: EvidenceLink[];
-  counts: {
-    evidence: number;
-    pending_reviews: number;
-    open_conflicts: number;
-    ai_items_total: number;
-    ai_items_reviewed: number;
-  };
-}
+export type CaseWorkspace = Omit<Schemas['CaseWorkspace'], 'objects'> & { objects: CaseObject[] };
 
 // ---------------------------------------------------------------------------
 // Reconstruction
@@ -451,149 +181,35 @@ export interface CaseWorkspace {
 
 export type Vec3 = [number, number, number];
 
-export interface Reconstruction {
-  id: Id;
-  case_id: Id;
-  scenario: string;
-  version: number;
-  assumptions: string;
-  scene_file: string | null;
-}
-
-export interface ReconstructionCreate {
-  scenario: string;
-  assumptions?: string;
-  scene_file?: string | null;
-}
-
-export interface SceneObject {
-  id: Id;
-  stage_id: Id;
-  model_id: string;
-  object_id: Id | null;
-  label: string;
-  /** Metres. */
-  position: Vec3;
-  /** Radians. */
-  rotation: Vec3;
-  scale: Vec3;
-}
-
-export type SceneObjectInput = Omit<SceneObject, 'id' | 'stage_id'>;
-
-export interface ReconstructionStage {
-  id: Id;
-  reconstruction_id: Id;
-  stage_order: number;
-  label: string;
-  event_ids: Id[];
-}
-
-export interface StageCreate {
-  label: string;
-  stage_order?: number;
-  event_ids?: Id[];
-}
-
-export interface SceneAnnotation {
-  id: Id;
-  reconstruction_id: Id;
-  stage_id: Id | null;
-  kind: AnnotationKind;
-  data: Record<string, unknown>;
-}
-
-export type SceneAnnotationCreate = Omit<SceneAnnotation, 'id' | 'reconstruction_id'>;
-
+export type Reconstruction = Schemas['Reconstruction'];
+export type ReconstructionCreate = Schemas['ReconstructionCreate'];
+export type SceneObject = Schemas['SceneObject'];
+export type SceneObjectInput = Schemas['SceneObjectInput'];
+export type ReconstructionStage = Schemas['ReconstructionStage'];
+export type StageCreate = Schemas['StageCreate'];
+export type SceneAnnotation = Schemas['SceneAnnotation'];
+export type SceneAnnotationCreate = Schemas['SceneAnnotationCreate'];
 /** GET /api/reconstructions/{id}. */
-export interface ReconstructionDetail extends Reconstruction {
-  stages: (ReconstructionStage & { scene_objects: SceneObject[] })[];
-  annotations: SceneAnnotation[];
-}
+export type ReconstructionDetail = Schemas['ReconstructionDetail'];
 
 // ---------------------------------------------------------------------------
 // Reports and audit
 // ---------------------------------------------------------------------------
 
-export interface ReportOptions {
-  include_ai_insights: boolean;
-  include_custody: boolean;
-}
-
-export interface ReportCreate {
-  template: ReportTemplate;
-  options: ReportOptions;
-}
-
-export interface ReportContent {
-  case: Case & { lead_investigator_name: string | null };
-  summary: string;
-  evidence: Pick<Evidence, 'id' | 'title' | 'type' | 'sha256' | 'size_bytes' | 'collected_at'>[];
-  timeline: CaseEvent[];
-  persons: Person[];
-  confirmed_findings: { statement: string; evidence_ids: Id[] }[];
-  open_conflicts: { description: string; statements: string[] }[];
-  uncertainties: string[];
-  reconstructions: Pick<Reconstruction, 'scenario' | 'version' | 'assumptions'>[];
-  injuries: Injury[];
-  ai_insights: string[] | null;
-  custody: AuditEntry[] | null;
-}
-
-export interface Report {
-  id: Id;
-  case_id: Id;
-  template: ReportTemplate;
-  options: ReportOptions;
-  content: ReportContent;
-  sha256: string;
-  created_by: Id | null;
-  created_at: IsoDateTime;
-}
-
-/** A row of the proposed GET /api/cases/{id}/reports. */
-export type ReportListItem = Omit<Report, 'content'>;
+/** Both flags default on in a request, and a stored report always carries both. */
+export type ReportOptions = Required<Schemas['ReportOptions']>;
+export type ReportCreate = Schemas['ReportCreate'];
+export type ReportContent = Schemas['ReportContent'];
+export type Report = Omit<Schemas['Report'], 'options'> & { options: ReportOptions };
+/** A row of GET /api/cases/{id}/reports. */
+export type ReportListItem = Omit<Schemas['ReportListItem'], 'options'> & { options: ReportOptions };
 
 // ---------------------------------------------------------------------------
 // Dashboard and alerts
 // ---------------------------------------------------------------------------
 
-export interface InvestigatorWithStats extends Investigator {
-  solved_cases: number;
-  active_cases: number;
-}
-
-export interface IncidentPoint {
-  case_id: Id;
-  case_number: string;
-  title: string;
-  incident_type: IncidentType;
-  priority: CasePriority;
-  address: string;
-  lat: number;
-  lng: number;
-  incident_at: IsoDateTime | null;
-}
-
-export interface Dashboard {
-  total_cases: number;
-  active_cases: number;
-  pending_reviews: number;
-  storage_bytes: number;
-  status_counts: Record<CaseStatus, number>;
-  incident_points: IncidentPoint[];
-  investigators: InvestigatorWithStats[];
-}
-
-export interface Alert {
-  id: string;
-  kind: AlertKind;
-  severity: AlertSeverity;
-  title: string;
-  message: string;
-  case_id: Id;
-  case_number: string;
-  record_type: RecordType | null;
-  record_id: Id | null;
-  created_at: IsoDateTime;
-}
+export type InvestigatorWithStats = Schemas['InvestigatorWithStats'];
+export type IncidentPoint = Schemas['IncidentPoint'];
+/** `status_counts` has every status as a key (OpenAPI only says "string keys"). */
+export type Dashboard = Omit<Schemas['Dashboard'], 'status_counts'> & { status_counts: Record<CaseStatus, number> };
+export type Alert = Schemas['Alert'];
