@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { LoadingState } from '@/components/shared/QueryState';
+import { selectClass } from '@/components/shared/formStyles';
 import { useReconstruction } from '@/hooks/useReconstruction';
 import { formatTimeRange } from '@/lib/format';
 import { CaseWorkspace, Id, Reconstruction, ReconstructionDetail } from '@/types/api';
@@ -12,16 +13,11 @@ export const CompareScenarios: React.FC<{ workspace: CaseWorkspace; scenarios: R
   const right = useReconstruction(rightId);
 
   if (scenarios.length < 2) {
-    return <p className="text-xs text-slate-400">Add a second scenario to compare competing sequences.</p>;
+    return <p className="text-body text-ink-muted">Add a second scenario to compare competing sequences.</p>;
   }
 
   const select = (value: Id | null, onChange: (id: Id) => void, label: string) => (
-    <select
-      value={value ?? ''}
-      onChange={(e) => onChange(Number(e.target.value))}
-      aria-label={label}
-      className="w-full py-1.5 px-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
-    >
+    <select value={value ?? ''} onChange={(e) => onChange(Number(e.target.value))} aria-label={label} className={selectClass}>
       {scenarios.map((s) => (
         <option key={s.id} value={s.id}>
           {s.scenario} (v{s.version})
@@ -35,26 +31,27 @@ export const CompareScenarios: React.FC<{ workspace: CaseWorkspace; scenarios: R
 
   const cell = (detail: ReconstructionDetail | undefined, other: ReconstructionDetail | undefined, index: number) => {
     const stage = detail?.stages[index];
-    if (!stage) return <div className="p-3 rounded-xl border border-dashed border-slate-800 text-[11px] text-slate-600">No stage</div>;
+    if (!stage) return <div className="px-3 py-2.5 text-xs text-ink-faint">No stage</div>;
     const otherEvents = new Set(other?.stages[index]?.event_ids ?? []);
     return (
-      <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800 space-y-1.5">
-        <div className="text-xs font-bold text-slate-100">
-          {stage.stage_order}. {stage.label}
+      <div className="px-3 py-2.5 space-y-1.5 min-w-0">
+        <div className="text-body font-medium text-ink">
+          <span className="font-mono text-2xs text-ink-muted mr-1.5">{stage.stage_order}</span>
+          {stage.label}
         </div>
-        {stage.event_ids.length === 0 && <p className="text-[11px] text-slate-500">No events.</p>}
+        {stage.event_ids.length === 0 && <p className="text-xs text-ink-muted">No events.</p>}
         {stage.event_ids.map((id) => {
           const e = event(id);
           const differs = !otherEvents.has(id);
           return (
             <div
               key={id}
-              className={`text-[11px] p-1.5 rounded-lg ${differs ? 'bg-amber-500/10 border border-amber-500/30 text-amber-100' : 'text-slate-300'}`}
+              className={`text-xs pl-2 border-l-2 ${differs ? 'border-warn text-ink' : 'border-transparent text-ink-soft'}`}
               data-differs={differs || undefined}
             >
               {e ? (
                 <>
-                  <span className="text-cyan-300">{formatTimeRange(e.time_start, e.time_end, e.time_precision)}</span> {e.description}
+                  <span className="font-mono text-ink-muted">{formatTimeRange(e.time_start, e.time_end, e.time_precision)}</span> {e.description}
                 </>
               ) : (
                 `Event #${id}`
@@ -73,22 +70,24 @@ export const CompareScenarios: React.FC<{ workspace: CaseWorkspace; scenarios: R
           { value: leftId, set: setLeftId, detail: left.data, label: 'First scenario' },
           { value: rightId, set: setRightId, detail: right.data, label: 'Second scenario' }
         ].map((side) => (
-          <div key={side.label} className="space-y-2">
+          <div key={side.label} className="space-y-2 min-w-0">
             {select(side.value, side.set, side.label)}
-            {side.detail?.assumptions && (
-              <p className="text-[11px] text-slate-400 p-2.5 rounded-lg bg-slate-950 border border-slate-800">{side.detail.assumptions}</p>
-            )}
+            {side.detail?.assumptions && <p className="text-xs text-ink-soft pl-3 border-l-2 border-line-strong">{side.detail.assumptions}</p>}
           </div>
         ))}
       </div>
       {(left.isPending || right.isPending) && <LoadingState />}
-      <p className="text-[10px] text-slate-500">Highlighted events appear at this stage in one scenario but not the other.</p>
-      {Array.from({ length: rows }, (_, i) => (
-        <div key={i} className="grid grid-cols-2 gap-4">
-          {cell(left.data, right.data, i)}
-          {cell(right.data, left.data, i)}
-        </div>
-      ))}
+      <p className="text-xs text-ink-muted flex items-center gap-2">
+        <span className="w-0.5 h-3 bg-warn" aria-hidden /> Marked events sit at this stage in one scenario but not the other.
+      </p>
+      <div className="rounded-md border border-line divide-y divide-line">
+        {Array.from({ length: rows }, (_, i) => (
+          <div key={i} className="grid grid-cols-2 divide-x divide-line">
+            {cell(left.data, right.data, i)}
+            {cell(right.data, left.data, i)}
+          </div>
+        ))}
+      </div>
     </div>
   );
 };

@@ -163,14 +163,13 @@ export const EditCaseDialog: React.FC<{ caseRecord: Case; onClose: () => void }>
             {investigators?.map((inv) => (
               <label
                 key={inv.id}
-                className="flex items-center gap-2 p-2 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-300 cursor-pointer"
+                className="flex items-center gap-2 px-2.5 py-1.5 rounded border border-line text-body text-ink-soft cursor-pointer hover:border-control"
               >
                 <input
                   type="checkbox"
                   checked={teamIds.includes(inv.id) || inv.id === leadId}
                   disabled={inv.id === leadId}
                   onChange={(e) => setTeamIds(e.target.checked ? [...teamIds, inv.id] : teamIds.filter((id) => id !== inv.id))}
-                  className="accent-cyan-500"
                 />
                 <span className="truncate">{inv.name}</span>
               </label>
@@ -190,7 +189,7 @@ export const EditCaseDialog: React.FC<{ caseRecord: Case; onClose: () => void }>
           />
         </div>
         {error && (
-          <p className="text-[11px] text-red-300" role="alert">
+          <p className="text-xs text-danger" role="alert">
             {error}
           </p>
         )}

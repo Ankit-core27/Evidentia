@@ -21,15 +21,23 @@ export const describeAuditDetail = (entry: AuditEntry): string => {
       }
       if (key === 'sha256') return `SHA-256 ${String(value).slice(0, 12)}…`;
       if (value === true) return humanize(key);
+      // Flat objects, such as an integrity check's counts, read as "checked 7, mismatches 0".
+      if (value && typeof value === 'object' && !Array.isArray(value)) {
+        const parts = Object.entries(value as Record<string, unknown>).map(([k, v]) =>
+          `${humanize(k).toLowerCase()} ${typeof v === 'object' ? JSON.stringify(v) : String(v)}`
+        );
+        return `${humanize(key)}: ${parts.join(', ')}`;
+      }
       return `${humanize(key)}: ${typeof value === 'object' ? JSON.stringify(value) : String(value)}`;
     })
-    .join(' • ');
+    .join(' · ');
 };
 
+/** Ledger verbs, set in mono like the rest of the custody record; colour marks the ones that change something. */
 export const AUDIT_ACTION_STYLES: Record<AuditEntry['action'], string> = {
-  uploaded: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30',
-  viewed: 'bg-slate-800 text-slate-300 border-slate-700',
-  modified: 'bg-amber-500/10 text-amber-300 border-amber-500/30',
-  reviewed: 'bg-purple-500/10 text-purple-300 border-purple-500/30',
-  exported: 'bg-cyan-500/10 text-cyan-300 border-cyan-500/30'
+  uploaded: 'text-ok',
+  viewed: 'text-ink-muted',
+  modified: 'text-warn',
+  reviewed: 'text-pending',
+  exported: 'text-info'
 };

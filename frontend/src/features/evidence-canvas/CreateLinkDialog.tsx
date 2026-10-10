@@ -68,8 +68,8 @@ export const CreateLinkDialog: React.FC<CreateLinkDialogProps> = ({ caseId, sour
           void save();
         }}
       >
-        <p className="text-xs text-slate-300">
-          <span className="text-cyan-300 font-bold">{source.label}</span> → <span className="text-cyan-300 font-bold">{target.label}</span>
+        <p className="text-body text-ink-soft">
+          <span className="text-ink font-medium">{source.label}</span> → <span className="text-ink font-medium">{target.label}</span>
         </p>
         <div className="grid grid-cols-2 gap-3">
           <div>
@@ -104,11 +104,11 @@ export const CreateLinkDialog: React.FC<CreateLinkDialogProps> = ({ caseId, sour
           </label>
           <textarea id="link-notes" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} className={`${inputClass} resize-none`} />
         </div>
-        <label className="flex items-center gap-2 text-xs text-slate-300">
-          <input type="checkbox" checked={flagged} onChange={(e) => setFlagged(e.target.checked)} className="accent-red-500" />
+        <label className="flex items-center gap-2 text-body text-ink-soft">
+          <input type="checkbox" checked={flagged} onChange={(e) => setFlagged(e.target.checked)} />
           Flag as needing attention
         </label>
-        {create.isError && <p className="text-[11px] text-red-300">{(create.error as Error).message}</p>}
+        {create.isError && <p className="text-xs text-danger">{(create.error as Error).message}</p>}
       </form>
     </Dialog>
   );

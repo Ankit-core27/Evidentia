@@ -38,7 +38,7 @@ export const ReportDocument: React.FC<ReportDocumentProps> = ({ report, investig
 
   return (
     <article
-      className="print-report bg-white text-slate-800 rounded-xl shadow-2xl p-8 space-y-6 font-sans text-[12px] leading-relaxed"
+      className="print-report bg-white text-slate-800 rounded-sm shadow-overlay p-6 sm:p-10 space-y-6 text-[12px] leading-relaxed"
       data-testid="report-document"
     >
       <header className="flex justify-between gap-6 border-b-2 border-slate-800 pb-4">
