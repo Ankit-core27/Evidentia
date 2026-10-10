@@ -7,12 +7,13 @@ import {
   useLayoutEffect,
   useMemo,
   useRef,
+  type ErrorInfo,
   type ReactNode,
 } from 'react';
 import { Color, Mesh, type EulerOrder, type Group, type Material, type Object3D } from 'three';
 
 import { getAssetRegistryEntry, resolveAssetTransform } from './assets/asset-registry.js';
-import type { SceneSelection, SceneTransform } from './types/scene.js';
+import type { SceneAssetLoadError, SceneSelection, SceneTransform } from './types/scene.js';
 
 const objectSelectionTint = new Color('#22d3ee');
 const evidenceSelectionTint = new Color('#f59e0b');
@@ -28,6 +29,7 @@ interface SceneObjectProps {
   markerNumber?: number;
   markerLabel?: string;
   selection: SceneSelection | null;
+  onAssetLoadError?: (failure: SceneAssetLoadError) => void;
 }
 
 interface ModelProps extends SceneObjectProps {
@@ -139,13 +141,25 @@ function AssetPlaceholder({
 }
 
 class AssetErrorBoundary extends Component<
-  { children: ReactNode; label: string; dimensions?: [number, number, number] },
+  {
+    children: ReactNode;
+    label: string;
+    dimensions?: [number, number, number];
+    onAssetLoadError?: (error: Error) => void;
+  },
   { error: Error | null }
 > {
   state = { error: null as Error | null };
 
   static getDerivedStateFromError(error: Error) {
     return { error };
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    this.props.onAssetLoadError?.(error);
+    if (info.componentStack) {
+      console.error(`Failed to render scene asset "${this.props.label}".`, error, info.componentStack);
+    }
   }
 
   render() {
@@ -214,7 +228,17 @@ export function SceneObject(props: SceneObjectProps) {
       {!entry ? (
         <AssetPlaceholder label={props.name} message={`Unknown asset ID: ${props.assetId}`} />
       ) : (
-        <AssetErrorBoundary label={props.name} dimensions={fallbackDimensions}>
+        <AssetErrorBoundary
+          label={props.name}
+          dimensions={fallbackDimensions}
+          onAssetLoadError={(error) => props.onAssetLoadError?.({
+            id: props.id,
+            name: props.name,
+            assetId: props.assetId,
+            url: entry.url,
+            message: error.message,
+          })}
+        >
           <Suspense
             fallback={
               <AssetPlaceholder

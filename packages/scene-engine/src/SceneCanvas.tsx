@@ -5,7 +5,7 @@ import type { PerspectiveCamera } from 'three';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 
 import { SceneBuilder } from './SceneBuilder.js';
-import type { SceneDefinition, SceneSelection } from './types/scene.js';
+import type { SceneAssetLoadError, SceneDefinition, SceneSelection } from './types/scene.js';
 
 interface SceneCanvasProps {
   scene: SceneDefinition;
@@ -15,6 +15,7 @@ interface SceneCanvasProps {
   resetVersion: number;
   overheadVersion: number;
   onObjectSelect?: (selection: SceneSelection) => void;
+  onAssetLoadError?: (failure: SceneAssetLoadError) => void;
   onClearSelection?: () => void;
 }
 
@@ -26,6 +27,7 @@ export function SceneCanvas({
   resetVersion,
   overheadVersion,
   onObjectSelect,
+  onAssetLoadError,
   onClearSelection,
 }: SceneCanvasProps) {
   const cameraPosition = scene.camera?.position ?? [8, 7, 9];
@@ -77,6 +79,7 @@ export function SceneCanvas({
           showEvidenceMarkers={showEvidenceMarkers}
           showCeilings={showCeilings}
           onObjectSelect={onObjectSelect}
+          onAssetLoadError={onAssetLoadError}
           onClearSelection={onClearSelection}
         />
       </Suspense>

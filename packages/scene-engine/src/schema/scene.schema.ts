@@ -130,6 +130,28 @@ const cameraSchema = z.object({
   fov: z.number().finite().positive().optional(),
   near: z.number().finite().positive().optional(),
   far: z.number().finite().positive().optional(),
+}).superRefine((camera, ctx) => {
+  if ((camera.fov ?? 50) >= 180) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['fov'],
+      message: 'Camera field of view must be less than 180 degrees.',
+    });
+  }
+  if ((camera.near ?? 0.1) >= (camera.far ?? 500)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['near'],
+      message: 'Camera near plane must be less than the far plane.',
+    });
+  }
+  if (camera.position.every((value, index) => value === camera.target[index])) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['position'],
+      message: 'Camera position and target must be different points.',
+    });
+  }
 });
 
 const sharedBoundarySchema = z.object({

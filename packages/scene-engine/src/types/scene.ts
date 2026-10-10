@@ -96,6 +96,14 @@ export interface EvidenceMarkerSelection extends SceneSelectionBase {
 
 export type SceneSelection = SceneObjectSelection | EvidenceMarkerSelection;
 
+export interface SceneAssetLoadError {
+  id: string;
+  name: string;
+  assetId: string;
+  url: string;
+  message: string;
+}
+
 export interface AssetPlacement {
   id: string;
   assetId: string;

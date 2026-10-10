@@ -5,7 +5,7 @@ import { EvidenceMarker } from './EvidenceMarker.js';
 import { ProceduralRoom } from './ProceduralRoom.js';
 import { createSceneSelection } from './selection.js';
 import { SceneObject } from './SceneObject.js';
-import type { SceneSelection } from './types/scene.js';
+import type { SceneAssetLoadError, SceneSelection } from './types/scene.js';
 import type { AssetPlacement, RoomDefinition, SceneDefinition } from './types/scene.js';
 
 interface SceneBuilderProps {
@@ -14,6 +14,7 @@ interface SceneBuilderProps {
   showEvidenceMarkers: boolean;
   showCeilings: boolean;
   onObjectSelect?: (selection: SceneSelection) => void;
+  onAssetLoadError?: (failure: SceneAssetLoadError) => void;
   onClearSelection?: () => void;
 }
 
@@ -25,6 +26,7 @@ export function SceneBuilder({
   showEvidenceMarkers,
   showCeilings,
   onObjectSelect,
+  onAssetLoadError,
   onClearSelection,
 }: SceneBuilderProps) {
   const rotationOrder = scene.coordinateSystem.rotationOrder;
@@ -88,6 +90,7 @@ export function SceneBuilder({
           rotationOrder={rotationOrder}
           selected={selectedId === placement.id}
           onSelect={onObjectSelect}
+          onAssetLoadError={onAssetLoadError}
         />
       ))}
       {scene.objects.map((object) => (
@@ -101,6 +104,7 @@ export function SceneBuilder({
           rotationOrder={rotationOrder}
           selected={selectedId === object.id}
           onSelect={onObjectSelect}
+          onAssetLoadError={onAssetLoadError}
         />
       ))}
       {showEvidenceMarkers &&
@@ -113,6 +117,7 @@ export function SceneBuilder({
             rotationOrder={rotationOrder}
             selected={selectedId === marker.id}
             onSelect={onObjectSelect}
+            onAssetLoadError={onAssetLoadError}
           />
         ))}
     </group>
@@ -157,11 +162,13 @@ function PlacedAsset({
   selected,
   selection,
   onSelect,
+  onAssetLoadError,
 }: {
   placement: AssetPlacement;
   rotationOrder: string;
   selected: boolean;
   onSelect?: (selection: SceneSelection) => void;
+  onAssetLoadError?: (failure: SceneAssetLoadError) => void;
   selection: SceneSelection | null;
 }) {
   if (!selection) return null;
@@ -175,6 +182,7 @@ function PlacedAsset({
       rotationOrder={rotationOrder as EulerOrder}
       selected={selected}
       onSelect={onSelect}
+      onAssetLoadError={onAssetLoadError}
     />
   );
 }

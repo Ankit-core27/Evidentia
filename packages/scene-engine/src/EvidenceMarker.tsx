@@ -1,7 +1,7 @@
 import type { EvidenceMarkerDefinition } from './types/scene.js';
 import type { EulerOrder } from 'three';
 import { SceneObject } from './SceneObject.js';
-import type { SceneSelection } from './types/scene.js';
+import type { SceneAssetLoadError, SceneSelection } from './types/scene.js';
 
 interface EvidenceMarkerProps {
   marker: EvidenceMarkerDefinition;
@@ -10,6 +10,7 @@ interface EvidenceMarkerProps {
   selected: boolean;
   selection: SceneSelection | null;
   onSelect?: (selection: SceneSelection) => void;
+  onAssetLoadError?: (failure: SceneAssetLoadError) => void;
 }
 
 export function EvidenceMarker({
@@ -19,6 +20,7 @@ export function EvidenceMarker({
   selected,
   selection,
   onSelect,
+  onAssetLoadError,
 }: EvidenceMarkerProps) {
   return (
     <SceneObject
@@ -34,6 +36,7 @@ export function EvidenceMarker({
       rotationOrder={rotationOrder}
       selected={selected}
       onSelect={onSelect}
+      onAssetLoadError={onAssetLoadError}
       markerNumber={number}
       markerLabel={marker.label}
     />
