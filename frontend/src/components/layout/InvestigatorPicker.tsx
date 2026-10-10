@@ -35,7 +35,7 @@ export const InvestigatorPicker: React.FC = () => {
         ) : (
           <UserCircle className="w-6 h-6 text-amber-300" />
         )}
-        <div className="hidden sm:flex flex-col text-left max-w-[11rem]">
+        <div className="hidden md:flex flex-col text-left max-w-[11rem]">
           <span className={`text-xs font-bold leading-tight truncate ${current ? 'text-slate-100' : 'text-amber-200'}`}>
             {current ? current.name : 'Choose investigator'}
           </span>

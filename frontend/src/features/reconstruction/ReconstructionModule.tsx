@@ -69,31 +69,28 @@ export const ReconstructionModule: React.FC<{ workspace: CaseWorkspace }> = ({ w
     ids.map((id) => workspace.events.find((e) => e.id === id)).filter((e): e is NonNullable<typeof e> => !!e);
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-3 pb-3 border-b border-slate-800">
-        <div>
-          <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2">
-            <Box className="w-5 h-5 text-cyan-400" />
-            Reconstruction
-          </h2>
-          <p className="text-xs text-slate-400">Competing scenarios of what happened, stage by stage, with the scene at each stage.</p>
-        </div>
+    <div className="space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="text-base font-bold text-slate-100 flex items-center gap-2">
+          <Box className="w-4 h-4 text-cyan-400" />
+          Reconstruction
+        </h2>
         <div className="flex items-center gap-2">
-          <div className="flex gap-1 p-1 bg-slate-950 rounded-xl border border-slate-800 text-xs" role="tablist">
+          <div className="flex gap-1 p-0.5 bg-slate-950 rounded-lg border border-slate-800 text-[11px]" role="tablist">
             {(['stages', 'compare'] as const).map((m) => (
               <button
                 key={m}
                 role="tab"
                 aria-selected={mode === m}
                 onClick={() => setMode(m)}
-                className={`px-3 py-1 rounded-lg whitespace-nowrap ${mode === m ? 'bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-500/40' : 'text-slate-400 hover:text-slate-200'}`}
+                className={`px-2.5 py-1 rounded-md whitespace-nowrap ${mode === m ? 'bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-500/40' : 'text-slate-400 hover:text-slate-200'}`}
               >
                 {m === 'stages' ? 'Stages' : 'Compare scenarios'}
               </button>
             ))}
           </div>
-          <button onClick={() => setDialog('scenario')} className={primaryButtonClass}>
-            <Plus className="w-3.5 h-3.5" /> New scenario
+          <button onClick={() => setDialog('scenario')} className={`${primaryButtonClass} !px-2.5 !py-1.5 !text-xs`}>
+            <Plus className="w-3.5 h-3.5" /> Scenario
           </button>
         </div>
       </div>
@@ -106,7 +103,7 @@ export const ReconstructionModule: React.FC<{ workspace: CaseWorkspace }> = ({ w
 
       {mode === 'stages' && scenarios.length > 0 && (
         <>
-          <div className="flex gap-2 overflow-x-auto pb-1" role="tablist" aria-label="Scenarios">
+          <div className="flex gap-1.5 overflow-x-auto pb-0.5" role="tablist" aria-label="Scenarios">
             {scenarios.map((s) => (
               <button
                 key={s.id}
@@ -116,12 +113,12 @@ export const ReconstructionModule: React.FC<{ workspace: CaseWorkspace }> = ({ w
                   setPlaying(false);
                   setReconstruction(s.id);
                 }}
-                className={`px-3 py-2 rounded-xl border text-left text-xs shrink-0 ${
+                className={`px-2.5 py-1.5 rounded-lg border text-left text-xs shrink-0 ${
                   s.id === reconstructionId ? 'bg-cyan-500/15 border-cyan-500/40 text-cyan-200' : 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-600'
                 }`}
               >
                 <div className="font-bold">{s.scenario}</div>
-                <div className="text-[10px] text-slate-400">Version {s.version}</div>
+                <div className="text-[9px] text-slate-400">Version {s.version}</div>
               </button>
             ))}
           </div>
@@ -130,15 +127,15 @@ export const ReconstructionModule: React.FC<{ workspace: CaseWorkspace }> = ({ w
           {detailQuery.isError && <ErrorState error={detailQuery.error} onRetry={() => detailQuery.refetch()} />}
 
           {detail && (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {detail.assumptions && (
-                <p className="text-xs text-slate-300 p-3 rounded-xl bg-slate-900/80 border border-slate-800">
-                  <span className="text-[10px] text-slate-500 uppercase font-bold block">Assumptions</span>
-                  {detail.assumptions}
-                </p>
+                <details className="rounded-lg bg-slate-900/80 border border-slate-800 px-2.5 py-1.5 text-[11px] text-slate-300">
+                  <summary className="cursor-pointer text-[10px] text-slate-400 uppercase font-bold">Scenario assumptions</summary>
+                  <p className="pt-1.5">{detail.assumptions}</p>
+                </details>
               )}
 
-              <div className="flex flex-wrap items-center gap-2" aria-label="Stages">
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5" aria-label="Stages">
                 <button
                   onClick={() => stageIndex > 0 && setStage(stages[stageIndex - 1].id)}
                   disabled={stageIndex <= 0}
@@ -188,32 +185,32 @@ export const ReconstructionModule: React.FC<{ workspace: CaseWorkspace }> = ({ w
               {stages.length === 0 && <EmptyState title="This scenario has no stages yet" message="Add a stage and choose its events." />}
 
               {stage && (
-                <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 items-start">
-                  <div className="xl:col-span-2 rounded-2xl overflow-hidden border border-slate-800 bg-slate-950">
-                    <div className="flex items-center justify-between gap-3 px-3 py-2 border-b border-slate-800">
-                      <span className="text-xs text-slate-300">
-                        {viewerKind === 'demo' ? '3D engine preview · synthetic scene' : `${stage.label} · stage schematic`}
+                <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_16rem] gap-2 xl:h-[min(72vh,900px)] xl:min-h-[34rem]">
+                  <section className="flex min-w-0 flex-col overflow-hidden rounded-xl border border-slate-800 bg-slate-950">
+                    <div className="flex items-center justify-between gap-2 border-b border-slate-800 px-2.5 py-1.5">
+                      <span className="text-[11px] text-slate-300">
+                        {viewerKind === 'demo' ? '3D crime-scene viewer' : `${stage.label} · stage schematic`}
                       </span>
                       <div className="flex gap-1" aria-label="Scene viewer mode">
                         <button
                           type="button"
                           aria-pressed={viewerKind === 'demo'}
                           onClick={() => setViewerKind('demo')}
-                          className={`px-2 py-1 rounded-md text-[11px] ${viewerKind === 'demo' ? 'bg-cyan-500/20 text-cyan-200' : 'text-slate-400 hover:text-slate-200'}`}
+                          className={`px-2 py-1 rounded-md text-[10px] ${viewerKind === 'demo' ? 'bg-cyan-500/20 text-cyan-200' : 'text-slate-400 hover:text-slate-200'}`}
                         >
-                          3D demo
+                          3D
                         </button>
                         <button
                           type="button"
                           aria-pressed={viewerKind === 'stage'}
                           onClick={() => setViewerKind('stage')}
-                          className={`px-2 py-1 rounded-md text-[11px] ${viewerKind === 'stage' ? 'bg-cyan-500/20 text-cyan-200' : 'text-slate-400 hover:text-slate-200'}`}
+                          className={`px-2 py-1 rounded-md text-[10px] ${viewerKind === 'stage' ? 'bg-cyan-500/20 text-cyan-200' : 'text-slate-400 hover:text-slate-200'}`}
                         >
-                          Stage schematic
+                          Schematic
                         </button>
                       </div>
                     </div>
-                    <div className="h-[460px]">
+                    <div className="h-[65vh] min-h-[28rem] xl:h-auto xl:min-h-0 xl:flex-1">
                       {viewerKind === 'demo' ? (
                         <React.Suspense
                           fallback={<div className="p-4 text-xs text-slate-400">Loading 3D scene…</div>}
@@ -229,38 +226,46 @@ export const ReconstructionModule: React.FC<{ workspace: CaseWorkspace }> = ({ w
                         />
                       )}
                     </div>
-                  </div>
-                  <div className="space-y-4">
+                  </section>
+                  <aside className="min-w-0 space-y-2 xl:h-full xl:overflow-y-auto" aria-label="Stage details">
                     {sceneObject && <SceneObjectPanel workspace={workspace} sceneObject={sceneObject} onClose={() => selectSceneObject(null)} />}
-                    <section className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-2" aria-label="Stage events">
-                      <div className="flex items-center justify-between">
-                        <h3 className="text-xs font-bold text-slate-200 uppercase">
-                          {stage.label}: events ({stage.event_ids.length})
-                        </h3>
-                        <Link to={casePath(caseId, 'timeline')} className="text-[10px] text-cyan-400 hover:underline">
-                          Show in timeline
-                        </Link>
-                      </div>
-                      {eventsOf(stage.event_ids).map((e) => (
-                        <div key={e.id} className="p-2 rounded-lg bg-slate-950 border border-slate-800 text-[11px]">
-                          <span className="text-cyan-300">{formatTimeRange(e.time_start, e.time_end, e.time_precision)}</span>{' '}
-                          <span className="text-slate-200">{e.description}</span>
+                    <section className="rounded-xl bg-slate-900/80 border border-slate-800 px-2.5 py-2" aria-label="Stage events">
+                      <details open>
+                        <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-[10px] font-bold uppercase text-slate-200">
+                          <span>{stage.label}: events ({stage.event_ids.length})</span>
+                          <Link to={casePath(caseId, 'timeline')} onClick={(event) => event.stopPropagation()} className="text-[9px] font-normal normal-case text-cyan-400 hover:underline">
+                            Timeline
+                          </Link>
+                        </summary>
+                        <div className="mt-2 max-h-48 space-y-1.5 overflow-y-auto">
+                          {eventsOf(stage.event_ids).map((e) => (
+                            <div key={e.id} className="p-2 rounded-lg bg-slate-950 border border-slate-800 text-[10px]">
+                              <span className="text-cyan-300">{formatTimeRange(e.time_start, e.time_end, e.time_precision)}</span>{' '}
+                              <span className="text-slate-200">{e.description}</span>
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                      <h3 className="text-xs font-bold text-slate-200 uppercase pt-2">Scene objects ({stage.scene_objects.length})</h3>
-                      {stage.scene_objects.map((o) => (
-                        <button
-                          key={o.id}
-                          onClick={() => selectSceneObject(o.id)}
-                          className={`w-full text-left p-2 rounded-lg border text-[11px] ${
-                            o.id === sceneObjectId ? 'bg-cyan-500/10 border-cyan-500/40 text-cyan-200' : 'bg-slate-950 border-slate-800 text-slate-300 hover:border-slate-600'
-                          }`}
-                        >
-                          {o.label}
-                        </button>
-                      ))}
+                      </details>
+                      <details open className="mt-2 border-t border-slate-800 pt-2">
+                        <summary className="cursor-pointer text-[10px] font-bold uppercase text-slate-200">
+                          Scene objects ({stage.scene_objects.length})
+                        </summary>
+                        <div className="mt-1.5 max-h-36 space-y-1 overflow-y-auto">
+                          {stage.scene_objects.map((o) => (
+                            <button
+                              key={o.id}
+                              onClick={() => selectSceneObject(o.id)}
+                              className={`w-full text-left px-2 py-1.5 rounded-md border text-[10px] ${
+                                o.id === sceneObjectId ? 'bg-cyan-500/10 border-cyan-500/40 text-cyan-200' : 'bg-slate-950 border-slate-800 text-slate-300 hover:border-slate-600'
+                              }`}
+                            >
+                              {o.label}
+                            </button>
+                          ))}
+                        </div>
+                      </details>
                     </section>
-                  </div>
+                  </aside>
                 </div>
               )}
             </div>

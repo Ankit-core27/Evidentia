@@ -67,6 +67,7 @@ const CaseWorkspace: React.FC<{ caseId: number; activeModule: CaseModule }> = ({
   const workspace = workspaceQuery.data;
   const c = workspace.case;
   const pendingTask = PENDING_MODULES[activeModule];
+  const isReconstruction = activeModule === 'reconstruction';
 
   return (
     <div className="flex flex-1 min-h-[calc(100vh-4rem)] bg-slate-950 text-slate-100 font-mono">
@@ -85,8 +86,12 @@ const CaseWorkspace: React.FC<{ caseId: number; activeModule: CaseModule }> = ({
         }}
       />
 
-      <main className="flex-1 p-4 lg:p-6 overflow-y-auto space-y-6 min-w-0">
-        <CaseWorkspaceBanner workspace={workspace} />
+      <main
+        className={`flex-1 min-w-0 overflow-y-auto ${
+          isReconstruction ? 'p-2 lg:p-3 space-y-3' : 'p-4 lg:p-6 space-y-6'
+        }`}
+      >
+        <CaseWorkspaceBanner workspace={workspace} compact={isReconstruction} />
         {activeModule === 'overview' && <CaseSummary workspace={workspace} />}
         {activeModule === 'evidence' && <EvidenceModule caseId={c.id} />}
         {activeModule === 'people' && <PeopleModule workspace={workspace} />}

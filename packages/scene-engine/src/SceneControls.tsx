@@ -12,8 +12,8 @@ const buttonStyle = {
   borderRadius: 6,
   background: '#0f172aee',
   color: '#e2e8f0',
-  padding: '7px 10px',
-  font: '12px/1.2 sans-serif',
+  padding: '5px 7px',
+  font: '11px/1.2 sans-serif',
   cursor: 'pointer',
 };
 
@@ -30,26 +30,27 @@ export function SceneControls({
       style={{
         position: 'absolute',
         zIndex: 2,
-        top: 12,
-        right: 12,
+        top: 8,
+        right: 8,
         display: 'flex',
         flexWrap: 'wrap',
         justifyContent: 'flex-end',
-        gap: 6,
+        gap: 4,
       }}
       aria-label="Scene controls"
     >
-      <button type="button" style={buttonStyle} onClick={onResetCamera}>
-        Reset view
+      <button type="button" style={buttonStyle} onClick={onResetCamera} title="Reset camera to the scene's initial view">
+        Reset
       </button>
-      <button type="button" style={buttonStyle} onClick={onOverheadView}>
-        Overhead
+      <button type="button" style={buttonStyle} onClick={onOverheadView} title="Show overhead view">
+        Top
       </button>
       <button
         type="button"
         style={buttonStyle}
         onClick={onToggleEvidenceMarkers}
         aria-pressed={showEvidenceMarkers}
+        title="Toggle evidence markers"
       >
         Evidence {showEvidenceMarkers ? 'on' : 'off'}
       </button>
@@ -58,6 +59,7 @@ export function SceneControls({
         style={buttonStyle}
         onClick={onToggleCeilings}
         aria-pressed={showCeilings}
+        title="Toggle room ceilings"
       >
         Ceilings {showCeilings ? 'on' : 'off'}
       </button>
