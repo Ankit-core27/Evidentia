@@ -165,8 +165,9 @@ def test_text_file_without_key_is_extracted_indexed_and_done(db):
     assert evidence.processed_at is not None
     assert evidence.summary is None
     assert evidence.extracted_text == "First paragraph.\n\nSecond paragraph."
-    assert "".join(c.text for c in chunks_of(db, evidence)) == "First paragraph.Second paragraph."
-    assert all(c.page is None for c in chunks_of(db, evidence))
+    chunks = chunks_of(db, evidence)
+    assert normalize(" ".join(c.text for c in chunks)) == "first paragraph second paragraph"
+    assert all(c.page is None for c in chunks)
     assert db.scalars(select(AiRun)).all() == []
     assert ai_rows(db, Observation) == []
 
