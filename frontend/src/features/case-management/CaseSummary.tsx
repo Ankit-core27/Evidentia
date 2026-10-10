@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Car, Clock, Folder, MapPin, Users, Brain, AlertTriangle, ChevronRight } from 'lucide-react';
 import { ProcessingBadge, ReviewBadge } from '@/components/shared/Badges';
 import { InitialsAvatar } from '@/components/shared/InitialsAvatar';
+import { useEvidenceInspector } from '@/hooks/useEvidenceInspector';
 import { casePath } from '@/lib/caseModules';
 import { formatBytes, humanize } from '@/lib/format';
 import { CaseModule } from '@/types';
@@ -14,6 +15,7 @@ const sectionTitle = 'text-xs font-bold text-slate-200 uppercase flex items-cent
 /** Overview of a case: counts and everything recorded so far, straight from the workspace call. */
 export const CaseSummary: React.FC<{ workspace: CaseWorkspace }> = ({ workspace }) => {
   const { case: c, counts, evidence } = workspace;
+  const { open: openEvidence } = useEvidenceInspector();
   // Rejected AI proposals are not part of the case.
   const kept = <T extends { review_status: string }>(rows: T[]) => rows.filter((r) => r.review_status !== 'rejected');
   const persons = kept(workspace.persons);
@@ -133,7 +135,11 @@ export const CaseSummary: React.FC<{ workspace: CaseWorkspace }> = ({ workspace 
             </h2>
             {evidence.length === 0 && <p className="text-xs text-slate-500">No evidence uploaded.</p>}
             {evidence.map((e) => (
-              <div key={e.id} className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs flex justify-between gap-3">
+              <button
+                key={e.id}
+                onClick={() => openEvidence(e.id)}
+                className="w-full text-left p-3 rounded-xl bg-slate-950 border border-slate-800 hover:border-cyan-500/40 text-xs flex justify-between gap-3"
+              >
                 <div className="min-w-0">
                   <div className="text-slate-200 font-bold truncate">{e.title}</div>
                   <div className="text-[11px] text-slate-500">
@@ -142,7 +148,7 @@ export const CaseSummary: React.FC<{ workspace: CaseWorkspace }> = ({ workspace 
                   {e.summary && <p className="text-[11px] text-slate-400 mt-1 line-clamp-2">{e.summary}</p>}
                 </div>
                 <ProcessingBadge status={e.processing_status} />
-              </div>
+              </button>
             ))}
           </section>
         </div>

@@ -17,6 +17,7 @@ import {
   useUpdateObject,
   useUpdatePerson
 } from '@/hooks/usePeople';
+import { useEvidenceInspector } from '@/hooks/useEvidenceInspector';
 import { humanize } from '@/lib/format';
 import { CaseObject, CaseWorkspace, Id, Location, Person, ReviewStatus } from '@/types/api';
 import { LocationDialog, ObjectDialog, PersonDialog } from './RecordForms';
@@ -32,11 +33,9 @@ const sectionClass = 'p-4 rounded-2xl bg-slate-900/80 border border-slate-800 sp
 const rowClass = 'p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs space-y-2';
 
 /** Persons, vehicles and other objects, and locations: add, edit, delete, and review AI proposals. */
-export const PeopleModule: React.FC<{ workspace: CaseWorkspace; onOpenEvidence?: (evidenceId: Id) => void }> = ({
-  workspace,
-  onOpenEvidence
-}) => {
+export const PeopleModule: React.FC<{ workspace: CaseWorkspace }> = ({ workspace }) => {
   const caseId = workspace.case.id;
+  const { open: onOpenEvidence } = useEvidenceInspector();
   const [editing, setEditing] = useState<Editing | null>(null);
   const [showRejected, setShowRejected] = useState(false);
 
