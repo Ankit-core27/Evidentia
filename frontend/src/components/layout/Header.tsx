@@ -58,7 +58,7 @@ export const Header: React.FC<HeaderProps> = ({ activeModule, onOpenCreateModal 
   return (
     <header className="h-16 border-b border-slate-800 bg-slate-950/95 backdrop-blur-xl px-4 lg:px-6 flex items-center justify-between sticky top-0 z-40 font-mono">
       {/* LEFT SECTION: Logo or Workspace Breadcrumb */}
-      <div className="flex items-center gap-4 lg:gap-6 shrink-0">
+      <div className="flex items-center gap-2 sm:gap-4 lg:gap-6 shrink-0">
         {/* Brand Logo */}
         <Link
           to="/"
@@ -67,7 +67,7 @@ export const Header: React.FC<HeaderProps> = ({ activeModule, onOpenCreateModal 
           <div className="w-8 h-8 rounded bg-cyan-600 text-white flex items-center justify-center font-bold shadow-[0_0_15px_rgba(8,145,178,0.4)]">
             <Shield className="w-4 h-4" />
           </div>
-          <div className="flex flex-col text-left">
+          <div className="hidden flex-col text-left sm:flex">
             <span className="font-bold text-sm text-slate-100 tracking-wider uppercase font-mono leading-tight">
               FORENSIX
             </span>
@@ -80,16 +80,16 @@ export const Header: React.FC<HeaderProps> = ({ activeModule, onOpenCreateModal 
         {/* NAVIGATION / BREADCRUMBS */}
         {routeCaseId ? (
           /* Case Workspace Breadcrumbs */
-          <div className="flex items-center gap-2 text-xs font-mono">
+          <div className="flex items-center gap-1 sm:gap-2 text-xs font-mono">
             <Link
               to="/cases"
-              className="text-slate-400 hover:text-cyan-300 transition-colors flex items-center gap-1"
+              className="hidden text-slate-400 hover:text-cyan-300 transition-colors items-center gap-1 md:flex"
             >
               <LayoutDashboard className="w-3.5 h-3.5" />
               <span>Cases</span>
             </Link>
 
-            <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
+            <ChevronRight className="hidden w-3.5 h-3.5 text-slate-600 sm:block" />
 
             {/* Case Picker Selector Dropdown */}
             <div className="relative" ref={caseSelectorRef}>
@@ -134,7 +134,7 @@ export const Header: React.FC<HeaderProps> = ({ activeModule, onOpenCreateModal 
               )}
             </div>
 
-            <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
+            <ChevronRight className="hidden w-3.5 h-3.5 text-slate-600 sm:block" />
 
             <span className="text-slate-200 font-bold px-2 py-1 rounded bg-slate-900 border border-slate-800 text-xs">
               {caseModuleLabel(activeModule)}
@@ -168,12 +168,12 @@ export const Header: React.FC<HeaderProps> = ({ activeModule, onOpenCreateModal 
       </div>
 
       {/* CENTER SECTION: Global Search Input */}
-      <div className="hidden lg:flex items-center gap-3 flex-1 min-w-[14rem] max-w-md mx-6">
+      <div className="hidden xl:flex items-center gap-3 flex-1 min-w-[14rem] max-w-md mx-6">
         <GlobalCaseSearch />
       </div>
 
       {/* RIGHT SECTION: Action Buttons & User Profile */}
-      <div className="flex items-center gap-3 shrink-0 font-mono">
+      <div className="flex items-center gap-2 sm:gap-3 shrink-0 font-mono">
         {/* Primary "+ Create Case" Button */}
         <button
           onClick={onOpenCreateModal}

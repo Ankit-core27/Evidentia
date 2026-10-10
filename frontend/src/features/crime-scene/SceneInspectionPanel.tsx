@@ -27,14 +27,14 @@ export function SceneInspectionPanel({
   if (!selection) {
     return (
       <aside
-        className="h-full overflow-y-auto border-l border-slate-800 bg-slate-900/80 p-4 text-xs text-slate-400"
+        className="h-full overflow-y-auto bg-slate-900/95 p-2.5 text-[11px] text-slate-400"
         aria-label="Object inspection"
         data-testid="scene-inspection-panel"
       >
         <div className="text-[10px] font-bold uppercase tracking-wide text-cyan-400">Scene inspection</div>
-        <h3 className="mt-2 text-sm font-bold text-slate-100">Nothing selected</h3>
-        <p className="mt-2 leading-relaxed">Select an object or evidence marker in the scene to inspect its recorded details.</p>
-        <p className="mt-3 text-[10px] text-slate-500">Scene positions are world-space. Click empty space to clear the selection.</p>
+        <h3 className="mt-1.5 text-xs font-bold text-slate-100">Nothing selected</h3>
+        <p className="mt-1.5 leading-relaxed">Select an object or evidence marker to inspect its details.</p>
+        <p className="mt-2 text-[10px] text-slate-500">Positions are world-space. Click empty space to clear selection.</p>
       </aside>
     );
   }
@@ -49,7 +49,7 @@ export function SceneInspectionPanel({
 
   return (
     <aside
-      className="h-full space-y-3 overflow-y-auto border-l border-slate-800 bg-slate-900/80 p-3 text-xs"
+      className="h-full space-y-2.5 overflow-y-auto bg-slate-900/95 p-2.5 text-[11px]"
       aria-label="Object inspection"
       data-testid="scene-inspection-panel"
     >
