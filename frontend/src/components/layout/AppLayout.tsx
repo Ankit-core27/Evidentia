@@ -34,7 +34,7 @@ export const AppLayout: React.FC = () => {
         src="/backgrounds/forensic-evidence-loop.svg"
         alt=""
         aria-hidden
-        className="pointer-events-none fixed inset-0 -z-10 size-full object-cover"
+        className="pointer-events-none fixed inset-0 -z-10 size-full object-cover motion-reduce:hidden"
       />
 
       {/* Agency navigation, or the case breadcrumb inside a workspace */}
