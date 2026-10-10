@@ -203,7 +203,7 @@ export function diagnoseScene(
   assetUrlExists?: (url: string) => boolean,
 ): SceneDiagnostic[] {
   const diagnostics: SceneDiagnostic[] = [];
-  const validation = validateScene(scene);
+  const validation = validateScene(scene, registry);
   validation.errors.forEach((issue) =>
     add(diagnostics, 'error', 'INVALID_SCENE', issue.path, issue.message),
   );

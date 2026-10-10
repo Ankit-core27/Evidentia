@@ -14,6 +14,7 @@
   "dependencies": {
     "@dagrejs/dagre": "^1.1.8",
     "@forensix/scene-engine": "file:../packages/scene-engine",
+    "@forensix/scene-planner": "file:../packages/scene-planner",
     "@react-three/drei": "^10.7.9",
     "@react-three/fiber": "^9.8.1",
     "@tailwindcss/vite": "^4.1.14",
