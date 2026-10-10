@@ -37,7 +37,13 @@ export const CaseWorkspacePage: React.FC = () => {
   }
 
   // Keyed by case so per-case state (such as the copilot conversation) resets when switching cases.
-  return <CaseWorkspace key={forensicCase.id} forensicCase={forensicCase} activeModule={module ?? 'overview'} />;
+  return (
+    <CaseWorkspace
+      key={forensicCase.id}
+      forensicCase={forensicCase}
+      activeModule={isCaseModule(module) ? module : 'overview'}
+    />
+  );
 };
 
 interface CaseWorkspaceProps {
