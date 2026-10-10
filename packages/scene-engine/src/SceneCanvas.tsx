@@ -12,6 +12,7 @@ interface SceneCanvasProps {
   scene: SceneDefinition;
   selectedId: string | null;
   showEvidenceMarkers: boolean;
+  showCeilings: boolean;
   resetVersion: number;
   overheadVersion: number;
   onObjectSelect?: (selection: SceneObjectSelection) => void;
@@ -22,6 +23,7 @@ export function SceneCanvas({
   scene,
   selectedId,
   showEvidenceMarkers,
+  showCeilings,
   resetVersion,
   overheadVersion,
   onObjectSelect,
@@ -74,6 +76,7 @@ export function SceneCanvas({
           scene={scene}
           selectedId={selectedId}
           showEvidenceMarkers={showEvidenceMarkers}
+          showCeilings={showCeilings}
           onObjectSelect={onObjectSelect}
           onClearSelection={onClearSelection}
         />

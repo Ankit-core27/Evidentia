@@ -1,8 +1,9 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import type { EulerOrder } from 'three';
 
 import { assetRegistry } from './assets/asset-registry.js';
+import { diagnoseScene } from './diagnostics/scene-diagnostics.js';
 import { validateScene } from './schema/scene.schema.js';
 import { SceneCanvas } from './SceneCanvas.js';
 import { SceneControls } from './SceneControls.js';
@@ -40,9 +41,16 @@ export function CrimeSceneEngine({
 }: CrimeSceneEngineProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showEvidenceMarkers, setShowEvidenceMarkers] = useState(true);
+  const [showCeilings, setShowCeilings] = useState(false);
   const [resetVersion, setResetVersion] = useState(0);
   const [overheadVersion, setOverheadVersion] = useState(0);
-  const validation = validateScene(scene, assetRegistry);
+  const validation = useMemo(() => validateScene(scene, assetRegistry), [scene]);
+  const diagnostics = useMemo(() => diagnoseScene(scene, assetRegistry), [scene]);
+  const warnings = diagnostics.filter((diagnostic) => diagnostic.severity === 'warning');
+
+  useEffect(() => {
+    setSelectedId(null);
+  }, [scene.sceneId]);
 
   const selectObject = useCallback(
     (selection: SceneObjectSelection) => {
@@ -82,7 +90,9 @@ export function CrimeSceneEngine({
     <div className={className} style={{ ...viewerStyle, ...style }}>
       <SceneControls
         showEvidenceMarkers={showEvidenceMarkers}
+        showCeilings={showCeilings}
         onToggleEvidenceMarkers={() => setShowEvidenceMarkers((visible) => !visible)}
+        onToggleCeilings={() => setShowCeilings((visible) => !visible)}
         onResetCamera={() => setResetVersion((version) => version + 1)}
         onOverheadView={() => setOverheadVersion((version) => version + 1)}
       />
@@ -91,12 +101,39 @@ export function CrimeSceneEngine({
           scene={scene}
           selectedId={selectedId}
           showEvidenceMarkers={showEvidenceMarkers}
+          showCeilings={showCeilings}
           resetVersion={resetVersion}
           overheadVersion={overheadVersion}
           onObjectSelect={selectObject}
           onClearSelection={clearSelection}
         />
       </div>
+      {warnings.length > 0 && (
+        <details
+          style={{
+            position: 'absolute',
+            zIndex: 2,
+            left: 12,
+            top: 12,
+            maxWidth: 'min(380px, calc(100% - 220px))',
+            color: '#fde68a',
+            background: '#0f172ae8',
+            border: '1px solid #854d0e',
+            borderRadius: 6,
+            padding: '6px 9px',
+            font: '12px/1.4 sans-serif',
+          }}
+        >
+          <summary>{warnings.length} scene diagnostic{warnings.length === 1 ? '' : 's'}</summary>
+          <ul style={{ margin: '6px 0 0', paddingLeft: 18 }}>
+            {warnings.map((warning, index) => (
+              <li key={`${warning.code}-${warning.path}-${index}`}>
+                {warning.path}: {warning.message}
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
       <div
         style={{
           position: 'absolute',

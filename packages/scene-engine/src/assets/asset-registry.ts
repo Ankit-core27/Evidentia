@@ -1,4 +1,5 @@
-import type { AssetDimensionSpec } from '../types/scene.js';
+import { Euler, Quaternion, Vector3 as ThreeVector3 } from 'three';
+import type { AssetCalibration, AssetDimensionSpec, RotationOrder, SceneTransform, Vector3 } from '../types/scene.js';
 
 export interface AssetRegistryEntry {
   id: string;
@@ -14,6 +15,7 @@ export interface AssetRegistryEntry {
     pivot?: 'center' | 'bottom' | 'front-left' | 'custom';
   };
   defaultScale?: number;
+  calibration?: AssetCalibration;
   tags?: string[];
 }
 
@@ -42,7 +44,7 @@ export const assetRegistry: AssetRegistry = {
     category: 'furniture',
     url: '/crime-scenes/library/chair_wooden.glb',
     format: 'glb',
-    dimensions: { width: 0.46, height: 1.1, depth: 0.4425, unit: 'meters' },
+    dimensions: { width: 0.46, height: 1.1, depth: 0.4425, unit: 'source-units' },
     origin: { x: 0, y: 0, z: 0, pivot: 'bottom' },
     tags: ['chair', 'wood', 'indoor'],
   },
@@ -76,7 +78,7 @@ export const assetRegistry: AssetRegistry = {
     category: 'structural',
     url: '/crime-scenes/library/door_wooden.glb',
     format: 'glb',
-    dimensions: { width: 0.9, height: 2, depth: 0.0875, unit: 'meters' },
+    dimensions: { width: 0.9, height: 2, depth: 0.0875, unit: 'source-units' },
     origin: { x: 0, y: 0, z: 0, pivot: 'bottom' },
     tags: ['door', 'wood', 'structural', 'indoor'],
   },
@@ -86,7 +88,7 @@ export const assetRegistry: AssetRegistry = {
     category: 'evidence',
     url: '/crime-scenes/library/evidence_marker.glb',
     format: 'glb',
-    dimensions: { width: 0.22, height: 0.325, depth: 0.18, unit: 'meters' },
+    dimensions: { width: 0.22, height: 0.325, depth: 0.18, unit: 'source-units' },
     origin: { x: 0, y: 0, z: 0, pivot: 'custom' },
     tags: ['marker', 'evidence'],
   },
@@ -96,7 +98,7 @@ export const assetRegistry: AssetRegistry = {
     category: 'structural',
     url: '/crime-scenes/library/floor_tile.glb',
     format: 'glb',
-    dimensions: { width: 3, height: 0.1, depth: 3, unit: 'meters' },
+    dimensions: { width: 3, height: 0.1, depth: 3, unit: 'source-units' },
     origin: { x: 0, y: 0, z: 0, pivot: 'bottom' },
     tags: ['floor', 'tile', 'structural', 'indoor'],
   },
@@ -106,7 +108,7 @@ export const assetRegistry: AssetRegistry = {
     category: 'weapon',
     url: '/crime-scenes/library/knife.glb',
     format: 'glb',
-    dimensions: { width: 0.28, height: 0.025, depth: 0.035, unit: 'meters' },
+    dimensions: { width: 0.28, height: 0.025, depth: 0.035, unit: 'source-units' },
     origin: { x: 0, y: 0, z: 0, pivot: 'custom' },
     tags: ['weapon', 'knife'],
   },
@@ -172,7 +174,7 @@ export const assetRegistry: AssetRegistry = {
     category: 'furniture',
     url: '/crime-scenes/library/table_wooden.glb',
     format: 'glb',
-    dimensions: { width: 1.4, height: 0.78, depth: 0.8, unit: 'meters' },
+    dimensions: { width: 1.4, height: 0.78, depth: 0.8, unit: 'source-units' },
     origin: { x: 0, y: 0, z: 0, pivot: 'bottom' },
     tags: ['table', 'furniture', 'wood', 'indoor'],
   },
@@ -198,7 +200,7 @@ export const assetRegistry: AssetRegistry = {
     category: 'body',
     url: '/crime-scenes/library/victim_body.glb',
     format: 'glb',
-    dimensions: { width: 1.91, height: 0.462, depth: 0.93, unit: 'meters' },
+    dimensions: { width: 1.91, height: 0.462, depth: 0.93, unit: 'source-units' },
     origin: { x: 0, y: 0, z: 0, pivot: 'custom' },
     tags: ['body', 'victim', 'indoor'],
   },
@@ -208,11 +210,32 @@ export const assetRegistry: AssetRegistry = {
     category: 'structural',
     url: '/crime-scenes/library/wall_section.glb',
     format: 'glb',
-    dimensions: { width: 3, height: 2.5, depth: 0.15, unit: 'meters' },
+    dimensions: { width: 3, height: 2.5, depth: 0.15, unit: 'source-units' },
     origin: { x: 0, y: 0, z: 0, pivot: 'bottom' },
     tags: ['wall', 'structural', 'indoor'],
   },
 };
+
+for (const entry of Object.values(assetRegistry)) {
+  entry.calibration ??= entry.dimensions
+    ? {
+        status: 'source-bounds-inspected',
+        sourceUnits: 'unknown',
+        sourceDimensions: [
+          entry.dimensions.width ?? 0,
+          entry.dimensions.height ?? 0,
+          entry.dimensions.depth ?? 0,
+        ],
+        originConvention: entry.origin?.pivot ?? 'unknown',
+        notes: 'Dimensions describe inspected source bounds; GLB does not declare physical units.',
+      }
+    : {
+        status: 'not-inspected',
+        sourceUnits: 'unknown',
+        originConvention: entry.origin?.pivot ?? 'unknown',
+        notes: 'No verified dimensions or source bounds are available for this asset.',
+      };
+}
 
 export const assetRegistryList = Object.values(assetRegistry);
 
@@ -222,4 +245,66 @@ export function getAssetRegistryEntry(assetId: string): AssetRegistryEntry | und
 
 export function isKnownAssetId(assetId: string): boolean {
   return assetId in assetRegistry;
+}
+
+export function resolveAssetTransform(
+  transform: SceneTransform,
+  calibration?: AssetCalibration,
+  assetDefaultScale?: number,
+  rotationOrder: RotationOrder = 'XYZ',
+): SceneTransform {
+  const scale = calibration?.defaultScale;
+  const defaultScale = assetDefaultScale ?? 1;
+  const resolvedScale: Vector3 = scale
+    ? [
+        transform.scale[0] * scale[0] * defaultScale,
+        transform.scale[1] * scale[1] * defaultScale,
+        transform.scale[2] * scale[2] * defaultScale,
+      ]
+    : [
+        transform.scale[0] * defaultScale,
+        transform.scale[1] * defaultScale,
+        transform.scale[2] * defaultScale,
+      ];
+  const rotation = new Euler(
+    (transform.rotation[0] * Math.PI) / 180,
+    (transform.rotation[1] * Math.PI) / 180,
+    (transform.rotation[2] * Math.PI) / 180,
+    rotationOrder,
+  );
+  const baseQuaternion = new Quaternion().setFromEuler(rotation);
+  const correctionQuaternion = calibration?.rotationCorrection
+    ? new Quaternion().setFromEuler(new Euler(
+        (calibration.rotationCorrection[0] * Math.PI) / 180,
+        (calibration.rotationCorrection[1] * Math.PI) / 180,
+        (calibration.rotationCorrection[2] * Math.PI) / 180,
+        rotationOrder,
+      ))
+    : new Quaternion();
+  const resolvedRotation = new Euler().setFromQuaternion(
+    baseQuaternion.multiply(correctionQuaternion),
+    rotationOrder,
+  );
+  const degrees = (value: number) => {
+    const result = (value * 180) / Math.PI;
+    return Math.abs(result) < 1e-12 ? 0 : result;
+  };
+  const positionCorrection = calibration?.positionCorrection
+    ? new ThreeVector3(...calibration.positionCorrection)
+        .multiply(new ThreeVector3(...resolvedScale))
+        .applyEuler(rotation)
+    : new ThreeVector3();
+  return {
+    position: [
+      transform.position[0] + positionCorrection.x,
+      transform.position[1] + positionCorrection.y,
+      transform.position[2] + positionCorrection.z,
+    ],
+    rotation: [
+      degrees(resolvedRotation.x),
+      degrees(resolvedRotation.y),
+      degrees(resolvedRotation.z),
+    ],
+    scale: resolvedScale,
+  };
 }

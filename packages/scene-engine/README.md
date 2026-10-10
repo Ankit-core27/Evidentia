@@ -34,7 +34,26 @@ The top-level scene object is versioned and deliberately sparse enough to suppor
   },
   environment: {
     type: 'residential_house',
-    rooms: []
+    rooms: [{
+      id: 'room-1',
+      name: 'Living room',
+      type: 'living_room',
+      layoutMode: 'procedural',
+      position: [0, 0, 0],
+      rotation: [0, 0, 0],
+      dimensions: { width: 6, depth: 5, height: 3 },
+      wallThickness: 0.12,
+      openings: [{
+        id: 'entry-door',
+        type: 'door',
+        wall: 'south',
+        offset: 2.4,
+        width: 1,
+        height: 2.1,
+        sillHeight: 0,
+        assetId: 'door_wooden'
+      }]
+    }]
   },
   objects: [],
   evidenceMarkers: [],
@@ -45,6 +64,20 @@ The top-level scene object is versioned and deliberately sparse enough to suppor
 }
 ```
 
+## Procedural rooms and openings
+
+Rooms with `layoutMode: 'procedural'` are built from their dimensions, world-space center position and horizontal Y-axis rotation. The engine generates a floor (unless disabled), four wall planes and optional ceilings. Door and window openings are cut from the specified wall using metre offsets measured from that wall's start edge; windows retain the wall below their sill and above their top. An opening may reference a registry asset, for example a door GLB. `sharedBoundaries` explicitly pairs opposite walls of two rooms; room A owns the shared wall and any connecting opening on that wall, and room B's duplicate wall is suppressed. Diagnostics report shared walls whose planes, heights or spans do not align. Authored structural placements remain supported for existing scenes.
+
+Procedural rooms require width, depth and height. Openings must fit within their wall and room height, and openings on a wall cannot overlap. Room object transforms remain world-space; setting `roomId` associates an object and enables center-point containment diagnostics without changing its transform.
+
+## Calibration and diagnostics
+
+Registry calibration status is explicit. `source-bounds-inspected` means source-coordinate bounds were inspected only; it is not a physical measurement. The legacy `dimensions` values on inspected entries are source-coordinate extents, not metres, and calibration records these as `sourceDimensions` with `sourceUnits: 'unknown'`. `demo-scale-estimate` records a demonstration estimate, `physical-dimensions-verified` is reserved for measured physical dimensions, and `not-inspected` indicates missing measurements. Optional `positionCorrection` is interpreted in model-local source units, `rotationCorrection` is composed in the configured scene rotation order, and scale corrections are applied by the shared `resolveAssetTransform` helper rather than model-specific offsets in components.
+
+`diagnoseScene(scene)` returns actionable errors and warnings for schema/registry issues, non-browser asset URLs, unverified asset scale, suspicious object scales, object centers outside their associated room, and misaligned shared boundaries. Outdoor objects without a room are valid. Diagnostics do not claim forensic accuracy.
+
+The package exports `mockMurderScene`, `mockMultiRoomScene`, and `mockRoadAccidentScene` as synthetic regression/demo fixtures. The existing reconstruction viewer's demo selector lets you switch between all three without creating a second frontend. Run `npm test` in `packages/scene-engine` for schema, diagnostics and calibration tests.
+
 ## Coordinate conventions
 
 - Units are metres.
@@ -53,7 +86,7 @@ The top-level scene object is versioned and deliberately sparse enough to suppor
 - Rotation is stored as `[x, y, z]` in degrees, using the `XYZ` rotation order.
 - Position, rotation and scale are world-space. `parentId` records a hierarchy/reference only; this renderer does not compound child transforms relative to a parent.
 - A room's optional `position` is the world-space center of its floor footprint. Structural placements and scene objects still use their own explicit world-space transforms.
-- Asset origins are not assumed to be identical across GLB files. When bounds were inspected from the GLB accessors, the registry records source-coordinate dimensions and the model-local origin/pivot. No automatic origin or scale correction is applied by the loader.
+- Asset origins are not assumed to be identical across GLB files. Registry calibration records whether only source bounds were inspected, a demo-scale estimate was applied, physical dimensions were verified, or the model remains uninspected. GLB source bounds do not prove physical units. Optional position, rotation, and scale corrections are centralized in the registry and applied without mutating scene transforms.
 
 ## Asset registry conventions
 
@@ -129,7 +162,7 @@ The current package loads models using `useGLTF` from the registry URL, clones t
 
 ### Asset measurement note
 
-For the fixture's floor tile, wall, door, table, chair, knife, body and evidence marker, the recorded dimensions were read from GLB accessor bounds, with node translations included for the multi-part body. GLB itself does not declare a physical unit; source coordinates are interpreted as metres to match this scene format. These values are useful renderer defaults, not certified survey measurements. Model-local transforms are preserved as authored; the engine does not normalize different origins automatically.
+For the fixture's floor tile, wall, door, table, chair, knife, body and evidence marker, the recorded dimensions were read from GLB accessor bounds, with node translations included for the multi-part body. GLB itself does not declare a physical unit; source coordinates remain unit-unknown and these dimensions are not certified survey measurements. The engine preserves model-local transforms unless explicit registry corrections are configured.
 
 ## Boundaries
 
