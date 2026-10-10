@@ -40,7 +40,7 @@ import {
 } from '@/types/api';
 import { addAudit, Chunk, chunkText, MockDb, nextId, nowIso, StoredEvidence } from './db';
 import { sha256Hex } from './files';
-import { created, idParam, invalid, MockRequest, MockRouter, noContent, notFound, ok } from './router';
+import { created, idParam, invalid, MockHttpError, MockRequest, MockRouter, noContent, notFound, ok } from './router';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -798,9 +798,15 @@ export const buildRoutes = () => {
 
   // search ------------------------------------------------------------------
 
+  // Questions containing "[fail]" fail once, so the retry path can be tried.
+  const failedOnce = new Set<string>();
   r.on('POST', '/cases/:id/ask', (req) => {
     const caseId = findCase(req.db, idParam(req)).id;
     requireFields(req.body, ['question']);
+    if (req.body.question.includes('[fail]') && !failedOnce.has(req.body.question)) {
+      failedOnce.add(req.body.question);
+      throw new MockHttpError(503, { detail: 'The AI service is unavailable (simulated once by the mock for questions containing [fail]).' });
+    }
     return ok(answerQuestion(req.db, caseId, { question: req.body.question, history: req.body.history ?? [] }));
   });
 
