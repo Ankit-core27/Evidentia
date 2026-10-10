@@ -1,8 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronLeft } from 'lucide-react';
-import { CaseModule } from '@/types';
-import { CASE_MODULES, casePath } from '@/lib/caseModules';
+import { CASE_MODULES, CaseModule, casePath } from '@/lib/caseModules';
 
 interface CaseWorkspaceSidebarProps {
   caseId: string | number;

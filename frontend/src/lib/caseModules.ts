@@ -12,7 +12,20 @@ import {
   ClipboardCheck
 } from 'lucide-react';
 import type { ElementType } from 'react';
-import { CaseModule } from '@/types';
+
+/** The workspace modules, one per tab: /cases/:caseId/:module. */
+export type CaseModule =
+  | 'overview'
+  | 'evidence'
+  | 'people'
+  | 'review'
+  | 'canvas'
+  | 'timeline'
+  | 'reconstruction'
+  | 'autopsy'
+  | 'copilot'
+  | 'reports'
+  | 'settings';
 
 export interface CaseModuleInfo {
   id: CaseModule;
@@ -34,7 +47,7 @@ export const CASE_MODULES: CaseModuleInfo[] = [
   { id: 'copilot', label: 'AI Copilot', icon: Bot },
   { id: 'reports', label: 'Reports', icon: FileSpreadsheet },
   { id: 'settings', label: 'Case Settings', icon: Settings },
-  // The 2D anatomy draft stays until the 3D anatomy explorer (M5, T13).
+  // Wired with the injuries and anatomy explorer in T13 (stretch).
   { id: 'autopsy', label: 'Autopsy & Medical', icon: Activity, hidden: true }
 ];
 
@@ -47,6 +60,6 @@ export const caseModuleLabel = (module: CaseModule) =>
 export const casePath = (caseId: string | number, module: CaseModule = 'overview') =>
   module === 'overview' ? `/cases/${caseId}` : `/cases/${caseId}/${module}`;
 
-/** Case IDs from the API are integers; anything else is a case from the UI draft's mock data. */
+/** Case IDs are integers; any other value in the URL names no case. */
 export const parseCaseId = (value: string | undefined): number | null =>
   value !== undefined && /^\d+$/.test(value) ? Number(value) : null;

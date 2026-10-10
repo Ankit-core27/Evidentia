@@ -13,13 +13,12 @@ import {
   LayoutDashboard,
   ChevronDown
 } from 'lucide-react';
-import { CaseModule } from '@/types';
 import { ALERT_SEVERITY_DOT, alertPath } from '@/lib/alerts';
 import { CaseStatusBadge } from '@/components/shared/Badges';
 import { useAlerts } from '@/hooks/useDashboard';
 import { useCase, useCases } from '@/hooks/useCases';
 import { useClickOutside } from '@/hooks/useClickOutside';
-import { caseModuleLabel, casePath, parseCaseId } from '@/lib/caseModules';
+import { CaseModule, caseModuleLabel, casePath, parseCaseId } from '@/lib/caseModules';
 import { formatDateTime } from '@/lib/format';
 import { GlobalCaseSearch } from './GlobalCaseSearch';
 import { InvestigatorPicker } from './InvestigatorPicker';

@@ -10,7 +10,20 @@ import {
   Info,
   CheckCircle2
 } from 'lucide-react';
-import { AnatomicalInjury } from '@/types';
+
+/** The UI draft's injury shape; T13 replaces it with the API's Injury. */
+export interface AnatomicalInjury {
+  id: string;
+  region: 'head' | 'neck' | 'chest' | 'abdomen' | 'left_arm' | 'right_arm' | 'left_leg' | 'right_leg' | 'back';
+  title: string;
+  type: 'Laceration' | 'Blunt Force Trauma' | 'Gunshot Wound' | 'Toxic Chemical Residue' | 'Defensive Wound' | 'Asphyxiation Mark';
+  severity: 'Minor' | 'Moderate' | 'Severe' | 'Fatal';
+  depth: string;
+  description: string;
+  estimatedTimeOfInjury: string;
+  aiNotes: string;
+  coordinates: { x: number; y: number }; // Percentage position on mannequin SVG/canvas
+}
 
 interface AnatomicalViewerProps {
   injuries: AnatomicalInjury[];
