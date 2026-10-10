@@ -3,6 +3,7 @@ import { Outlet, ScrollRestoration, useMatch, useNavigate, useOutletContext } fr
 import { Header } from './Header';
 import { CreateCaseModal } from '@/components/cases/CreateCaseModal';
 import { EvidencePreviewModal } from '@/components/evidence/EvidencePreviewModal';
+import { MockModeBanner } from '@/components/shared/MockModeBanner';
 import { mockCases, mockInvestigators, mockSystemAlerts } from '@/data/mockData';
 import { isCaseModule, casePath } from '@/lib/caseModules';
 import { ForensicCase, EvidenceItem, CaseStatus } from '@/types';
@@ -79,6 +80,8 @@ export const AppLayout: React.FC = () => {
         evidence={previewEvidence}
         onClose={() => setPreviewEvidence(null)}
       />
+
+      <MockModeBanner />
     </div>
   );
 };
