@@ -11,7 +11,7 @@ import {
 } from 'react';
 import { Color, Mesh, type EulerOrder, type Group, type Material, type Object3D } from 'three';
 
-import { getAssetRegistryEntry } from './assets/asset-registry.js';
+import { getAssetRegistryEntry, resolveAssetTransform } from './assets/asset-registry.js';
 import type { SceneTransform } from './types/scene.js';
 import type { SceneObjectSelection } from './CrimeSceneEngine.js';
 
@@ -160,14 +160,23 @@ class AssetErrorBoundary extends Component<
 export function SceneObject(props: SceneObjectProps) {
   const group = useRef<Group>(null);
   const entry = getAssetRegistryEntry(props.assetId);
+  const transform = useMemo(
+    () => resolveAssetTransform(
+      props.transform,
+      entry?.calibration,
+      entry?.defaultScale,
+      props.rotationOrder,
+    ),
+    [entry?.calibration, entry?.defaultScale, props.rotationOrder, props.transform],
+  );
   const rotation = useMemo(
     () =>
-      props.transform.rotation.map((degrees) => (degrees * Math.PI) / 180) as [
+      transform.rotation.map((degrees) => (degrees * Math.PI) / 180) as [
         number,
         number,
         number,
       ],
-    [props.transform.rotation],
+    [transform.rotation],
   );
   const fallbackDimensions: [number, number, number] | undefined = entry?.dimensions
     ? [
@@ -196,9 +205,9 @@ export function SceneObject(props: SceneObjectProps) {
   return (
     <group
       ref={group}
-      position={props.transform.position}
+      position={transform.position}
       rotation={rotation}
-      scale={props.transform.scale}
+      scale={transform.scale}
       onClick={handleSelect}
       userData={{ sceneObjectId: props.id, assetId: props.assetId }}
     >

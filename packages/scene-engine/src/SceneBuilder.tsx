@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import type { EulerOrder } from 'three';
 
 import { EvidenceMarker } from './EvidenceMarker.js';
+import { ProceduralRoom } from './ProceduralRoom.js';
 import { SceneObject } from './SceneObject.js';
 import type { SceneObjectSelection } from './CrimeSceneEngine.js';
 import type { AssetPlacement, RoomDefinition, SceneDefinition } from './types/scene.js';
@@ -10,6 +11,7 @@ interface SceneBuilderProps {
   scene: SceneDefinition;
   selectedId: string | null;
   showEvidenceMarkers: boolean;
+  showCeilings: boolean;
   onObjectSelect?: (selection: SceneObjectSelection) => void;
   onClearSelection?: () => void;
 }
@@ -20,6 +22,7 @@ export function SceneBuilder({
   scene,
   selectedId,
   showEvidenceMarkers,
+  showCeilings,
   onObjectSelect,
   onClearSelection,
 }: SceneBuilderProps) {
@@ -28,7 +31,10 @@ export function SceneBuilder({
     () =>
       scene.environment.rooms.flatMap((room) =>
         STRUCTURAL_CATEGORIES.flatMap((category) =>
-          (room.structural?.[category] ?? []).map((placement) => ({
+          (room.layoutMode === 'procedural' && (category === 'floorTiles' || category === 'walls')
+            ? []
+            : room.structural?.[category] ?? []
+          ).map((placement) => ({
             room,
             category,
             placement,
@@ -41,7 +47,23 @@ export function SceneBuilder({
   return (
     <group>
       {scene.environment.rooms.map((room) => (
-        <RoomFloor key={`floor-${room.id}`} room={room} onClearSelection={onClearSelection} />
+        room.layoutMode === 'procedural' ? (
+          <ProceduralRoom
+            key={`procedural-room-${room.id}`}
+            room={room}
+            showCeiling={showCeilings}
+            rotationOrder={rotationOrder}
+            hiddenWalls={(scene.environment.sharedBoundaries ?? []).flatMap((boundary) => {
+              if (boundary.roomB === room.id) return [boundary.wallB];
+              return [];
+            })}
+            selectedId={selectedId}
+            onObjectSelect={onObjectSelect}
+            onClearSelection={onClearSelection}
+          />
+        ) : (
+          <RoomFloor key={`floor-${room.id}`} room={room} onClearSelection={onClearSelection} />
+        )
       ))}
       {roomStructures.map(({ room, category, placement }) => (
         <PlacedAsset

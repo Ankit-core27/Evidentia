@@ -12,6 +12,8 @@ const vector3Schema = z.tuple([
   z.number().finite(),
 ]);
 
+const roomWallSchema = z.enum(['north', 'south', 'east', 'west']);
+
 const transformSchema = z.object({
   position: vector3Schema,
   rotation: vector3Schema,
@@ -24,6 +26,22 @@ const roomSchema = z.object({
   type: z.string().min(1),
   parentId: z.string().min(1).optional(),
   position: vector3Schema.optional(),
+  rotation: vector3Schema.optional(),
+  layoutMode: z.enum(['authored', 'procedural']).optional(),
+  wallThickness: z.number().finite().positive().optional(),
+  floor: z.object({ enabled: z.boolean().optional() }).optional(),
+  ceiling: z.object({ enabled: z.boolean().optional() }).optional(),
+  openings: z.array(z.object({
+    id: z.string().min(1),
+    type: z.enum(['door', 'window']),
+    wall: roomWallSchema,
+    offset: z.number().finite().nonnegative(),
+    width: z.number().finite().positive(),
+    height: z.number().finite().positive(),
+    sillHeight: z.number().finite().nonnegative(),
+    assetId: z.string().min(1).optional(),
+    label: z.string().min(1).optional(),
+  })).optional(),
   dimensions: z
     .object({
       width: z.number().finite().positive().optional(),
@@ -114,6 +132,14 @@ const cameraSchema = z.object({
   far: z.number().finite().positive().optional(),
 });
 
+const sharedBoundarySchema = z.object({
+  id: z.string().min(1),
+  roomA: z.string().min(1),
+  wallA: roomWallSchema,
+  roomB: z.string().min(1),
+  wallB: roomWallSchema,
+});
+
 export const sceneSchema = z.object({
   schemaVersion: z.enum(['1.0']),
   sceneId: z.string().min(1),
@@ -130,6 +156,7 @@ export const sceneSchema = z.object({
   environment: z.object({
     type: z.string().min(1),
     rooms: z.array(roomSchema),
+    sharedBoundaries: z.array(sharedBoundarySchema).optional(),
     metadata: z.record(z.unknown()).optional(),
   }),
   objects: z.array(objectSchema),
@@ -147,7 +174,7 @@ export const sceneSchema = z.object({
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path,
-        message: `Scene element ID "${id}" must be unique across objects, structural placements, and evidence markers.`,
+        message: `Scene element ID "${id}" must be unique across objects, openings, structural placements, and evidence markers.`,
       });
       return;
     }
@@ -183,12 +210,142 @@ export const sceneSchema = z.object({
   );
 
   scene.environment.rooms.forEach((room, roomIndex) => {
+    if (room.layoutMode === 'procedural' &&
+      (!(room.dimensions?.width ?? room.dimensions?.length) || !room.dimensions?.depth || !room.dimensions?.height)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['environment', 'rooms', roomIndex, 'dimensions'],
+        message: 'Procedural rooms require positive width, depth, and height dimensions.',
+      });
+    }
+    if (room.layoutMode === 'procedural' && room.rotation &&
+      (room.rotation[0] !== 0 || room.rotation[2] !== 0)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['environment', 'rooms', roomIndex, 'rotation'],
+        message: 'Procedural rooms support horizontal rotation around the Y axis only.',
+      });
+    }
     for (const layoutKey of ['floorTiles', 'walls', 'doors', 'windows'] as const) {
       room.structural?.[layoutKey]?.forEach((placement, placementIndex) => {
         registerRenderableId(
           placement.id,
           ['environment', 'rooms', roomIndex, 'structural', layoutKey, placementIndex, 'id'],
         );
+      });
+    }
+
+    if (room.openings) {
+      room.openings.forEach((opening, openingIndex) =>
+        registerRenderableId(
+          opening.id,
+          ['environment', 'rooms', roomIndex, 'openings', openingIndex, 'id'],
+        ),
+      );
+      const width = room.dimensions?.width ?? room.dimensions?.length;
+      const depth = room.dimensions?.depth;
+      const height = room.dimensions?.height;
+      const openings = room.openings;
+      openings.forEach((opening, openingIndex) => {
+        const wallSpan = opening.wall === 'north' || opening.wall === 'south' ? width : depth;
+        const openingPath = ['environment', 'rooms', roomIndex, 'openings', openingIndex];
+        if (wallSpan === undefined || height === undefined) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: openingPath,
+            message: 'Room openings require the matching wall span and room height dimensions.',
+          });
+          return;
+        }
+        if (opening.offset + opening.width > wallSpan) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: [...openingPath, 'width'],
+            message: `Opening "${opening.id}" extends beyond the ${opening.wall} wall.`,
+          });
+        }
+        if (opening.sillHeight + opening.height > height) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: [...openingPath, 'height'],
+            message: `Opening "${opening.id}" extends above the room ceiling.`,
+          });
+        }
+        for (const other of openings.slice(0, openingIndex)) {
+          if (other.wall !== opening.wall) continue;
+          const horizontalOverlap = opening.offset < other.offset + other.width &&
+            other.offset < opening.offset + opening.width;
+          const verticalOverlap = opening.sillHeight < other.sillHeight + other.height &&
+            other.sillHeight < opening.sillHeight + opening.height;
+          if (horizontalOverlap && verticalOverlap) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: openingPath,
+              message: `Opening "${opening.id}" overlaps opening "${other.id}".`,
+            });
+          }
+        }
+      });
+    }
+  });
+
+  const sharedBoundaries = scene.environment.sharedBoundaries ?? [];
+  const boundaryIds = new Set<string>();
+  sharedBoundaries.forEach((boundary, index) => {
+    const path = ['environment', 'sharedBoundaries', index];
+    if (boundaryIds.has(boundary.id)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: [...path, 'id'],
+        message: `Shared boundary ID "${boundary.id}" must be unique.`,
+      });
+    }
+    boundaryIds.add(boundary.id);
+    const sameWallAlreadyShared = sharedBoundaries.slice(0, index).some((previous) =>
+      (previous.roomA === boundary.roomA && previous.wallA === boundary.wallA) ||
+      (previous.roomA === boundary.roomB && previous.wallA === boundary.wallB) ||
+      (previous.roomB === boundary.roomA && previous.wallB === boundary.wallA) ||
+      (previous.roomB === boundary.roomB && previous.wallB === boundary.wallB),
+    );
+    if (sameWallAlreadyShared) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path,
+        message: 'Each room wall can belong to only one shared boundary.',
+      });
+    }
+    if (!roomIds.has(boundary.roomA) || !roomIds.has(boundary.roomB) || boundary.roomA === boundary.roomB) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path,
+        message: 'A shared boundary must connect two different rooms in this scene.',
+      });
+    }
+    if (!roomIds.has(boundary.roomA)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: [...path, 'roomA'],
+        message: `Shared boundary room "${boundary.roomA}" was not found in the scene.`,
+      });
+    }
+    if (!roomIds.has(boundary.roomB)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: [...path, 'roomB'],
+        message: `Shared boundary room "${boundary.roomB}" was not found in the scene.`,
+      });
+    }
+    const oppositeWalls: Record<string, string> = {
+      north: 'south',
+      south: 'north',
+      east: 'west',
+      west: 'east',
+    };
+    if (oppositeWalls[boundary.wallA] !== boundary.wallB) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: [...path, 'wallB'],
+        message: 'Shared boundary walls must be opposite (north/south or east/west).',
       });
     }
   });
@@ -276,6 +433,14 @@ export function validateScene(
     }
 
     for (const room of scene.environment.rooms) {
+      for (const [index, opening] of (room.openings ?? []).entries()) {
+        if (opening.assetId && !registry[opening.assetId]) {
+          errors.push({
+            path: `environment.rooms.${room.id}.openings.${index}.assetId`,
+            message: `Asset ID "${opening.assetId}" is not present in the asset registry.`,
+          });
+        }
+      }
       for (const layoutKey of ['floorTiles', 'walls', 'doors', 'windows'] as const) {
         const items = room.structural?.[layoutKey] ?? [];
         for (const item of items) {

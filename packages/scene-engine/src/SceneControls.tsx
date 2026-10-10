@@ -1,6 +1,8 @@
 interface SceneControlsProps {
   showEvidenceMarkers: boolean;
+  showCeilings: boolean;
   onToggleEvidenceMarkers: () => void;
+  onToggleCeilings: () => void;
   onResetCamera: () => void;
   onOverheadView: () => void;
 }
@@ -17,7 +19,9 @@ const buttonStyle = {
 
 export function SceneControls({
   showEvidenceMarkers,
+  showCeilings,
   onToggleEvidenceMarkers,
+  onToggleCeilings,
   onResetCamera,
   onOverheadView,
 }: SceneControlsProps) {
@@ -48,6 +52,14 @@ export function SceneControls({
         aria-pressed={showEvidenceMarkers}
       >
         Evidence {showEvidenceMarkers ? 'on' : 'off'}
+      </button>
+      <button
+        type="button"
+        style={buttonStyle}
+        onClick={onToggleCeilings}
+        aria-pressed={showCeilings}
+      >
+        Ceilings {showCeilings ? 'on' : 'off'}
       </button>
     </div>
   );

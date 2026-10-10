@@ -25,7 +25,29 @@ export interface AssetDimensionSpec {
   depth?: number;
   length?: number;
   radius?: number;
-  unit?: 'meters';
+  unit?: 'meters' | 'source-units';
+}
+
+export type AssetCalibrationStatus =
+  | 'source-bounds-inspected'
+  | 'demo-scale-estimate'
+  | 'physical-dimensions-verified'
+  | 'not-inspected';
+
+export interface AssetCalibration {
+  status: AssetCalibrationStatus;
+  sourceUnits: 'unknown' | 'meters' | 'centimeters' | 'millimeters' | 'inches' | 'feet';
+  sourceDimensions?: Vector3;
+  sourceBounds?: {
+    min: Vector3;
+    max: Vector3;
+  };
+  physicalDimensions?: AssetDimensionSpec;
+  originConvention?: 'center' | 'bottom' | 'front-left' | 'custom' | 'unknown';
+  defaultScale?: Vector3;
+  rotationCorrection?: Vector3;
+  positionCorrection?: Vector3;
+  notes?: string;
 }
 
 export interface SceneTransform {
@@ -54,6 +76,16 @@ export interface RoomDefinition {
   type: string;
   parentId?: string;
   position?: Vector3;
+  rotation?: Vector3;
+  layoutMode?: 'authored' | 'procedural';
+  wallThickness?: number;
+  floor?: {
+    enabled?: boolean;
+  };
+  ceiling?: {
+    enabled?: boolean;
+  };
+  openings?: RoomOpening[];
   dimensions?: {
     width?: number;
     depth?: number;
@@ -62,6 +94,29 @@ export interface RoomDefinition {
     area?: number;
   };
   structural?: StructuralLayout;
+}
+
+export type RoomWall = 'north' | 'south' | 'east' | 'west';
+
+export interface RoomOpening {
+  id: string;
+  type: 'door' | 'window';
+  wall: RoomWall;
+  /** Distance from the start edge along the room-local wall axis, in metres. */
+  offset: number;
+  width: number;
+  height: number;
+  sillHeight: number;
+  assetId?: string;
+  label?: string;
+}
+
+export interface SharedBoundary {
+  id: string;
+  roomA: string;
+  wallA: RoomWall;
+  roomB: string;
+  wallB: RoomWall;
 }
 
 export interface SceneObjectDefinition {
@@ -112,6 +167,7 @@ export interface CoordinateSystemDefinition {
 export interface SceneEnvironment {
   type: EnvironmentType;
   rooms: RoomDefinition[];
+  sharedBoundaries?: SharedBoundary[];
   metadata?: Record<string, unknown>;
 }
 
@@ -139,4 +195,11 @@ export interface ValidationResult {
   success: boolean;
   data?: SceneDefinition;
   errors: ValidationIssue[];
+}
+
+export type DiagnosticSeverity = 'error' | 'warning';
+
+export interface SceneDiagnostic extends ValidationIssue {
+  severity: DiagnosticSeverity;
+  code: string;
 }
