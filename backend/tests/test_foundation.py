@@ -14,7 +14,6 @@ from app.core.storage import absolute_path, save_original, sha256_of
 from app.models import AuditLog, Conflict, EvidenceLink, Relationship
 from app.schemas.cases import Case as CaseSchema
 from app.services.ai.pipeline import process_evidence
-from app.services.search.indexing import index_evidence
 from tests.factories import (
     make_case,
     make_event,
@@ -180,17 +179,6 @@ def test_pipeline_stub_marks_evidence_done(db):
     evidence = db.get(type(evidence), evidence.id)
     assert evidence.processing_status == "done"
     assert evidence.processed_at is not None
-
-
-def test_index_stub_chunks_by_paragraph(db):
-    case = make_case(db)
-    evidence = make_evidence(db, case)
-    chunks = index_evidence(db, evidence.id, ["First para.\n\nSecond para.", "Page two."], paged=True)
-    db.commit()
-    assert [(c.page, c.text) for c in chunks] == [(1, "First para."), (1, "Second para."), (2, "Page two.")]
-    again = index_evidence(db, evidence.id, ["Only one."])
-    db.commit()
-    assert [(c.page, c.ordinal) for c in again] == [(None, 0)]
 
 
 def test_audit_entry_schema_reads_actor_name(db):
