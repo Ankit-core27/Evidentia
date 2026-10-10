@@ -70,7 +70,9 @@ def answer_question(db: Session, case_id: int, question: str, history: list[AskT
 
     candidates = rank_chunks(db, case_id, retrieval_query(question, history), limit=ANSWER_CHUNKS)
     if not candidates:
-        return AskResponse(answer=NOTHING_FOUND, citations=[], follow_ups=unasked(DEFAULT_FOLLOW_UPS, question, history))
+        return AskResponse(
+            answer=NOTHING_FOUND, citations=[], follow_ups=unasked(DEFAULT_FOLLOW_UPS, question, history)
+        )
 
     model = get_settings().gemini_model
     try:

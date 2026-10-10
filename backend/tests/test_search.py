@@ -85,9 +85,7 @@ def make_indexed_case(db):
 
 def chunk_ids(db, title: str) -> list[int]:
     return list(
-        db.scalars(
-            select(EvidenceChunk.id).join(Evidence).where(Evidence.title == title).order_by(EvidenceChunk.id)
-        )
+        db.scalars(select(EvidenceChunk.id).join(Evidence).where(Evidence.title == title).order_by(EvidenceChunk.id))
     )
 
 
@@ -98,7 +96,10 @@ def chunk_ids(db, title: str) -> list[int]:
 
 def test_chunks_pack_paragraphs_up_to_the_limit():
     text = "First paragraph.\n\nSecond paragraph.\n \nThird, a bit longer paragraph."
-    assert split_into_chunks(text, limit=40) == ["First paragraph.\n\nSecond paragraph.", "Third, a bit longer paragraph."]
+    assert split_into_chunks(text, limit=40) == [
+        "First paragraph.\n\nSecond paragraph.",
+        "Third, a bit longer paragraph.",
+    ]
     assert split_into_chunks(text) == [text]
     assert split_into_chunks("  \n\n ") == []
 
@@ -325,7 +326,14 @@ def test_ask_with_gemini_cites_only_candidate_chunks(client, db, monkeypatch):
         answer={
             "answer": " The van moved off before its light turned green, according to Anita Desai. ",
             "chunk_ids": [statement, other_case_chunk, 9999, statement, report_page_1],
-            "follow_ups": ["Who called 112?", "who are the witnesses?", "", "What did the CCTV show?", "Who drove?", "Fifth?"],
+            "follow_ups": [
+                "Who called 112?",
+                "who are the witnesses?",
+                "",
+                "What did the CCTV show?",
+                "Who drove?",
+                "Fifth?",
+            ],
         },
     )
 
@@ -347,7 +355,10 @@ def test_ask_with_gemini_cites_only_candidate_chunks(client, db, monkeypatch):
     # The question is embedded with the previous turns, newest first.
     task_type, (query,) = gemini.embed_calls[0]
     assert task_type == "RETRIEVAL_QUERY"
-    assert query == "When did the van move off?\n\nassistant: Anita Desai and Vikram Singh.\n\nuser: Who are the witnesses?"
+    assert (
+        query
+        == "When did the van move off?\n\nassistant: Anita Desai and Vikram Singh.\n\nuser: Who are the witnesses?"
+    )
 
     # Gemini sees this case's chunks, the conversation and the question, and must answer in JSON.
     (call,) = gemini.generate_calls
