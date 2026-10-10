@@ -20,6 +20,7 @@ import { IncidentTimeline } from '@/features/incident-timeline/IncidentTimeline'
 import { TimelineModule } from '@/features/incident-timeline/TimelineModule';
 import { AutopsyModule } from '@/features/anatomy/AutopsyModule';
 import { CrimeSceneModule } from '@/features/reconstruction/CrimeSceneModule';
+import { ReconstructionModule } from '@/features/reconstruction/ReconstructionModule';
 import { CopilotModule } from '@/features/ai-investigation/CopilotModule';
 import { ReviewModule } from '@/features/ai-investigation/ReviewModule';
 import { CopilotPanel } from '@/features/ai-investigation/CopilotPanel';
@@ -64,7 +65,6 @@ const CaseNotFound: React.FC<{ caseId: string | undefined }> = ({ caseId }) => (
 
 /** Which task in docs/FRONTEND_TASKS.md wires each module to the API. */
 const PENDING_MODULES: Partial<Record<CaseModule, string>> = {
-  reconstruction: 'T10',
   autopsy: 'T13',
   reports: 'T11'
 };
@@ -118,6 +118,7 @@ const CaseWorkspace: React.FC<{ caseId: number; activeModule: CaseModule }> = ({
         {activeModule === 'review' && <ReviewModule workspace={workspace} />}
         {activeModule === 'canvas' && <CaseCanvasModule workspace={workspace} />}
         {activeModule === 'timeline' && <IncidentTimeline workspace={workspace} />}
+        {activeModule === 'reconstruction' && <ReconstructionModule workspace={workspace} />}
         {activeModule === 'copilot' && <CopilotModule caseId={c.id} />}
         {activeModule === 'settings' && <SettingsModule caseId={c.id} />}
         {pendingTask && <NotWiredYet module={caseModuleLabel(activeModule)} task={pendingTask} />}
