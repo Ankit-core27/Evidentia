@@ -5,6 +5,7 @@ import {
   assetRegistry,
   createSceneSelection,
   diagnoseScene,
+  loadScene,
   mockMultiRoomScene,
   mockMurderScene,
   mockRoadAccidentScene,
@@ -17,6 +18,56 @@ test('all supported demonstration fixtures validate using the registry', () => {
   for (const scene of [mockMurderScene, mockMultiRoomScene, mockRoadAccidentScene]) {
     assert.deepEqual(validateScene(scene, assetRegistry).errors, []);
   }
+});
+
+test('scene loader returns validated murder and road fixtures without changing their scene IDs', () => {
+  const murder = loadScene(JSON.stringify(mockMurderScene));
+  const road = loadScene(mockRoadAccidentScene);
+  assert.equal(murder.success, true);
+  assert.equal(murder.scene.sceneId, mockMurderScene.sceneId);
+  assert.equal(road.success, true);
+  assert.equal(road.scene.sceneId, mockRoadAccidentScene.sceneId);
+});
+
+test('scene loader reports malformed JSON and unsupported schema versions separately', () => {
+  assert.equal(loadScene('{"sceneId":').diagnostics[0].code, 'INVALID_JSON');
+  const unsupported = structuredClone(mockMurderScene);
+  unsupported.schemaVersion = '2.0';
+  const result = loadScene(unsupported);
+  assert.equal(result.success, false);
+  assert.equal(result.diagnostics[0].code, 'UNSUPPORTED_SCHEMA_VERSION');
+  assert.equal(result.diagnostics[0].path, 'schemaVersion');
+});
+
+test('scene loader reports unknown assets and unresolved scene references with paths', () => {
+  const unknownAsset = structuredClone(mockMurderScene);
+  unknownAsset.objects[0].assetId = 'missing_asset';
+  const assetResult = loadScene(unknownAsset);
+  assert.equal(assetResult.success, false);
+  assert.equal(assetResult.diagnostics[0].code, 'UNKNOWN_ASSET');
+  assert.match(assetResult.diagnostics[0].path, /^objects\./);
+
+  const unknownRoom = structuredClone(mockMurderScene);
+  unknownRoom.objects[0].roomId = 'missing_room';
+  const roomResult = loadScene(unknownRoom);
+  assert.equal(roomResult.success, false);
+  assert.ok(roomResult.diagnostics.some(({ code }) => code === 'INVALID_REFERENCE'));
+});
+
+test('scene loader rejects invalid camera transforms without treating them as JSON errors', () => {
+  const scene = structuredClone(mockMurderScene);
+  scene.camera.near = 300;
+  scene.camera.far = 200;
+  const result = loadScene(scene);
+  assert.equal(result.success, false);
+  assert.ok(result.diagnostics.some(({ code, path }) =>
+    code === 'INVALID_SCENE' && path === 'camera.near'));
+});
+
+test('unavailable asset URLs are diagnosed as asset errors, independently of scene validity', () => {
+  const diagnostics = diagnoseScene(mockRoadAccidentScene, assetRegistry, () => false);
+  assert.ok(diagnostics.some(({ code }) => code === 'UNRESOLVED_ASSET_URL'));
+  assert.equal(loadScene(mockRoadAccidentScene).success, true);
 });
 
 test('procedural room openings reject out-of-bounds and overlapping geometry', () => {

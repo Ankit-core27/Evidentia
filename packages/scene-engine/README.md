@@ -115,7 +115,7 @@ The registry is separate from the scene data itself. The scene stores the asset 
 
 ## Validation
 
-Use the exported `validateScene` API to test a scene before sending it to the renderer. `CrimeSceneEngine` also validates its input and presents the specific schema or registry issues instead of silently rendering invalid data.
+Use the exported `validateScene` API to test a scene before sending it to the renderer. `CrimeSceneEngine` also validates its input, presents schema/registry issues, and reports model-loading failures separately while keeping unaffected scene elements visible.
 
 ```ts
 import { validateScene, assetRegistry } from '@forensix/scene-engine';
@@ -137,6 +137,30 @@ The validator checks:
 - finite numeric transforms
 
 It does not treat a scene as factually accurate just because it passes validation.
+
+### Loading external scene data
+
+Use `loadScene` to parse JSON text or validate already-parsed data before rendering:
+
+```ts
+import { loadScene } from '@forensix/scene-engine';
+
+const result = loadScene(jsonText);
+if (result.success) {
+  renderScene(result.scene);
+} else {
+  console.error(result.diagnostics);
+}
+```
+
+The result is a discriminated union. Failures contain diagnostics with a stable
+`code`, field `path`, and actionable `message`; codes distinguish malformed JSON,
+unsupported schema versions, invalid scene data/references, and unknown registry
+assets. The loader does not normalize invalid data. It checks registry membership
+but does not fetch GLB files: network or model-decoding failures are reported by
+the viewer as per-asset placeholders so other scene elements remain visible.
+Evidence IDs remain references only because the scene schema has no evidence
+record catalog.
 
 ## Mock scene fixture
 

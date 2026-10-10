@@ -7,14 +7,15 @@ import { diagnoseScene } from './diagnostics/scene-diagnostics.js';
 import { validateScene } from './schema/scene.schema.js';
 import { SceneCanvas } from './SceneCanvas.js';
 import { SceneControls } from './SceneControls.js';
-import type { SceneDefinition, SceneSelection } from './types/scene.js';
+import type { SceneAssetLoadError, SceneDefinition, SceneSelection } from './types/scene.js';
 
-export type { SceneObjectSelection, SceneSelection } from './types/scene.js';
+export type { SceneAssetLoadError, SceneObjectSelection, SceneSelection } from './types/scene.js';
 
 export interface CrimeSceneEngineProps {
   scene: SceneDefinition;
   onObjectSelect?: (object: SceneSelection) => void;
   onSelectionChange?: (selection: SceneSelection | null) => void;
+  onAssetLoadError?: (failure: SceneAssetLoadError) => void;
   className?: string;
   style?: CSSProperties;
 }
@@ -33,36 +34,49 @@ export function CrimeSceneEngine({
   scene,
   onObjectSelect,
   onSelectionChange,
+  onAssetLoadError,
   className,
   style,
 }: CrimeSceneEngineProps) {
   const [selection, setSelection] = useState<SceneSelection | null>(null);
-  const selectedId = selection?.id ?? null;
+  const [selectionSceneId, setSelectionSceneId] = useState(scene.sceneId);
+  const selectedId = selectionSceneId === scene.sceneId ? selection?.id ?? null : null;
   const [showEvidenceMarkers, setShowEvidenceMarkers] = useState(true);
   const [showCeilings, setShowCeilings] = useState(false);
   const [resetVersion, setResetVersion] = useState(0);
   const [overheadVersion, setOverheadVersion] = useState(0);
+  const [assetErrors, setAssetErrors] = useState<SceneAssetLoadError[]>([]);
   const validation = useMemo(() => validateScene(scene, assetRegistry), [scene]);
   const diagnostics = useMemo(() => diagnoseScene(scene, assetRegistry), [scene]);
   const warnings = diagnostics.filter((diagnostic) => diagnostic.severity === 'warning');
 
   useEffect(() => {
     setSelection(null);
+    setSelectionSceneId(scene.sceneId);
+    setResetVersion((version) => version + 1);
+    setAssetErrors([]);
     onSelectionChange?.(null);
   }, [scene.sceneId]);
 
   const selectObject = useCallback(
     (nextSelection: SceneSelection) => {
       setSelection(nextSelection);
+      setSelectionSceneId(scene.sceneId);
       onObjectSelect?.(nextSelection);
       onSelectionChange?.(nextSelection);
     },
-    [onObjectSelect, onSelectionChange],
+    [onObjectSelect, onSelectionChange, scene.sceneId],
   );
   const clearSelection = useCallback(() => {
     setSelection(null);
     onSelectionChange?.(null);
   }, [onSelectionChange]);
+  const reportAssetError = useCallback((failure: SceneAssetLoadError) => {
+    setAssetErrors((current) => current.some(({ id }) => id === failure.id)
+      ? current
+      : [...current, failure]);
+    onAssetLoadError?.(failure);
+  }, [onAssetLoadError]);
 
   useEffect(() => {
     if (!showEvidenceMarkers && selection?.kind === 'evidence-marker') clearSelection();
@@ -105,6 +119,7 @@ export function CrimeSceneEngine({
       />
       <div style={{ position: 'absolute', inset: 0 }}>
         <SceneCanvas
+          key={scene.sceneId}
           scene={scene}
           selectedId={selectedId}
           showEvidenceMarkers={showEvidenceMarkers}
@@ -112,9 +127,25 @@ export function CrimeSceneEngine({
           resetVersion={resetVersion}
           overheadVersion={overheadVersion}
           onObjectSelect={selectObject}
+          onAssetLoadError={reportAssetError}
           onClearSelection={clearSelection}
         />
       </div>
+      {assetErrors.length > 0 && (
+        <div
+          role="alert"
+          className="absolute right-3 top-[5.5rem] z-[2] max-w-[min(20rem,calc(100%-1.5rem))] rounded border border-rose-700 bg-slate-950/95 p-2 text-xs text-rose-200"
+        >
+          <p className="font-semibold">Some scene assets could not be loaded.</p>
+          <ul className="mt-1 list-disc space-y-1 pl-4">
+            {assetErrors.map((failure) => (
+              <li key={failure.id}>
+                {failure.name} ({failure.assetId}): {failure.message}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       {warnings.length > 0 && (
         <details
           style={{
