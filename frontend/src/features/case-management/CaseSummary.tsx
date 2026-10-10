@@ -1,8 +1,9 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Car, Clock, Folder, MapPin, Users, Brain, AlertTriangle, ChevronRight } from 'lucide-react';
+import { Car, Clock, Folder, MapPin, Users, Brain, AlertTriangle, ChevronRight, Share2 } from 'lucide-react';
 import { ProcessingBadge, ReviewBadge } from '@/components/shared/Badges';
 import { InitialsAvatar } from '@/components/shared/InitialsAvatar';
+import { EvidenceCanvas } from '@/features/evidence-canvas/EvidenceCanvas';
 import { useEvidenceInspector } from '@/hooks/useEvidenceInspector';
 import { casePath } from '@/lib/caseModules';
 import { formatBytes, humanize } from '@/lib/format';
@@ -54,6 +55,15 @@ export const CaseSummary: React.FC<{ workspace: CaseWorkspace }> = ({ workspace 
           </Link>
         ))}
       </div>
+
+      {workspace.relationships.length > 0 && (
+        <section className={`${card} space-y-3`}>
+          <h2 className={sectionTitle}>
+            <Share2 className="w-4 h-4 text-cyan-400" /> Relationships{moduleLink('canvas', 'Open canvas')}
+          </h2>
+          <EvidenceCanvas workspace={workspace} readOnly heightClass="h-[320px]" />
+        </section>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
         <div className="space-y-6">

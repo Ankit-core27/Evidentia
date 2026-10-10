@@ -12,9 +12,11 @@
     "gen:api": "openapi-typescript http://localhost:8000/openapi.json -o src/lib/api-types.ts"
   },
   "dependencies": {
+    "@dagrejs/dagre": "^1.1.8",
     "@tailwindcss/vite": "^4.1.14",
     "@tanstack/react-query": "^5.104.1",
     "@vitejs/plugin-react": "^5.0.4",
+    "@xyflow/react": "^12.12.0",
     "lucide-react": "^0.546.0",
     "react": "^19.0.1",
     "react-dom": "^19.0.1",
