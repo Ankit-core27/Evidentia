@@ -17,9 +17,7 @@ import { SchematicSceneView } from './SchematicSceneView';
 
 const PLAYBACK_MS = 2500;
 const CrimeSceneDemo = React.lazy(() =>
-  import('@/features/crime-scene/CrimeSceneDemo').then((module) => ({
-    default: module.CrimeSceneDemo,
-  })),
+  import('@/features/crime-scene/CrimeSceneDemo').then((module) => ({ default: module.CrimeSceneDemo }))
 );
 
 /**
@@ -34,7 +32,7 @@ export const ReconstructionModule: React.FC<{ workspace: CaseWorkspace }> = ({ w
   const [mode, setMode] = useState<'stages' | 'compare'>('stages');
   const [dialog, setDialog] = useState<'scenario' | 'stage' | null>(null);
   const [playing, setPlaying] = useState(false);
-  const [viewerKind, setViewerKind] = useState<'stage' | 'demo'>('demo');
+  const [viewerKind, setViewerKind] = useState<'demo' | 'stage'>('demo');
 
   const scenarios = listQuery.data ?? [];
   const detail = detailQuery.data?.case_id === caseId ? detailQuery.data : undefined;
@@ -71,28 +69,13 @@ export const ReconstructionModule: React.FC<{ workspace: CaseWorkspace }> = ({ w
     ids.map((id) => workspace.events.find((e) => e.id === id)).filter((e): e is NonNullable<typeof e> => !!e);
 
   return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between gap-2">
-        <h2 className="text-base font-bold text-slate-100 flex items-center gap-2">
-          <Box className="w-4 h-4 text-cyan-400" />
-          Reconstruction
-        </h2>
-        <div className="flex items-center gap-2">
-          <div className="flex gap-1 p-0.5 bg-slate-950 rounded-lg border border-slate-800 text-[11px]" role="tablist">
-            {(['stages', 'compare'] as const).map((m) => (
-              <button
-                key={m}
-                role="tab"
-                aria-selected={mode === m}
-                onClick={() => setMode(m)}
-                className={`px-2.5 py-1 rounded-md whitespace-nowrap ${mode === m ? 'bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-500/40' : 'text-slate-400 hover:text-slate-200'}`}
-              >
-                {m === 'stages' ? 'Stages' : 'Compare scenarios'}
-              </button>
-            ))}
-          </div>
-          <button onClick={() => setDialog('scenario')} className={`${primaryButtonClass} !px-2.5 !py-1.5 !text-xs`}>
-            <Plus className="w-3.5 h-3.5" /> Scenario
+    <div className="space-y-4">
+      <PageHeader
+        title="Reconstruction"
+        description="Competing scenarios of what happened, stage by stage, with the scene at each stage."
+        actions={
+          <button onClick={() => setDialog('scenario')} className={primaryButtonClass}>
+            <Plus className="size-4" aria-hidden /> New scenario
           </button>
         }
       />
@@ -115,39 +98,42 @@ export const ReconstructionModule: React.FC<{ workspace: CaseWorkspace }> = ({ w
 
       {mode === 'stages' && scenarios.length > 0 && (
         <>
-          <div className="flex gap-1.5 overflow-x-auto pb-0.5" role="tablist" aria-label="Scenarios">
-            {scenarios.map((s) => (
-              <button
-                key={s.id}
-                role="tab"
-                aria-selected={s.id === reconstructionId}
-                onClick={() => {
-                  setPlaying(false);
-                  setReconstruction(s.id);
-                }}
-                className={`px-2.5 py-1.5 rounded-lg border text-left text-xs shrink-0 ${
-                  s.id === reconstructionId ? 'bg-cyan-500/15 border-cyan-500/40 text-cyan-200' : 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-600'
-                }`}
-              >
-                <div className="font-bold">{s.scenario}</div>
-                <div className="text-[9px] text-slate-400">Version {s.version}</div>
-              </button>
-            ))}
+          <div className="flex gap-2 overflow-x-auto" role="tablist" aria-label="Scenarios">
+            {scenarios.map((s) => {
+              const active = s.id === reconstructionId;
+              return (
+                <button
+                  key={s.id}
+                  role="tab"
+                  aria-selected={active}
+                  onClick={() => {
+                    setPlaying(false);
+                    setReconstruction(s.id);
+                  }}
+                  className={`px-3 py-1.5 rounded border text-left shrink-0 transition-colors ${
+                    active ? 'border-accent/60 bg-accent/10' : 'border-line-strong hover:border-control'
+                  }`}
+                >
+                  <span className={`block text-body ${active ? 'text-ink font-medium' : 'text-ink-soft'}`}>{s.scenario}</span>
+                  <span className="block text-2xs text-ink-muted">Version {s.version}</span>
+                </button>
+              );
+            })}
           </div>
 
           {detailQuery.isPending && <LoadingState label="Loading scenario…" />}
           {detailQuery.isError && <ErrorState error={detailQuery.error} onRetry={() => detailQuery.refetch()} />}
 
           {detail && (
-            <div className="space-y-2">
+            <div className="space-y-4">
               {detail.assumptions && (
-                <details className="rounded-lg bg-slate-900/80 border border-slate-800 px-2.5 py-1.5 text-[11px] text-slate-300">
-                  <summary className="cursor-pointer text-[10px] text-slate-400 uppercase font-bold">Scenario assumptions</summary>
-                  <p className="pt-1.5">{detail.assumptions}</p>
-                </details>
+                <div className="pl-3 border-l-2 border-line-strong max-w-4xl">
+                  <div className="text-xs font-medium text-ink-muted">Assumptions</div>
+                  <p className="text-body text-ink-soft">{detail.assumptions}</p>
+                </div>
               )}
 
-              <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5" aria-label="Stages">
+              <div className="flex flex-wrap items-center gap-1.5" aria-label="Stages">
                 <button
                   onClick={() => stageIndex > 0 && setStage(stages[stageIndex - 1].id)}
                   disabled={stageIndex <= 0}
@@ -201,36 +187,21 @@ export const ReconstructionModule: React.FC<{ workspace: CaseWorkspace }> = ({ w
               {stages.length === 0 && <EmptyState title="This scenario has no stages yet" message="Add a stage and choose its events." />}
 
               {stage && (
-                <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_16rem] gap-2 xl:h-[min(72vh,900px)] xl:min-h-[34rem]">
-                  <section className="flex min-w-0 flex-col overflow-hidden rounded-xl border border-slate-800 bg-slate-950">
-                    <div className="flex items-center justify-between gap-2 border-b border-slate-800 px-2.5 py-1.5">
-                      <span className="text-[11px] text-slate-300">
-                        {viewerKind === 'demo' ? '3D crime-scene viewer' : `${stage.label} · stage schematic`}
-                      </span>
-                      <div className="flex gap-1" aria-label="Scene viewer mode">
-                        <button
-                          type="button"
-                          aria-pressed={viewerKind === 'demo'}
-                          onClick={() => setViewerKind('demo')}
-                          className={`px-2 py-1 rounded-md text-[10px] ${viewerKind === 'demo' ? 'bg-cyan-500/20 text-cyan-200' : 'text-slate-400 hover:text-slate-200'}`}
-                        >
-                          3D
-                        </button>
-                        <button
-                          type="button"
-                          aria-pressed={viewerKind === 'stage'}
-                          onClick={() => setViewerKind('stage')}
-                          className={`px-2 py-1 rounded-md text-[10px] ${viewerKind === 'stage' ? 'bg-cyan-500/20 text-cyan-200' : 'text-slate-400 hover:text-slate-200'}`}
-                        >
-                          Schematic
-                        </button>
-                      </div>
-                    </div>
-                    <div className="h-[65vh] min-h-[28rem] xl:h-auto xl:min-h-0 xl:flex-1">
+                <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 items-start">
+                  {/* Scene host: the 3D track's viewer mounts here (see sceneViewer.ts). */}
+                  <div className="xl:col-span-2 space-y-2">
+                    <Tabs
+                      label="Scene viewer"
+                      value={viewerKind}
+                      onChange={setViewerKind}
+                      options={[
+                        { value: 'demo', label: '3D' },
+                        { value: 'stage', label: 'Schematic' }
+                      ]}
+                    />
+                    <div className="h-[340px] sm:h-[460px] rounded-md overflow-hidden border border-line">
                       {viewerKind === 'demo' ? (
-                        <React.Suspense
-                          fallback={<div className="p-4 text-xs text-slate-400">Loading 3D scene…</div>}
-                        >
+                        <React.Suspense fallback={<LoadingState label="Loading 3D scene…" />}>
                           <CrimeSceneDemo />
                         </React.Suspense>
                       ) : (
@@ -242,46 +213,47 @@ export const ReconstructionModule: React.FC<{ workspace: CaseWorkspace }> = ({ w
                         />
                       )}
                     </div>
-                  </section>
-                  <aside className="min-w-0 space-y-2 xl:h-full xl:overflow-y-auto" aria-label="Stage details">
+                  </div>
+                  <div className="space-y-5">
                     {sceneObject && <SceneObjectPanel workspace={workspace} sceneObject={sceneObject} onClose={() => selectSceneObject(null)} />}
-                    <section className="rounded-xl bg-slate-900/80 border border-slate-800 px-2.5 py-2" aria-label="Stage events">
-                      <details open>
-                        <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-[10px] font-bold uppercase text-slate-200">
-                          <span>{stage.label}: events ({stage.event_ids.length})</span>
-                          <Link to={casePath(caseId, 'timeline')} onClick={(event) => event.stopPropagation()} className="text-[9px] font-normal normal-case text-cyan-400 hover:underline">
-                            Timeline
+                    <section className="space-y-2" aria-label="Stage events">
+                      <SectionHeader
+                        title={`${stage.label}: events`}
+                        count={stage.event_ids.length}
+                        action={
+                          <Link to={casePath(caseId, 'timeline')} className={`text-xs ${linkClass}`}>
+                            Show in timeline
                           </Link>
-                        </summary>
-                        <div className="mt-2 max-h-48 space-y-1.5 overflow-y-auto">
-                          {eventsOf(stage.event_ids).map((e) => (
-                            <div key={e.id} className="p-2 rounded-lg bg-slate-950 border border-slate-800 text-[10px]">
-                              <span className="text-cyan-300">{formatTimeRange(e.time_start, e.time_end, e.time_precision)}</span>{' '}
-                              <span className="text-slate-200">{e.description}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </details>
-                      <details open className="mt-2 border-t border-slate-800 pt-2">
-                        <summary className="cursor-pointer text-[10px] font-bold uppercase text-slate-200">
-                          Scene objects ({stage.scene_objects.length})
-                        </summary>
-                        <div className="mt-1.5 max-h-36 space-y-1 overflow-y-auto">
-                          {stage.scene_objects.map((o) => (
+                        }
+                      />
+                      <ul className="rounded-md border border-line divide-y divide-line">
+                        {eventsOf(stage.event_ids).map((e) => (
+                          <li key={e.id} className="px-3 py-2 text-body">
+                            <span className="block font-mono text-2xs text-ink-muted">{formatTimeRange(e.time_start, e.time_end, e.time_precision)}</span>
+                            <span className="text-ink">{e.description}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </section>
+                    <section className="space-y-2" aria-label="Scene objects">
+                      <SectionHeader title="Scene objects" count={stage.scene_objects.length} />
+                      <ul className="rounded-md border border-line divide-y divide-line">
+                        {stage.scene_objects.map((o) => (
+                          <li key={o.id}>
                             <button
-                              key={o.id}
                               onClick={() => selectSceneObject(o.id)}
-                              className={`w-full text-left px-2 py-1.5 rounded-md border text-[10px] ${
-                                o.id === sceneObjectId ? 'bg-cyan-500/10 border-cyan-500/40 text-cyan-200' : 'bg-slate-950 border-slate-800 text-slate-300 hover:border-slate-600'
+                              aria-pressed={o.id === sceneObjectId}
+                              className={`w-full text-left px-3 py-2 text-body transition-colors ${
+                                o.id === sceneObjectId ? 'bg-accent/10 text-ink' : 'text-ink-soft hover:bg-surface'
                               }`}
                             >
                               {o.label}
                             </button>
-                          ))}
-                        </div>
-                      </details>
+                          </li>
+                        ))}
+                      </ul>
                     </section>
-                  </aside>
+                  </div>
                 </div>
               )}
             </div>
