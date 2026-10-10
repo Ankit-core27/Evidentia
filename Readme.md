@@ -13,6 +13,7 @@ python -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\Activate.ps1
 pip install -e ".[dev]"
 alembic upgrade head               # creates storage/forensix.db
+python -m app.seed                 # loads the demo cases; --reset to start over
 uvicorn app.main:app --reload --port 8000
 
 # Frontend on http://localhost:3000, in a second terminal
