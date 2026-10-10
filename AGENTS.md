@@ -24,7 +24,13 @@ Several people work on this repo at the same time, and each may run several AI s
    - Use npm only. If `package-lock.json` conflicts, regenerate it with `npm install`; don't edit it by hand.
    - Before adding an Alembic migration, merge `main` so it builds on the current head. Two branches that each add a migration from the same parent leave Alembic with two heads.
 6. **Commit small and often, and push your branch** so other people can see what's in progress.
-   - Commit as the person you're working for, using their git name and email, not your tool's.
+   - Commit as the person you're working for, not as your tool. Before your first commit, run `git var GIT_AUTHOR_IDENT`. If it names your tool (such as `Claude <noreply@anthropic.com>`) instead of a person, look up the person you're working for on GitHub (in Claude Code cloud sessions, the GitHub `get_me` tool) and set their identity in this clone:
+     ```sh
+     git config user.name "<their GitHub display name>"
+     git config user.email "<their GitHub user id>+<their login>@users.noreply.github.com"
+     git config commit.gpgsign false   # the container's signing key isn't theirs
+     ```
+     The `users.noreply.github.com` address links each commit to their GitHub profile. If you can't tell who you're working for, ask.
    - Don't add AI attribution to commits or pull requests: no `Co-Authored-By` trailers, session links, "Generated with" footers or model names.
 7. **Before opening a pull request, merge the latest `main` into your branch** (`git fetch origin && git merge origin/main`). When resolving conflicts, keep the other side's work. If you can't tell which version is right, stop and ask. Then run the checks that exist: `npm run lint` and `npm run build` in `frontend/`, and `pytest` in `backend/`.
 8. **Open a draft pull request into `main`.** Say what changed, why and how to test it, and link the issue (`Closes #12`). Don't merge it. Humans merge at the checkpoints in the plan.
