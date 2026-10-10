@@ -1,29 +1,22 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronLeft } from 'lucide-react';
-import { CASE_MODULES, CaseModule, casePath } from '@/lib/caseModules';
+import { CASE_MODULE_GROUPS, CASE_MODULES, CaseModule, casePath } from '@/lib/caseModules';
 
 interface CaseWorkspaceSidebarProps {
   caseId: string | number;
-  caseNumber: string;
-  title: string;
-  priority: string;
   activeModule: CaseModule;
-  badges?: Partial<Record<CaseModule, string | number>>;
+  /** Counts shown beside each module. */
+  badges?: Partial<Record<CaseModule, number>>;
+  /** Modules whose count needs the investigator's attention. */
+  attention?: Partial<Record<CaseModule, boolean>>;
 }
 
-export const CaseWorkspaceSidebar: React.FC<CaseWorkspaceSidebarProps> = ({
-  caseId,
-  caseNumber,
-  title,
-  priority,
-  activeModule,
-  badges = {}
-}) => {
-  const modulesList = CASE_MODULES.filter((m) => !m.hidden || m.id === activeModule).map((m) => ({
-    ...m,
-    badge: badges[m.id]
-  }));
+/**
+ * Module navigation for a case. A grouped sidebar from lg up; below that, one row of tabs
+ * that scrolls sideways, so the workspace keeps the full width of a phone or tablet.
+ */
+export const CaseWorkspaceSidebar: React.FC<CaseWorkspaceSidebarProps> = ({ caseId, activeModule, badges = {}, attention = {} }) => {
+  const visible = CASE_MODULES.filter((m) => !m.hidden || m.id === activeModule);
 
   return (
     <aside className="w-14 shrink-0 bg-slate-950 border-r border-slate-800 flex flex-col h-[calc(100vh-4rem)] sticky top-16 z-30 font-mono select-none md:w-64">
@@ -100,7 +93,7 @@ export const CaseWorkspaceSidebar: React.FC<CaseWorkspaceSidebarProps> = ({
             </Link>
           );
         })}
-      </nav>
-    </aside>
+      </div>
+    </nav>
   );
 };

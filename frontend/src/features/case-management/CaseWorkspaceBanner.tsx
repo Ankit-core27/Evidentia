@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { AlertTriangle, Brain, Loader2, Pencil } from 'lucide-react';
+import { Loader2, Pencil } from 'lucide-react';
 import { PriorityBadge } from '@/components/shared/Badges';
+import { inlineSelectClass, secondaryButtonClass } from '@/components/shared/formStyles';
 import { useInvestigators, useUpdateCase } from '@/hooks/useCases';
 import { formatDate, formatDateTime, humanize } from '@/lib/format';
 import { CASE_STATUSES } from '@/lib/options';
@@ -40,8 +41,13 @@ export const CaseWorkspaceBanner: React.FC<{ workspace: CaseWorkspace; compact?:
                 {humanize(s)}
               </option>
             ))}
-          </select>
-          {updateCase.isPending && <Loader2 className="w-3.5 h-3.5 text-cyan-400 animate-spin" />}
+          </dl>
+          {updateCase.isError && (
+            <p className="text-xs text-danger" role="alert">
+              Status not saved: {(updateCase.error as Error).message}
+            </p>
+          )}
+        </div>
 
           <PriorityBadge priority={c.priority} />
           <span className={`text-slate-400 rounded bg-slate-950 border border-slate-800 ${compact ? 'text-[9px] px-1.5 py-0.5' : 'text-[10px] px-2 py-0.5'}`}>
@@ -131,11 +137,21 @@ export const CaseWorkspaceBanner: React.FC<{ workspace: CaseWorkspace; compact?:
             <span className={compact ? 'text-[10px]' : 'text-xs'}>
               <strong>{counts.open_conflicts}</strong> {compact ? 'conflicts' : `open conflict${counts.open_conflicts === 1 ? '' : 's'}`}
             </span>
-          </Link>
-        )}
-      </div>
+          </div>
+          {counts.pending_reviews > 0 && (
+            <Link to={casePath(c.id, 'review')} className="text-pending hover:underline underline-offset-2">
+              {counts.pending_reviews} waiting for review
+            </Link>
+          )}
+          {counts.open_conflicts > 0 && (
+            <Link to={`${casePath(c.id, 'review')}?view=conflicts`} className="text-warn hover:underline underline-offset-2">
+              {counts.open_conflicts} open conflict{counts.open_conflicts === 1 ? '' : 's'} between statements
+            </Link>
+          )}
+        </div>
+      )}
 
       {editing && <EditCaseDialog caseRecord={c} onClose={() => setEditing(false)} />}
-    </div>
+    </header>
   );
 };

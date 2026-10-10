@@ -1,7 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ExternalLink, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { EvidenceLinkPicker } from '@/components/evidence/EvidenceLinkPicker';
+import { iconButtonClass } from '@/components/shared/formStyles';
 import { SourcePassages } from '@/components/evidence/SourcePassages';
 import { useEvidenceInspector } from '@/hooks/useEvidenceInspector';
 import { casePath } from '@/lib/caseModules';
@@ -20,33 +21,46 @@ export const SceneObjectPanel: React.FC<{ workspace: CaseWorkspace; sceneObject:
   const heading = Math.round(((sceneObject.rotation[1] * 180) / Math.PI + 360) % 360);
 
   return (
-    <section className="p-4 rounded-2xl bg-slate-900/90 border border-cyan-500/30 space-y-3 text-xs" aria-label="Scene object" data-testid="scene-object-panel">
+    <section className="rounded-md border border-accent/40 p-3.5 space-y-3 text-body" aria-label="Scene object" data-testid="scene-object-panel">
       <div className="flex items-start justify-between gap-2">
-        <div>
-          <div className="text-[10px] text-cyan-400 uppercase">Scene object</div>
-          <h3 className="text-sm font-bold text-slate-100">{sceneObject.label}</h3>
-          <p className="text-[11px] text-slate-400">
-            Model {sceneObject.model_id} · {x.toFixed(1)} m east, {(-z).toFixed(1)} m north of the origin · heading {heading}°
+        <div className="min-w-0">
+          <div className="text-2xs text-ink-muted">Selected in the scene</div>
+          <h3 className="text-sm font-semibold text-ink">{sceneObject.label}</h3>
+          <p className="text-xs text-ink-muted mt-0.5">
+            Model <span className="font-mono">{sceneObject.model_id}</span> ·{' '}
+            <span className="font-mono">
+              {x.toFixed(1)} m E, {(-z).toFixed(1)} m N
+            </span>{' '}
+            of the origin · heading <span className="font-mono">{heading}°</span>
           </p>
         </div>
-        <button onClick={onClose} className="p-1 rounded text-slate-400 hover:bg-slate-800" aria-label="Deselect object">
-          <X className="w-4 h-4" />
+        <button onClick={onClose} className={`${iconButtonClass} -mr-1 -mt-1`} aria-label="Deselect object">
+          <X className="size-4" />
         </button>
       </div>
 
       {record ? (
-        <div className="p-2.5 rounded-lg bg-slate-950 border border-slate-800 space-y-1.5">
-          <div className="text-slate-200 font-bold">{record.label}</div>
-          <div className="text-[11px] text-slate-400">
-            {[humanize(record.kind), record.details.plate, record.details.make, record.details.colour].filter(Boolean).join(' • ')}
+        <div className="space-y-2 pt-3 border-t border-line">
+          <div>
+            <div className="text-ink font-medium">{record.label}</div>
+            <div className="text-xs text-ink-muted">
+              {humanize(record.kind)}
+              {record.details.plate && (
+                <>
+                  {' · '}
+                  <span className="font-mono">{record.details.plate}</span>
+                </>
+              )}
+              {[record.details.make, record.details.colour].filter(Boolean).map((v) => ` · ${v}`)}
+            </div>
           </div>
           <SourcePassages links={workspace.links} evidence={workspace.evidence} targetType="object" targetId={record.id} onOpenEvidence={openEvidence} />
-          <Link to={casePath(workspace.case.id, 'people')} className="text-[11px] text-cyan-400 hover:underline flex items-center gap-1">
-            Open in People & Vehicles <ExternalLink className="w-3 h-3" />
+          <Link to={casePath(workspace.case.id, 'people')} className="inline-block text-xs text-accent-text hover:underline">
+            Open in People & vehicles
           </Link>
         </div>
       ) : (
-        <p className="text-[11px] text-slate-500">Not tied to a vehicle or object record.</p>
+        <p className="text-xs text-ink-muted">Not tied to a vehicle or object record.</p>
       )}
 
       <SourcePassages

@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Box, ChevronLeft, ChevronRight, Pause, Play, Plus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Pause, Play, Plus } from 'lucide-react';
+import { PageHeader, SectionHeader } from '@/components/shared/PageHeader';
 import { EmptyState, ErrorState, LoadingState } from '@/components/shared/QueryState';
-import { primaryButtonClass, smallButtonClass } from '@/components/shared/formStyles';
+import { Tabs } from '@/components/shared/Segmented';
+import { linkClass, primaryButtonClass, smallButtonClass } from '@/components/shared/formStyles';
 import { useReconstruction, useReconstructions } from '@/hooks/useReconstruction';
 import { casePath } from '@/lib/caseModules';
 import { formatTimeRange } from '@/lib/format';
@@ -92,8 +94,18 @@ export const ReconstructionModule: React.FC<{ workspace: CaseWorkspace }> = ({ w
           <button onClick={() => setDialog('scenario')} className={`${primaryButtonClass} !px-2.5 !py-1.5 !text-xs`}>
             <Plus className="w-3.5 h-3.5" /> Scenario
           </button>
-        </div>
-      </div>
+        }
+      />
+
+      <Tabs
+        label="Reconstruction views"
+        value={mode}
+        onChange={setMode}
+        options={[
+          { value: 'stages', label: 'Stages' },
+          { value: 'compare', label: 'Compare scenarios' }
+        ]}
+      />
 
       {scenarios.length === 0 && (
         <EmptyState title="No scenarios yet" message="Create a scenario, then add its stages from the timeline's events." />
@@ -139,33 +151,37 @@ export const ReconstructionModule: React.FC<{ workspace: CaseWorkspace }> = ({ w
                 <button
                   onClick={() => stageIndex > 0 && setStage(stages[stageIndex - 1].id)}
                   disabled={stageIndex <= 0}
-                  className={smallButtonClass}
+                  className={`${smallButtonClass} px-1.5`}
                   aria-label="Previous stage"
                 >
-                  <ChevronLeft className="w-3.5 h-3.5" />
+                  <ChevronLeft className="size-3.5" />
                 </button>
-                {stages.map((s) => (
-                  <button
-                    key={s.id}
-                    onClick={() => {
-                      setPlaying(false);
-                      setStage(s.id);
-                    }}
-                    aria-pressed={s.id === stageId}
-                    className={`px-3 py-1.5 rounded-lg border text-xs ${
-                      s.id === stageId ? 'bg-purple-500/20 border-purple-400/60 text-purple-100 font-bold' : 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-600'
-                    }`}
-                  >
-                    {s.stage_order}. {s.label}
-                  </button>
-                ))}
+                {stages.map((s) => {
+                  const active = s.id === stageId;
+                  return (
+                    <button
+                      key={s.id}
+                      onClick={() => {
+                        setPlaying(false);
+                        setStage(s.id);
+                      }}
+                      aria-pressed={active}
+                      className={`h-7 px-2.5 rounded border text-xs whitespace-nowrap transition-colors ${
+                        active ? 'border-accent bg-accent/15 text-ink font-medium' : 'border-line-strong text-ink-muted hover:text-ink'
+                      }`}
+                    >
+                      <span className="font-mono text-2xs mr-1.5 opacity-70">{s.stage_order}</span>
+                      {s.label}
+                    </button>
+                  );
+                })}
                 <button
                   onClick={() => stageIndex < stages.length - 1 && setStage(stages[stageIndex + 1].id)}
                   disabled={stageIndex < 0 || stageIndex >= stages.length - 1}
-                  className={smallButtonClass}
+                  className={`${smallButtonClass} px-1.5`}
                   aria-label="Next stage"
                 >
-                  <ChevronRight className="w-3.5 h-3.5" />
+                  <ChevronRight className="size-3.5" />
                 </button>
                 <button
                   onClick={() => {
@@ -175,10 +191,10 @@ export const ReconstructionModule: React.FC<{ workspace: CaseWorkspace }> = ({ w
                   disabled={stages.length < 2}
                   className={smallButtonClass}
                 >
-                  {playing ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />} {playing ? 'Pause' : 'Play'}
+                  {playing ? <Pause className="size-3.5" /> : <Play className="size-3.5" />} {playing ? 'Pause' : 'Play stages'}
                 </button>
                 <button onClick={() => setDialog('stage')} className={`${smallButtonClass} ml-auto`}>
-                  <Plus className="w-3 h-3" /> Add stage
+                  <Plus className="size-3" aria-hidden /> Add stage
                 </button>
               </div>
 

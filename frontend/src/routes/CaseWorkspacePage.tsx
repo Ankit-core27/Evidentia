@@ -34,7 +34,7 @@ export const CaseWorkspacePage: React.FC = () => {
 };
 
 const CaseNotFound: React.FC<{ caseId: string | undefined }> = ({ caseId }) => (
-  <main className="flex-1 pb-12">
+  <main className="flex-1 px-4 lg:px-6 pt-6 pb-12">
     <NotFoundPage title="Case not found" message={`No case with ID ${caseId} exists.`} />
   </main>
 );
@@ -54,7 +54,7 @@ const CaseWorkspace: React.FC<{ caseId: number; activeModule: CaseModule }> = ({
   }
   if (!workspaceQuery.data) {
     return (
-      <main className="flex-1 p-6">
+      <main className="flex-1 px-4 lg:px-8 pt-6">
         {workspaceQuery.isError ? (
           <ErrorState error={workspaceQuery.error} onRetry={() => workspaceQuery.refetch()} />
         ) : (
@@ -70,20 +70,17 @@ const CaseWorkspace: React.FC<{ caseId: number; activeModule: CaseModule }> = ({
   const isReconstruction = activeModule === 'reconstruction';
 
   return (
-    <div className="flex flex-1 min-h-[calc(100vh-4rem)] bg-slate-950 text-slate-100 font-mono">
+    <div className="flex flex-col lg:flex-row flex-1">
       <CaseWorkspaceSidebar
         caseId={c.id}
-        caseNumber={c.case_number}
-        title={c.title}
-        priority={c.priority}
         activeModule={activeModule}
         badges={{
           evidence: workspace.counts.evidence,
           people: kept(workspace.persons).length + kept(workspace.objects).length,
-          review: workspace.counts.pending_reviews + workspace.counts.open_conflicts || undefined,
-          timeline: kept(workspace.events).length,
-          copilot: 'AI'
+          review: workspace.counts.pending_reviews + workspace.counts.open_conflicts,
+          timeline: kept(workspace.events).length
         }}
+        attention={{ review: true }}
       />
 
       <main

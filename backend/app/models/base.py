@@ -8,8 +8,8 @@ attribute instead of mutating it in place, or SQLAlchemy won't see the change.
 
 from datetime import UTC, datetime
 
-from sqlalchemy import DateTime, MetaData, String
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy import DateTime, MetaData, String, event
+from sqlalchemy.orm import DeclarativeBase, Mapped, Mapper, mapped_column
 from sqlalchemy.types import TypeDecorator
 
 # Named constraints, so Alembic's batch mode can alter SQLite tables.
@@ -24,6 +24,13 @@ NAMING_CONVENTION = {
 
 def utcnow() -> datetime:
     return datetime.now(UTC)
+
+
+def as_utc(value: datetime | None) -> datetime | None:
+    """Aware UTC, taking a naive value to be UTC already."""
+    if value is None:
+        return None
+    return value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)
 
 
 class UTCDateTime(TypeDecorator):
@@ -47,6 +54,20 @@ class UTCDateTime(TypeDecorator):
 
 class Base(DeclarativeBase):
     metadata = MetaData(naming_convention=NAMING_CONVENTION)
+
+
+@event.listens_for(Base, "mapper_configured", propagate=True)
+def _utc_on_assignment(mapper: Mapper, cls: type) -> None:
+    """Converts datetimes to UTC as they are assigned, not only when reloaded, so a
+    row returned straight after a create or update also serialises with a Z suffix
+    (sessions don't expire rows on commit)."""
+    for attribute in mapper.column_attrs:
+        if isinstance(attribute.columns[0].type, UTCDateTime):
+            event.listen(attribute.class_attribute, "set", _set_utc, retval=True)
+
+
+def _set_utc(_row, value: datetime | None, _old, _initiator) -> datetime | None:
+    return as_utc(value)
 
 
 class ReviewableMixin:
