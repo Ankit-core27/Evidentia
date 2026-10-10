@@ -1,10 +1,8 @@
-import React, { useState } from 'react';
-import { Link, NavLink, useNavigate } from 'react-router-dom';
+import React, { useRef, useState } from 'react';
+import { Link, NavLink, useMatch, useNavigate } from 'react-router-dom';
 import {
-  Search,
   Bell,
   Plus,
-  Radio,
   X,
   ShieldAlert,
   Shield,
@@ -13,20 +11,22 @@ import {
   Fingerprint,
   Cpu,
   LayoutDashboard,
-  ArrowLeft,
   ChevronDown
 } from 'lucide-react';
-import { SystemAlert, ForensicCase, CaseModule } from '@/types';
-import { caseModuleLabel, casePath } from '@/lib/caseModules';
+import { CaseModule } from '@/types';
+import { Alert } from '@/types/api';
+import { CaseStatusBadge } from '@/components/shared/Badges';
+import { useAlerts } from '@/hooks/useDashboard';
+import { useCase, useCases } from '@/hooks/useCases';
+import { useClickOutside } from '@/hooks/useClickOutside';
+import { caseModuleLabel, casePath, parseCaseId } from '@/lib/caseModules';
+import { formatDateTime } from '@/lib/format';
+import { GlobalCaseSearch } from './GlobalCaseSearch';
+import { InvestigatorPicker } from './InvestigatorPicker';
 
 interface HeaderProps {
-  activeCase: ForensicCase | null;
   activeModule: CaseModule;
-  searchTerm: string;
-  onSearchChange: (term: string) => void;
   onOpenCreateModal: () => void;
-  alerts: SystemAlert[];
-  allCases: ForensicCase[];
 }
 
 const MACRO_TABS = [
@@ -36,18 +36,34 @@ const MACRO_TABS = [
   { to: '/reports', label: 'Intelligence Hub', icon: Cpu }
 ];
 
-export const Header: React.FC<HeaderProps> = ({
-  activeCase,
-  activeModule,
-  searchTerm,
-  onSearchChange,
-  onOpenCreateModal,
-  alerts,
-  allCases
-}) => {
+/** The workspace module an alert should open. */
+const alertModule = (alert: Alert): CaseModule => (alert.record_type === 'evidence' ? 'evidence' : 'overview');
+
+const SEVERITY_DOT: Record<Alert['severity'], string> = {
+  info: 'bg-cyan-400',
+  warning: 'bg-amber-400',
+  critical: 'bg-red-500'
+};
+
+export const Header: React.FC<HeaderProps> = ({ activeModule, onOpenCreateModal }) => {
   const navigate = useNavigate();
   const [showAlertsMenu, setShowAlertsMenu] = useState(false);
   const [showCaseSelector, setShowCaseSelector] = useState(false);
+  const alertsRef = useRef<HTMLDivElement>(null);
+  const caseSelectorRef = useRef<HTMLDivElement>(null);
+  useClickOutside(alertsRef, () => setShowAlertsMenu(false), showAlertsMenu);
+  useClickOutside(caseSelectorRef, () => setShowCaseSelector(false), showCaseSelector);
+
+  // The open case comes from the URL. Numeric IDs are API cases; anything else is a
+  // case from the UI draft's mock data, until every screen reads from the API.
+  const workspaceMatch = useMatch('/cases/:caseId/:module?');
+  const routeCaseId = workspaceMatch?.params.caseId;
+  const apiCaseId = parseCaseId(routeCaseId);
+  const { data: apiCase } = useCase(apiCaseId ?? undefined);
+  const caseLabel = apiCaseId !== null ? (apiCase?.case_number ?? '…') : routeCaseId;
+
+  const { data: allCases } = useCases({}, { enabled: showCaseSelector });
+  const { data: alerts } = useAlerts();
 
   return (
     <header className="h-16 border-b border-slate-800 bg-slate-950/95 backdrop-blur-xl px-4 lg:px-6 flex items-center justify-between sticky top-0 z-40 font-mono">
@@ -72,7 +88,7 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="h-6 w-px bg-slate-800 hidden md:block"></div>
 
         {/* NAVIGATION / BREADCRUMBS */}
-        {activeCase ? (
+        {routeCaseId ? (
           /* Case Workspace Breadcrumbs */
           <div className="flex items-center gap-2 text-xs font-mono">
             <Link
@@ -86,36 +102,41 @@ export const Header: React.FC<HeaderProps> = ({
             <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
 
             {/* Case Picker Selector Dropdown */}
-            <div className="relative">
+            <div className="relative" ref={caseSelectorRef}>
               <button
                 onClick={() => setShowCaseSelector(!showCaseSelector)}
                 className="px-2.5 py-1 rounded-lg bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 font-bold flex items-center gap-1.5 hover:bg-cyan-500/20 transition-all"
+                aria-haspopup="listbox"
+                aria-expanded={showCaseSelector}
               >
-                <span>{activeCase.id}</span>
+                <span>{caseLabel}</span>
                 <ChevronDown className="w-3 h-3 text-cyan-400" />
               </button>
 
               {showCaseSelector && (
-                <div className="absolute top-full left-0 mt-2 w-72 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl p-2 z-50">
+                <div className="absolute top-full left-0 mt-2 w-80 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl p-2 z-50">
                   <span className="text-[10px] text-slate-400 uppercase font-bold block px-2 py-1 border-b border-slate-800">
                     Switch Active Case
                   </span>
                   <div className="max-h-60 overflow-y-auto space-y-1 mt-1">
-                    {allCases.map((c) => (
+                    {!allCases && <div className="p-2 text-xs text-slate-500">Loading cases…</div>}
+                    {allCases?.map((c) => (
                       <button
                         key={c.id}
                         onClick={() => {
                           navigate(casePath(c.id));
                           setShowCaseSelector(false);
                         }}
-                        className={`w-full text-left p-2 rounded-lg text-xs font-mono transition-colors flex items-center justify-between ${
-                          c.id === activeCase.id
+                        className={`w-full text-left p-2 rounded-lg text-xs font-mono transition-colors flex items-center justify-between gap-2 ${
+                          c.id === apiCaseId
                             ? 'bg-cyan-500/20 text-cyan-300 font-bold'
                             : 'text-slate-300 hover:bg-slate-800'
                         }`}
                       >
-                        <span className="truncate">{c.id}</span>
-                        <span className="text-[9px] text-slate-500">{c.status}</span>
+                        <span className="truncate">
+                          {c.case_number} · {c.title}
+                        </span>
+                        <CaseStatusBadge status={c.status} />
                       </button>
                     ))}
                   </div>
@@ -157,37 +178,12 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       {/* CENTER SECTION: Global Search Input */}
-      <div className="hidden lg:flex items-center gap-3 flex-1 max-w-md mx-6">
-        <div className="relative w-full">
-          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Search cases by ID, suspect name, DNA swab, or location..."
-            className="w-full pl-10 pr-4 py-1.5 bg-slate-900/90 border border-slate-800 rounded-xl text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 font-mono transition-all"
-            id="global-search-input"
-          />
-          {searchTerm && (
-            <button
-              onClick={() => onSearchChange('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          )}
-        </div>
+      <div className="hidden lg:flex items-center gap-3 flex-1 min-w-[14rem] max-w-md mx-6">
+        <GlobalCaseSearch />
       </div>
 
       {/* RIGHT SECTION: Action Buttons & User Profile */}
       <div className="flex items-center gap-3 shrink-0 font-mono">
-        {/* Live System Pipeline Indicator */}
-        <div className="hidden xl:flex items-center gap-2 px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-[10px] text-slate-300">
-          <Radio className="w-3 h-3 text-cyan-400 animate-pulse" />
-          <span>NEURAL PIPELINE ACTIVE</span>
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-        </div>
-
         {/* Primary "+ Create Case" Button */}
         <button
           onClick={onOpenCreateModal}
@@ -199,81 +195,65 @@ export const Header: React.FC<HeaderProps> = ({
         </button>
 
         {/* Alerts Menu Bell */}
-        <div className="relative">
+        <div className="relative" ref={alertsRef}>
           <button
             onClick={() => setShowAlertsMenu(!showAlertsMenu)}
             id="alerts-bell-btn"
+            aria-label={`Alerts (${alerts?.length ?? 0})`}
             className="relative p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-cyan-400 hover:border-slate-700 transition-colors"
           >
             <Bell className="w-4 h-4" />
-            {alerts.length > 0 && (
-              <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white">
+            {!!alerts?.length && (
+              <span className="absolute -top-1 -right-1 flex h-4 min-w-4 px-1 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white">
                 {alerts.length}
               </span>
             )}
           </button>
 
           {showAlertsMenu && (
-            <div className="absolute right-0 mt-2 w-80 bg-slate-900/95 border border-slate-800 rounded-xl shadow-2xl backdrop-blur-xl p-3 z-50 animate-in fade-in zoom-in-95 duration-150">
+            <div className="absolute right-0 mt-2 w-80 bg-slate-900/95 border border-slate-800 rounded-xl shadow-2xl backdrop-blur-xl p-3 z-50">
               <div className="flex items-center justify-between pb-2 border-b border-slate-800 px-1">
                 <span className="text-xs font-bold text-slate-200 uppercase flex items-center gap-1.5">
                   <ShieldAlert className="w-4 h-4 text-cyan-400" />
-                  Forensic Intelligence ({alerts.length})
+                  Alerts ({alerts?.length ?? 0})
                 </span>
                 <button
                   onClick={() => setShowAlertsMenu(false)}
                   className="text-slate-500 hover:text-slate-300"
+                  aria-label="Close alerts"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
               </div>
 
               <div className="mt-2 space-y-2 max-h-80 overflow-y-auto pr-1">
-                {alerts.map((alert) => (
-                  <div
+                {alerts?.length === 0 && <div className="p-2 text-xs text-slate-500">No alerts.</div>}
+                {alerts?.map((alert) => (
+                  <button
                     key={alert.id}
                     onClick={() => {
-                      navigate(casePath(alert.caseId));
+                      navigate(casePath(alert.case_id, alertModule(alert)));
                       setShowAlertsMenu(false);
                     }}
-                    className="p-2.5 rounded-lg bg-slate-950/60 border border-slate-800 hover:border-cyan-500/50 cursor-pointer transition-all group"
+                    className="w-full text-left p-2.5 rounded-lg bg-slate-950/60 border border-slate-800 hover:border-cyan-500/50 cursor-pointer transition-all group"
                   >
                     <div className="flex items-start justify-between gap-2">
-                      <span className="text-xs font-semibold text-slate-200 group-hover:text-cyan-300">
+                      <span className="text-xs font-semibold text-slate-200 group-hover:text-cyan-300 flex items-center gap-1.5">
+                        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${SEVERITY_DOT[alert.severity]}`} />
                         {alert.title}
                       </span>
-                      <span className="text-[10px] text-slate-500 shrink-0">
-                        {alert.timestamp}
-                      </span>
+                      <span className="text-[10px] text-cyan-400 shrink-0">{alert.case_number}</span>
                     </div>
-                    <p className="text-[11px] text-slate-400 mt-1 line-clamp-2">
-                      {alert.message}
-                    </p>
-                  </div>
+                    <p className="text-[11px] text-slate-400 mt-1 line-clamp-2">{alert.message}</p>
+                    <span className="text-[10px] text-slate-500">{formatDateTime(alert.created_at)}</span>
+                  </button>
                 ))}
               </div>
             </div>
           )}
         </div>
 
-        {/* User Profile Badge: Det. A. Sharma */}
-        <div className="flex items-center gap-2.5 pl-2 border-l border-slate-800">
-          <div className="w-8 h-8 rounded-lg overflow-hidden border border-cyan-500/40 p-0.5 bg-slate-900 shrink-0">
-            <img
-              src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80"
-              alt="Det. A. Sharma"
-              className="w-full h-full object-cover rounded"
-            />
-          </div>
-          <div className="hidden sm:flex flex-col">
-            <span className="text-xs font-bold text-slate-100 leading-tight">
-              Det. A. Sharma
-            </span>
-            <span className="text-[9px] text-cyan-400 tracking-wider">
-              LEVEL 5 LEAD
-            </span>
-          </div>
-        </div>
+        <InvestigatorPicker />
       </div>
     </header>
   );

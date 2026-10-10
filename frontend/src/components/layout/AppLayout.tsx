@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
-import { Outlet, ScrollRestoration, useMatch, useNavigate, useOutletContext } from 'react-router-dom';
+import { Outlet, ScrollRestoration, useMatch, useOutletContext } from 'react-router-dom';
 import { Header } from './Header';
 import { CreateCaseModal } from '@/components/cases/CreateCaseModal';
 import { EvidencePreviewModal } from '@/components/evidence/EvidencePreviewModal';
 import { MockModeBanner } from '@/components/shared/MockModeBanner';
-import { mockCases, mockInvestigators, mockSystemAlerts } from '@/data/mockData';
-import { isCaseModule, casePath } from '@/lib/caseModules';
+import { mockCases } from '@/data/mockData';
+import { isCaseModule } from '@/lib/caseModules';
 import { ForensicCase, EvidenceItem, CaseStatus } from '@/types';
 
 // Shared app state handed to every page through the router outlet.
-// The mock cases live here until the pages read from the API.
+// `cases` holds the UI draft's mock cases, still used by the dashboard, global
+// evidence and reports pages until they read from the API.
 export interface AppOutletContext {
   cases: ForensicCase[];
   updateCaseStatus: (caseId: string, newStatus: CaseStatus) => void;
@@ -20,22 +21,14 @@ export interface AppOutletContext {
 export const useAppContext = () => useOutletContext<AppOutletContext>();
 
 export const AppLayout: React.FC = () => {
-  const navigate = useNavigate();
   const workspaceMatch = useMatch('/cases/:caseId/:module?');
 
   const [cases, setCases] = useState<ForensicCase[]>(mockCases);
-  const [searchTerm, setSearchTerm] = useState<string>('');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
   const [previewEvidence, setPreviewEvidence] = useState<EvidenceItem | null>(null);
 
-  const activeCase = cases.find((c) => c.id === workspaceMatch?.params.caseId) || null;
   const moduleParam = workspaceMatch?.params.module;
   const activeModule = isCaseModule(moduleParam) ? moduleParam : 'overview';
-
-  const handleCreateCase = (newCase: ForensicCase) => {
-    setCases((prevCases) => [newCase, ...prevCases]);
-    navigate(casePath(newCase.id));
-  };
 
   const context: AppOutletContext = {
     cases,
@@ -52,15 +45,7 @@ export const AppLayout: React.FC = () => {
       <ScrollRestoration />
 
       {/* Top Navigation Header (Macro Tabs or Workspace Breadcrumbs) */}
-      <Header
-        activeCase={activeCase}
-        activeModule={activeModule}
-        searchTerm={searchTerm}
-        onSearchChange={(term) => setSearchTerm(term)}
-        onOpenCreateModal={() => setIsCreateModalOpen(true)}
-        alerts={mockSystemAlerts}
-        allCases={cases}
-      />
+      <Header activeModule={activeModule} onOpenCreateModal={() => setIsCreateModalOpen(true)} />
 
       {/* Main Body Layout */}
       <div className="flex-1 flex flex-col">
@@ -68,12 +53,7 @@ export const AppLayout: React.FC = () => {
       </div>
 
       {/* "+ Create Case" Pop-up Modal */}
-      <CreateCaseModal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        investigators={mockInvestigators}
-        onCreateCase={handleCreateCase}
-      />
+      <CreateCaseModal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} />
 
       {/* Evidence Preview Modal */}
       <EvidencePreviewModal

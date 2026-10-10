@@ -2,8 +2,12 @@ import React from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import { CaseWorkspaceSidebar } from '@/components/layout/CaseWorkspaceSidebar';
 import { useAppContext } from '@/components/layout/AppLayout';
+import { NotWiredYet } from '@/components/shared/NotWiredYet';
+import { ErrorState, LoadingState } from '@/components/shared/QueryState';
 import { CaseBanner } from '@/features/case-management/CaseBanner';
 import { CaseOverview } from '@/features/case-management/CaseOverview';
+import { CaseSummary } from '@/features/case-management/CaseSummary';
+import { CaseWorkspaceBanner } from '@/features/case-management/CaseWorkspaceBanner';
 import { PersonsModule } from '@/features/case-management/PersonsModule';
 import { CaseSettings } from '@/features/case-management/CaseSettings';
 import { CaseEvidenceModule } from '@/features/evidence-management/CaseEvidenceModule';
@@ -14,7 +18,9 @@ import { CrimeSceneModule } from '@/features/reconstruction/CrimeSceneModule';
 import { CopilotPanel } from '@/features/ai-investigation/CopilotPanel';
 import { useMockCopilot } from '@/features/ai-investigation/useMockCopilot';
 import { CaseReportModule } from '@/features/reports/CaseReportModule';
-import { casePath, isCaseModule } from '@/lib/caseModules';
+import { useCaseWorkspace } from '@/hooks/useCases';
+import { ApiError } from '@/lib/api';
+import { caseModuleLabel, casePath, isCaseModule, parseCaseId } from '@/lib/caseModules';
 import { CaseModule, ForensicCase } from '@/types';
 import { NotFoundPage } from './NotFoundPage';
 
@@ -22,36 +28,100 @@ import { NotFoundPage } from './NotFoundPage';
 export const CaseWorkspacePage: React.FC = () => {
   const { caseId, module } = useParams();
   const { cases } = useAppContext();
-  const forensicCase = cases.find((c) => c.id === caseId);
 
-  if (!forensicCase) {
+  if (module !== undefined && !isCaseModule(module)) {
+    return <Navigate to={casePath(caseId!)} replace />;
+  }
+  const activeModule: CaseModule = isCaseModule(module) ? module : 'overview';
+
+  const apiCaseId = parseCaseId(caseId);
+  if (apiCaseId !== null) {
+    return <CaseWorkspace key={apiCaseId} caseId={apiCaseId} activeModule={activeModule} />;
+  }
+
+  // Cases from the UI draft's mock data, still linked from the dashboard and global
+  // evidence pages until those read from the API (T5, T12).
+  const draftCase = cases.find((c) => c.id === caseId);
+  if (draftCase) {
+    return <DraftCaseWorkspace key={draftCase.id} forensicCase={draftCase} activeModule={activeModule} />;
+  }
+
+  return <CaseNotFound caseId={caseId} />;
+};
+
+const CaseNotFound: React.FC<{ caseId: string | undefined }> = ({ caseId }) => (
+  <main className="flex-1 pb-12">
+    <NotFoundPage title="Case not found" message={`No case with ID ${caseId} exists.`} />
+  </main>
+);
+
+/** Which task in docs/FRONTEND_TASKS.md wires each module to the API. */
+const PENDING_MODULES: Partial<Record<CaseModule, string>> = {
+  evidence: 'T5',
+  canvas: 'T8',
+  timeline: 'T9',
+  autopsy: 'T13',
+  crimescene: 'T10',
+  witnesses: 'T4',
+  copilot: 'T6',
+  reports: 'T11',
+  settings: 'T5 and T11'
+};
+
+const CaseWorkspace: React.FC<{ caseId: number; activeModule: CaseModule }> = ({ caseId, activeModule }) => {
+  const workspaceQuery = useCaseWorkspace(caseId);
+
+  if (workspaceQuery.isError && workspaceQuery.error instanceof ApiError && workspaceQuery.error.status === 404) {
+    return <CaseNotFound caseId={String(caseId)} />;
+  }
+  if (!workspaceQuery.data) {
     return (
-      <main className="flex-1 pb-12">
-        <NotFoundPage title="Case not found" message={`No case with ID ${caseId} exists.`} />
+      <main className="flex-1 p-6">
+        {workspaceQuery.isError ? (
+          <ErrorState error={workspaceQuery.error} onRetry={() => workspaceQuery.refetch()} />
+        ) : (
+          <LoadingState label="Loading case…" />
+        )}
       </main>
     );
   }
 
-  if (module !== undefined && !isCaseModule(module)) {
-    return <Navigate to={casePath(forensicCase.id)} replace />;
-  }
+  const workspace = workspaceQuery.data;
+  const c = workspace.case;
+  const pendingTask = PENDING_MODULES[activeModule];
 
-  // Keyed by case so per-case state (such as the copilot conversation) resets when switching cases.
   return (
-    <CaseWorkspace
-      key={forensicCase.id}
-      forensicCase={forensicCase}
-      activeModule={isCaseModule(module) ? module : 'overview'}
-    />
+    <div className="flex flex-1 min-h-[calc(100vh-4rem)] bg-slate-950 text-slate-100 font-mono">
+      <CaseWorkspaceSidebar
+        caseId={c.id}
+        caseNumber={c.case_number}
+        title={c.title}
+        priority={c.priority}
+        activeModule={activeModule}
+        badges={{
+          evidence: workspace.counts.evidence,
+          timeline: workspace.events.length,
+          witnesses: workspace.persons.length,
+          copilot: 'AI'
+        }}
+      />
+
+      <main className="flex-1 p-4 lg:p-6 overflow-y-auto space-y-6 min-w-0">
+        <CaseWorkspaceBanner workspace={workspace} />
+        {activeModule === 'overview' && <CaseSummary workspace={workspace} />}
+        {pendingTask && <NotWiredYet module={caseModuleLabel(activeModule)} task={pendingTask} />}
+      </main>
+    </div>
   );
 };
 
-interface CaseWorkspaceProps {
+interface DraftCaseWorkspaceProps {
   forensicCase: ForensicCase;
   activeModule: CaseModule;
 }
 
-const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ forensicCase, activeModule }) => {
+/** The UI draft's workspace over its mock data. Removed once no screen links to draft cases. */
+const DraftCaseWorkspace: React.FC<DraftCaseWorkspaceProps> = ({ forensicCase, activeModule }) => {
   const navigate = useNavigate();
   const { updateCaseStatus, previewEvidence } = useAppContext();
   const copilot = useMockCopilot(forensicCase);
@@ -60,10 +130,20 @@ const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ forensicCase, activeModul
 
   return (
     <div className="flex flex-1 min-h-[calc(100vh-4rem)] bg-slate-950 text-slate-100 font-mono">
-      {/* 1. Case Workspace Secondary Left Sidebar */}
-      <CaseWorkspaceSidebar activeCase={forensicCase} activeModule={activeModule} />
+      <CaseWorkspaceSidebar
+        caseId={forensicCase.id}
+        caseNumber={forensicCase.id}
+        title={forensicCase.title}
+        priority={forensicCase.priority}
+        activeModule={activeModule}
+        badges={{
+          evidence: forensicCase.evidenceList.length || forensicCase.evidenceCount,
+          timeline: forensicCase.timeline.length,
+          witnesses: forensicCase.personsOfInterest.length,
+          copilot: 'AI'
+        }}
+      />
 
-      {/* 2. Main Case Module Panel Content */}
       <main className="flex-1 p-4 lg:p-6 overflow-y-auto space-y-6">
         <CaseBanner forensicCase={forensicCase} onUpdateStatus={updateCaseStatus} />
 
