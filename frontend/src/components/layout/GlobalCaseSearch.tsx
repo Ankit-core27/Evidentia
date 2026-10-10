@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, Search, X } from 'lucide-react';
-import { CaseStatusBadge } from '@/components/shared/Badges';
+import { CASE_STATUS_DOT } from '@/components/shared/Badges';
 import { useCases } from '@/hooks/useCases';
 import { useClickOutside } from '@/hooks/useClickOutside';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
@@ -28,7 +28,7 @@ export const GlobalCaseSearch: React.FC = () => {
 
   return (
     <div className="relative w-full" ref={ref}>
-      <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+      <Search className="size-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-muted pointer-events-none" aria-hidden />
       <input
         type="search"
         value={term}
@@ -40,42 +40,43 @@ export const GlobalCaseSearch: React.FC = () => {
         onKeyDown={(e) => {
           if (e.key === 'Enter' && data?.[0]) openCase(data[0].id);
         }}
-        placeholder="Search cases by number, title, person or place…"
-        className="w-full pl-10 pr-8 py-1.5 bg-slate-900/90 border border-slate-800 rounded-xl text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 font-mono transition-all"
+        placeholder="Find a case: number, name, place…"
+        className="w-full h-8 pl-8 pr-7 bg-surface border border-line-strong rounded text-body text-ink placeholder:text-ink-faint hover:border-control focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent [&::-webkit-search-cancel-button]:hidden"
         id="global-search-input"
         aria-label="Search cases"
       />
       {term && (
         <button
           onClick={() => setTerm('')}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+          className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1 rounded text-ink-muted hover:text-ink"
           aria-label="Clear search"
         >
-          <X className="w-3.5 h-3.5" />
+          <X className="size-3.5" />
         </button>
       )}
 
       {open && enabled && (
-        <div className="absolute left-0 mt-2 w-full min-w-[22rem] bg-slate-900 border border-slate-800 rounded-xl shadow-2xl p-2 z-50 max-h-80 overflow-y-auto">
-          {isError && <div className="p-2 text-xs text-red-300">Search failed.</div>}
+        <div className="absolute right-0 z-50 mt-1.5 w-[min(26rem,calc(100vw-2rem))] bg-raised border border-line-strong rounded-lg shadow-overlay p-1 max-h-80 overflow-y-auto">
+          {isError && <div className="px-2 py-2 text-body text-danger">Search failed.</div>}
           {!data && isFetching && (
-            <div className="p-2 text-xs text-slate-400 flex items-center gap-2">
-              <Loader2 className="w-3.5 h-3.5 animate-spin" /> Searching…
+            <div className="px-2 py-2 text-body text-ink-muted flex items-center gap-2">
+              <Loader2 className="size-3.5 animate-spin" aria-hidden /> Searching…
             </div>
           )}
-          {data?.length === 0 && <div className="p-2 text-xs text-slate-500">No cases match "{q}".</div>}
+          {data?.length === 0 && <div className="px-2 py-2 text-body text-ink-muted">No cases match “{q}”.</div>}
           {data?.map((c) => (
             <button
               key={c.id}
               onClick={() => openCase(c.id)}
-              className="w-full p-2 rounded-lg text-left hover:bg-slate-800 flex items-center justify-between gap-3"
+              className="w-full px-2 py-1.5 rounded text-left hover:bg-hover flex items-start gap-2.5"
             >
-              <div className="min-w-0">
-                <div className="text-[10px] text-cyan-400 font-bold">{c.case_number}</div>
-                <div className="text-xs text-slate-200 truncate">{c.title}</div>
-                <div className="text-[10px] text-slate-500">{humanize(c.incident_type)}</div>
-              </div>
-              <CaseStatusBadge status={c.status} />
+              <span className={`mt-1.5 size-1.5 rounded-full shrink-0 ${CASE_STATUS_DOT[c.status]}`} title={humanize(c.status)} />
+              <span className="min-w-0">
+                <span className="block text-body text-ink truncate">{c.title}</span>
+                <span className="block text-2xs text-ink-muted">
+                  <span className="font-mono">{c.case_number}</span> · {humanize(c.incident_type)} · {humanize(c.status)}
+                </span>
+              </span>
             </button>
           ))}
         </div>
