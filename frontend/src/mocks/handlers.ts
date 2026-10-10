@@ -575,6 +575,7 @@ export const buildRoutes = () => {
       events: byCase(db.events),
       relationships: byCase(db.relationships),
       injuries: byCase(db.injuries),
+      links: db.links.filter((l) => db.evidence.some((e) => e.id === l.evidence_id && e.case_id === caseId)),
       counts: caseCounts(db, caseId)
     });
   });

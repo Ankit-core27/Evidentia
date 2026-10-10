@@ -135,11 +135,12 @@ export interface CopilotMessage {
 export type CaseModule =
   | 'overview'
   | 'evidence'
+  | 'people'
+  | 'review'
   | 'canvas'
   | 'timeline'
+  | 'reconstruction'
   | 'autopsy'
-  | 'crimescene'
-  | 'witnesses'
   | 'copilot'
   | 'reports'
   | 'settings';

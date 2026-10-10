@@ -8,6 +8,7 @@ import { CaseBanner } from '@/features/case-management/CaseBanner';
 import { CaseOverview } from '@/features/case-management/CaseOverview';
 import { CaseSummary } from '@/features/case-management/CaseSummary';
 import { CaseWorkspaceBanner } from '@/features/case-management/CaseWorkspaceBanner';
+import { PeopleModule } from '@/features/case-management/PeopleModule';
 import { PersonsModule } from '@/features/case-management/PersonsModule';
 import { CaseSettings } from '@/features/case-management/CaseSettings';
 import { CaseEvidenceModule } from '@/features/evidence-management/CaseEvidenceModule';
@@ -58,15 +59,17 @@ const CaseNotFound: React.FC<{ caseId: string | undefined }> = ({ caseId }) => (
 /** Which task in docs/FRONTEND_TASKS.md wires each module to the API. */
 const PENDING_MODULES: Partial<Record<CaseModule, string>> = {
   evidence: 'T5',
+  review: 'T7',
   canvas: 'T8',
   timeline: 'T9',
+  reconstruction: 'T10',
   autopsy: 'T13',
-  crimescene: 'T10',
-  witnesses: 'T4',
   copilot: 'T6',
   reports: 'T11',
   settings: 'T5 and T11'
 };
+
+const kept = <T extends { review_status: string }>(rows: T[]) => rows.filter((r) => r.review_status !== 'rejected');
 
 const CaseWorkspace: React.FC<{ caseId: number; activeModule: CaseModule }> = ({ caseId, activeModule }) => {
   const workspaceQuery = useCaseWorkspace(caseId);
@@ -100,8 +103,9 @@ const CaseWorkspace: React.FC<{ caseId: number; activeModule: CaseModule }> = ({
         activeModule={activeModule}
         badges={{
           evidence: workspace.counts.evidence,
-          timeline: workspace.events.length,
-          witnesses: workspace.persons.length,
+          people: kept(workspace.persons).length + kept(workspace.objects).length,
+          review: workspace.counts.pending_reviews + workspace.counts.open_conflicts || undefined,
+          timeline: kept(workspace.events).length,
           copilot: 'AI'
         }}
       />
@@ -109,6 +113,7 @@ const CaseWorkspace: React.FC<{ caseId: number; activeModule: CaseModule }> = ({
       <main className="flex-1 p-4 lg:p-6 overflow-y-auto space-y-6 min-w-0">
         <CaseWorkspaceBanner workspace={workspace} />
         {activeModule === 'overview' && <CaseSummary workspace={workspace} />}
+        {activeModule === 'people' && <PeopleModule workspace={workspace} />}
         {pendingTask && <NotWiredYet module={caseModuleLabel(activeModule)} task={pendingTask} />}
       </main>
     </div>
@@ -139,7 +144,7 @@ const DraftCaseWorkspace: React.FC<DraftCaseWorkspaceProps> = ({ forensicCase, a
         badges={{
           evidence: forensicCase.evidenceList.length || forensicCase.evidenceCount,
           timeline: forensicCase.timeline.length,
-          witnesses: forensicCase.personsOfInterest.length,
+          people: forensicCase.personsOfInterest.length,
           copilot: 'AI'
         }}
       />
@@ -161,8 +166,9 @@ const DraftCaseWorkspace: React.FC<DraftCaseWorkspaceProps> = ({ forensicCase, a
         {activeModule === 'canvas' && <CanvasModule forensicCase={forensicCase} />}
         {activeModule === 'timeline' && <TimelineModule forensicCase={forensicCase} />}
         {activeModule === 'autopsy' && <AutopsyModule forensicCase={forensicCase} />}
-        {activeModule === 'crimescene' && <CrimeSceneModule />}
-        {activeModule === 'witnesses' && <PersonsModule forensicCase={forensicCase} />}
+        {activeModule === 'reconstruction' && <CrimeSceneModule />}
+        {activeModule === 'people' && <PersonsModule forensicCase={forensicCase} />}
+        {activeModule === 'review' && <NotWiredYet module="AI Review" task="T7" />}
         {activeModule === 'copilot' && <CopilotPanel messages={copilot.messages} onSend={copilot.send} />}
         {activeModule === 'reports' && <CaseReportModule forensicCase={forensicCase} />}
         {activeModule === 'settings' && <CaseSettings />}

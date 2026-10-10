@@ -1,15 +1,19 @@
-import React from 'react';
-import { AlertTriangle, Brain, Loader2 } from 'lucide-react';
+import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { AlertTriangle, Brain, Loader2, Pencil } from 'lucide-react';
 import { PriorityBadge } from '@/components/shared/Badges';
 import { useInvestigators, useUpdateCase } from '@/hooks/useCases';
 import { formatDate, formatDateTime, humanize } from '@/lib/format';
 import { CASE_STATUSES } from '@/lib/options';
+import { casePath } from '@/lib/caseModules';
 import { CaseStatus, CaseWorkspace } from '@/types/api';
+import { EditCaseDialog } from './EditCaseDialog';
 
 /** Case number, status, priority and progress, at the top of every workspace module. */
 export const CaseWorkspaceBanner: React.FC<{ workspace: CaseWorkspace }> = ({ workspace }) => {
   const { case: c, counts, locations } = workspace;
   const updateCase = useUpdateCase(c.id);
+  const [editing, setEditing] = useState(false);
   const { data: investigators } = useInvestigators();
   const lead = investigators?.find((i) => i.id === c.lead_investigator_id);
   const site = locations.find((l) => l.kind === 'incident_site');
@@ -43,6 +47,12 @@ export const CaseWorkspaceBanner: React.FC<{ workspace: CaseWorkspace }> = ({ wo
           <span className="text-[10px] text-slate-400 px-2 py-0.5 rounded bg-slate-950 border border-slate-800">
             {humanize(c.incident_type)}
           </span>
+          <button
+            onClick={() => setEditing(true)}
+            className="px-2 py-0.5 rounded-lg bg-slate-950 border border-slate-800 text-slate-300 hover:text-cyan-300 hover:border-slate-700 text-[11px] flex items-center gap-1"
+          >
+            <Pencil className="w-3 h-3" /> Edit case
+          </button>
         </div>
 
         <h1 className="text-xl font-bold text-slate-100 mt-2">{c.title}</h1>
@@ -83,23 +93,31 @@ export const CaseWorkspaceBanner: React.FC<{ workspace: CaseWorkspace }> = ({ wo
         )}
 
         {counts.pending_reviews > 0 && (
-          <div className="p-3 rounded-xl bg-purple-950/40 border border-purple-500/30 text-purple-200 flex items-center gap-2">
+          <Link
+            to={casePath(c.id, 'review')}
+            className="p-3 rounded-xl bg-purple-950/40 border border-purple-500/30 text-purple-200 flex items-center gap-2 hover:border-purple-400/60"
+          >
             <Brain className="w-4 h-4 text-purple-300" />
             <span className="text-xs">
               <strong>{counts.pending_reviews}</strong> to review
             </span>
-          </div>
+          </Link>
         )}
 
         {counts.open_conflicts > 0 && (
-          <div className="p-3 rounded-xl bg-amber-950/40 border border-amber-500/30 text-amber-200 flex items-center gap-2">
+          <Link
+            to={casePath(c.id, 'review')}
+            className="p-3 rounded-xl bg-amber-950/40 border border-amber-500/30 text-amber-200 flex items-center gap-2 hover:border-amber-400/60"
+          >
             <AlertTriangle className="w-4 h-4 text-amber-300" />
             <span className="text-xs">
               <strong>{counts.open_conflicts}</strong> open conflict{counts.open_conflicts === 1 ? '' : 's'}
             </span>
-          </div>
+          </Link>
         )}
       </div>
+
+      {editing && <EditCaseDialog caseRecord={c} onClose={() => setEditing(false)} />}
     </div>
   );
 };

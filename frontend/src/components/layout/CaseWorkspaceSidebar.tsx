@@ -21,7 +21,10 @@ export const CaseWorkspaceSidebar: React.FC<CaseWorkspaceSidebarProps> = ({
   activeModule,
   badges = {}
 }) => {
-  const modulesList = CASE_MODULES.map((m) => ({ ...m, badge: badges[m.id] }));
+  const modulesList = CASE_MODULES.filter((m) => !m.hidden || m.id === activeModule).map((m) => ({
+    ...m,
+    badge: badges[m.id]
+  }));
 
   return (
     <aside className="w-64 shrink-0 bg-slate-950 border-r border-slate-800 flex flex-col h-[calc(100vh-4rem)] sticky top-16 z-30 font-mono select-none">
