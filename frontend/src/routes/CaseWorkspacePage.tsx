@@ -18,6 +18,7 @@ import { CanvasModule } from '@/features/evidence-canvas/CanvasModule';
 import { TimelineModule } from '@/features/incident-timeline/TimelineModule';
 import { AutopsyModule } from '@/features/anatomy/AutopsyModule';
 import { CrimeSceneModule } from '@/features/reconstruction/CrimeSceneModule';
+import { CopilotModule } from '@/features/ai-investigation/CopilotModule';
 import { CopilotPanel } from '@/features/ai-investigation/CopilotPanel';
 import { useMockCopilot } from '@/features/ai-investigation/useMockCopilot';
 import { CaseReportModule } from '@/features/reports/CaseReportModule';
@@ -65,7 +66,6 @@ const PENDING_MODULES: Partial<Record<CaseModule, string>> = {
   timeline: 'T9',
   reconstruction: 'T10',
   autopsy: 'T13',
-  copilot: 'T6',
   reports: 'T11'
 };
 
@@ -115,6 +115,7 @@ const CaseWorkspace: React.FC<{ caseId: number; activeModule: CaseModule }> = ({
         {activeModule === 'overview' && <CaseSummary workspace={workspace} />}
         {activeModule === 'evidence' && <EvidenceModule caseId={c.id} />}
         {activeModule === 'people' && <PeopleModule workspace={workspace} />}
+        {activeModule === 'copilot' && <CopilotModule caseId={c.id} />}
         {activeModule === 'settings' && <SettingsModule caseId={c.id} />}
         {pendingTask && <NotWiredYet module={caseModuleLabel(activeModule)} task={pendingTask} />}
       </main>
