@@ -9,6 +9,9 @@ const FOOTPRINTS: Record<string, [number, number]> = {
 const DEFAULT_FOOTPRINT: [number, number] = [4, 2];
 const GRID_M = 5;
 
+/** A dark outline behind labels, so they stay readable over the grid and the vehicles. */
+const HALO: React.CSSProperties = { paintOrder: 'stroke', stroke: 'var(--color-well)', strokeWidth: 0.35, strokeLinejoin: 'round' };
+
 const asVec3 = (value: unknown): Vec3 | null =>
   Array.isArray(value) && value.length === 3 && value.every((n) => typeof n === 'number') ? (value as Vec3) : null;
 
@@ -47,10 +50,10 @@ export const SchematicSceneView: React.FC<SceneViewerProps> = ({
 
   const gridLines = [];
   for (let x = Math.ceil(bounds.minX / GRID_M) * GRID_M; x <= bounds.minX + bounds.width; x += GRID_M) {
-    gridLines.push(<line key={`x${x}`} x1={x} y1={bounds.minZ} x2={x} y2={bounds.minZ + bounds.height} className="stroke-slate-800" strokeWidth={x === 0 ? 0.25 : 0.08} />);
+    gridLines.push(<line key={`x${x}`} x1={x} y1={bounds.minZ} x2={x} y2={bounds.minZ + bounds.height} className="stroke-line-strong" strokeWidth={x === 0 ? 0.25 : 0.08} />);
   }
   for (let z = Math.ceil(bounds.minZ / GRID_M) * GRID_M; z <= bounds.minZ + bounds.height; z += GRID_M) {
-    gridLines.push(<line key={`z${z}`} x1={bounds.minX} y1={z} x2={bounds.minX + bounds.width} y2={z} className="stroke-slate-800" strokeWidth={z === 0 ? 0.25 : 0.08} />);
+    gridLines.push(<line key={`z${z}`} x1={bounds.minX} y1={z} x2={bounds.minX + bounds.width} y2={z} className="stroke-line-strong" strokeWidth={z === 0 ? 0.25 : 0.08} />);
   }
 
   const renderObject = (o: SceneObject) => {
@@ -82,11 +85,11 @@ export const SchematicSceneView: React.FC<SceneViewerProps> = ({
           width={length}
           height={width}
           rx={0.35}
-          className={selected ? 'fill-cyan-400/40 stroke-cyan-300' : 'fill-slate-700/80 stroke-slate-300'}
+          className={selected ? 'fill-accent/40 stroke-accent-text' : 'fill-raised stroke-ink-soft'}
           strokeWidth={selected ? 0.25 : 0.12}
         />
         {/* Front of the object */}
-        <polygon points={`${length / 2 - 0.9},-0.5 ${length / 2 - 0.2},0 ${length / 2 - 0.9},0.5`} className="fill-amber-300" />
+        <polygon points={`${length / 2 - 0.9},-0.5 ${length / 2 - 0.2},0 ${length / 2 - 0.9},0.5`} className="fill-warn" />
       </g>
     );
   };
@@ -94,7 +97,7 @@ export const SchematicSceneView: React.FC<SceneViewerProps> = ({
   return (
     <svg
       viewBox={`${bounds.minX} ${bounds.minZ} ${bounds.width} ${bounds.height}`}
-      className="w-full h-full bg-slate-950"
+      className="w-full h-full bg-well font-sans"
       onClick={() => onSelectSceneObject(null)}
       role="img"
       aria-label={`Plan of stage ${stage?.label ?? ''}`}
@@ -110,8 +113,8 @@ export const SchematicSceneView: React.FC<SceneViewerProps> = ({
         if (a.kind === 'measurement' && from && to) {
           return (
             <g key={a.id}>
-              <line x1={from[0]} y1={from[2]} x2={to[0]} y2={to[2]} className="stroke-amber-400" strokeWidth={0.15} strokeDasharray="0.6 0.4" />
-              <text x={(from[0] + to[0]) / 2} y={(from[2] + to[2]) / 2 - 0.8} className="fill-amber-300" fontSize={1.2} textAnchor="middle">
+              <line x1={from[0]} y1={from[2]} x2={to[0]} y2={to[2]} className="stroke-warn" strokeWidth={0.15} strokeDasharray="0.6 0.4" />
+              <text x={(from[0] + to[0]) / 2} y={(from[2] + to[2]) / 2 - 0.8} className="fill-warn" fontSize={1.2} textAnchor="middle" style={HALO}>
                 {label}
                 {typeof a.data.length_m === 'number' ? ` ${a.data.length_m} m` : ''}
               </text>
@@ -122,10 +125,10 @@ export const SchematicSceneView: React.FC<SceneViewerProps> = ({
           return (
             <g key={a.id}>
               {target && (
-                <line x1={position[0]} y1={position[2]} x2={target[0]} y2={target[2]} className="stroke-purple-400" strokeWidth={0.1} strokeDasharray="0.4 0.4" />
+                <line x1={position[0]} y1={position[2]} x2={target[0]} y2={target[2]} className="stroke-info" strokeWidth={0.1} strokeDasharray="0.4 0.4" />
               )}
-              <circle cx={position[0]} cy={position[2]} r={0.6} className="fill-purple-400" />
-              <text x={position[0]} y={position[2] - 1} className="fill-purple-300" fontSize={1.1} textAnchor="middle">
+              <circle cx={position[0]} cy={position[2]} r={0.6} className="fill-info" />
+              <text x={position[0]} y={position[2] - 1} className="fill-info" fontSize={1.1} style={HALO} textAnchor="middle">
                 {label}
               </text>
             </g>
@@ -139,21 +142,21 @@ export const SchematicSceneView: React.FC<SceneViewerProps> = ({
           key={`label-${o.id}`}
           x={o.position[0]}
           y={o.position[2] - 1.8}
-          className="fill-slate-200 pointer-events-none"
+          className="fill-ink pointer-events-none"
           fontSize={1.2}
           textAnchor="middle"
-          style={{ transition: 'x 700ms, y 700ms' }}
+          style={{ ...HALO, transition: 'x 700ms, y 700ms' }}
         >
           {o.label}
         </text>
       ))}
-      <g transform={`translate(${bounds.minX + 3} ${bounds.minZ + 4})`} className="fill-slate-400">
+      <g transform={`translate(${bounds.minX + 3} ${bounds.minZ + 4})`} className="fill-ink-muted">
         <polygon points="0,-2.2 0.8,0 -0.8,0" />
         <text y={1.6} fontSize={1.2} textAnchor="middle">
           N
         </text>
       </g>
-      <text x={bounds.minX + bounds.width - 1} y={bounds.minZ + bounds.height - 1} className="fill-slate-500" fontSize={1} textAnchor="end">
+      <text x={bounds.minX + bounds.width - 1} y={bounds.minZ + bounds.height - 1} className="fill-ink-muted" fontSize={1} textAnchor="end" style={HALO}>
         Grid {GRID_M} m · schematic until the 3D viewer lands
       </text>
     </svg>
