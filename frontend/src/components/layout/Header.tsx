@@ -61,36 +61,39 @@ export const Header: React.FC<HeaderProps> = ({ activeModule, onOpenCreateModal 
   const { data: alerts } = useAlerts();
 
   return (
-    <header className="sticky top-0 z-40 bg-canvas border-b border-line">
-      {/* Below lg the navigation (or the case breadcrumb) wraps onto a second row. */}
-      <div className="flex flex-wrap items-center gap-x-4 px-4 lg:px-6 lg:h-13">
-        <div className="order-1 h-13 flex items-center gap-3 shrink-0">
-          <Link to="/" className="flex items-center gap-2 rounded" aria-label="Forensix dashboard">
-            <BrandMark />
-            <span className="text-[15px] font-semibold text-ink tracking-tight">Forensix</span>
-          </Link>
-          {isMockMode && (
-            <span
-              className="h-5 px-1.5 rounded border border-dashed border-warn/60 text-2xs text-warn inline-flex items-center whitespace-nowrap"
-              title="In-memory mock backend: every change is lost when the page reloads."
-            >
-              Mock data<span className="hidden xl:inline">&nbsp;· resets on reload</span>
+    <header className="h-16 border-b border-slate-800 bg-slate-950/95 backdrop-blur-xl px-4 lg:px-6 flex items-center justify-between sticky top-0 z-40 font-mono">
+      {/* LEFT SECTION: Logo or Workspace Breadcrumb */}
+      <div className="flex items-center gap-2 sm:gap-4 lg:gap-6 shrink-0">
+        {/* Brand Logo */}
+        <Link
+          to="/"
+          className="flex items-center gap-2.5 hover:opacity-90 transition-opacity focus:outline-none"
+        >
+          <div className="w-8 h-8 rounded bg-cyan-600 text-white flex items-center justify-center font-bold shadow-[0_0_15px_rgba(8,145,178,0.4)]">
+            <Shield className="w-4 h-4" />
+          </div>
+          <div className="hidden flex-col text-left sm:flex">
+            <span className="font-bold text-sm text-slate-100 tracking-wider uppercase font-mono leading-tight">
+              FORENSIX
             </span>
           )}
         </div>
 
         {routeCaseId ? (
-          <nav
-            aria-label="Breadcrumb"
-            className="order-3 lg:order-2 w-[calc(100%+2rem)] lg:w-auto min-w-0 h-10 lg:h-13 flex items-center gap-1.5 text-body border-t border-line lg:border-t-0 -mx-4 px-4 lg:mx-0 lg:px-0"
-          >
-            <Link to="/cases" className="text-ink-muted hover:text-ink shrink-0">
-              Cases
+          /* Case Workspace Breadcrumbs */
+          <div className="flex items-center gap-1 sm:gap-2 text-xs font-mono">
+            <Link
+              to="/cases"
+              className="hidden text-slate-400 hover:text-cyan-300 transition-colors items-center gap-1 md:flex"
+            >
+              <LayoutDashboard className="w-3.5 h-3.5" />
+              <span>Cases</span>
             </Link>
-            <span className="text-ink-faint" aria-hidden>
-              /
-            </span>
-            <div className="relative min-w-0" ref={caseSelectorRef}>
+
+            <ChevronRight className="hidden w-3.5 h-3.5 text-slate-600 sm:block" />
+
+            {/* Case Picker Selector Dropdown */}
+            <div className="relative" ref={caseSelectorRef}>
               <button
                 onClick={() => setShowCaseSelector(!showCaseSelector)}
                 className="h-7 px-1.5 -mx-1.5 rounded flex items-center gap-1 font-mono text-xs text-ink hover:bg-raised"
@@ -129,10 +132,10 @@ export const Header: React.FC<HeaderProps> = ({ activeModule, onOpenCreateModal 
                 </div>
               )}
             </div>
-            <span className="text-ink-faint" aria-hidden>
-              /
-            </span>
-            <span className="text-ink truncate" aria-current="page">
+
+            <ChevronRight className="hidden w-3.5 h-3.5 text-slate-600 sm:block" />
+
+            <span className="text-slate-200 font-bold px-2 py-1 rounded bg-slate-900 border border-slate-800 text-xs">
               {caseModuleLabel(activeModule)}
             </span>
           </nav>
@@ -157,11 +160,24 @@ export const Header: React.FC<HeaderProps> = ({ activeModule, onOpenCreateModal 
             ))}
           </nav>
         )}
+      </div>
 
-        <div className="order-2 lg:order-3 ml-auto h-13 flex items-center gap-2 lg:gap-3">
-          <div className="hidden lg:block w-56 xl:w-72">
-            <GlobalCaseSearch />
-          </div>
+      {/* CENTER SECTION: Global Search Input */}
+      <div className="hidden xl:flex items-center gap-3 flex-1 min-w-[14rem] max-w-md mx-6">
+        <GlobalCaseSearch />
+      </div>
+
+      {/* RIGHT SECTION: Action Buttons & User Profile */}
+      <div className="flex items-center gap-2 sm:gap-3 shrink-0 font-mono">
+        {/* Primary "+ Create Case" Button */}
+        <button
+          onClick={onOpenCreateModal}
+          id="header-create-case-btn"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold shadow-[0_0_15px_rgba(8,145,178,0.3)] transition-all active:scale-95"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">+ Create Case</span>
+        </button>
 
           <button onClick={onOpenCreateModal} id="header-create-case-btn" className={`${primaryButtonClass} px-2.5 sm:px-3`}>
             <Plus className="size-4" aria-hidden />

@@ -31,9 +31,13 @@ export const InvestigatorPicker: React.FC = () => {
         aria-label={current ? `Working as ${current.name}. Change investigator` : 'Choose investigator'}
         id="investigator-picker"
       >
-        {current ? <InitialsAvatar name={current.name} size="sm" /> : <UserCircle className="size-5" aria-hidden />}
-        <span className="hidden xl:flex flex-col text-left max-w-[11rem] leading-tight">
-          <span className={`text-body font-medium truncate ${current ? 'text-ink' : 'text-warn'}`}>
+        {current ? (
+          <InitialsAvatar name={current.name} size="sm" />
+        ) : (
+          <UserCircle className="w-6 h-6 text-amber-300" />
+        )}
+        <div className="hidden md:flex flex-col text-left max-w-[11rem]">
+          <span className={`text-xs font-bold leading-tight truncate ${current ? 'text-slate-100' : 'text-amber-200'}`}>
             {current ? current.name : 'Choose investigator'}
           </span>
           <span className="text-2xs text-ink-muted truncate">

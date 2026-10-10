@@ -1,0 +1,30 @@
+{
+  "name": "@forensix/scene-planner",
+  "version": "0.1.0",
+  "description": "Provider-neutral planning and validation of synthetic Forensix scenes.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "check": "tsc --noEmit -p tsconfig.json",
+    "test": "npm run build && node --test tests/*.test.mjs",
+    "prepare": "npm run build"
+  },
+  "dependencies": {
+    "@forensix/scene-engine": "file:../scene-engine"
+  },
+  "devDependencies": {
+    "typescript": "~5.8.2"
+  },
+  "license": "MIT"
+}
