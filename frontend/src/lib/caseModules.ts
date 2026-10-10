@@ -39,5 +39,9 @@ export const isCaseModule = (value: string | undefined): value is CaseModule =>
 export const caseModuleLabel = (module: CaseModule) =>
   CASE_MODULES.find((m) => m.id === module)?.label ?? 'Overview';
 
-export const casePath = (caseId: string, module: CaseModule = 'overview') =>
+export const casePath = (caseId: string | number, module: CaseModule = 'overview') =>
   module === 'overview' ? `/cases/${caseId}` : `/cases/${caseId}/${module}`;
+
+/** Case IDs from the API are integers; anything else is a case from the UI draft's mock data. */
+export const parseCaseId = (value: string | undefined): number | null =>
+  value !== undefined && /^\d+$/.test(value) ? Number(value) : null;

@@ -15,9 +15,10 @@ import {
 } from '@/types/api';
 import { invalidateCase, queryKeys } from './queryKeys';
 
-const PROCESSING_POLL_MS = 3000;
+export const PROCESSING_POLL_MS = 3000;
 
-const isProcessing = (items: Pick<Evidence, 'processing_status'>[] | undefined) =>
+/** True while any of the items is still queued or processing. */
+export const isProcessing = (items: Pick<Evidence, 'processing_status'>[] | undefined) =>
   items?.some((e) => e.processing_status === 'queued' || e.processing_status === 'processing') ?? false;
 
 export const useGlobalEvidence = (filters: EvidenceFilters = {}) =>

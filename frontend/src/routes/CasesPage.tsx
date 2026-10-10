@@ -6,14 +6,13 @@ import { casePath } from '@/lib/caseModules';
 
 export const CasesPage: React.FC = () => {
   const navigate = useNavigate();
-  const { cases, openCreateCaseModal } = useAppContext();
+  const { openCreateCaseModal } = useAppContext();
 
   return (
     <CasesIndexView
-      cases={cases}
       onSelectCase={(id) => navigate(casePath(id))}
       onOpenCreateModal={openCreateCaseModal}
-      onNavigateToReports={(caseId) => navigate(caseId ? casePath(caseId, 'reports') : '/reports')}
+      onNavigateToReports={(id) => navigate(casePath(id, 'reports'))}
     />
   );
 };

@@ -12,6 +12,7 @@ import {
   Investigator
 } from '@/types/api';
 import { invalidateCase, queryKeys } from './queryKeys';
+import { isProcessing, PROCESSING_POLL_MS } from './useEvidence';
 
 export const useInvestigators = () =>
   useQuery({
@@ -27,18 +28,26 @@ export const useCases = (filters: CaseFilters = {}, { enabled = true }: { enable
     enabled
   });
 
-export const useCase = (caseId: Id | undefined) =>
-  useQuery({
+export const useCase = (caseId: Id | undefined) => {
+  const queryClient = useQueryClient();
+  return useQuery<Case>({
     queryKey: queryKeys.caseDetail(caseId!),
     queryFn: ({ signal }) => api.get<Case>(`/cases/${caseId}`, undefined, signal),
-    enabled: caseId !== undefined
+    enabled: caseId !== undefined,
+    // Show the case from an already-loaded workspace while this request runs.
+    placeholderData: (previous) =>
+      previous ??
+      (caseId === undefined ? undefined : queryClient.getQueryData<CaseWorkspace>(queryKeys.workspace(caseId))?.case)
   });
+};
 
+/** Everything about one case. Polls while evidence is processing, since processing adds AI proposals. */
 export const useCaseWorkspace = (caseId: Id | undefined) =>
   useQuery({
     queryKey: queryKeys.workspace(caseId!),
     queryFn: ({ signal }) => api.get<CaseWorkspace>(`/cases/${caseId}/workspace`, undefined, signal),
-    enabled: caseId !== undefined
+    enabled: caseId !== undefined,
+    refetchInterval: (query) => (isProcessing(query.state.data?.evidence) ? PROCESSING_POLL_MS : false)
   });
 
 export const useCreateCase = () => {

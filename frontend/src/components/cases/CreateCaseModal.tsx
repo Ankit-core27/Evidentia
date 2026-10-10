@@ -1,191 +1,271 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   X,
   UploadCloud,
   FileText,
-  Dna,
-  Radio,
-  UserPlus,
-  Shield,
-  CheckCircle2,
-  AlertCircle,
   Plus,
   Trash2,
   FolderPlus,
   Zap,
   ArrowRight,
-  ArrowLeft
+  ArrowLeft,
+  CheckCircle2,
+  AlertTriangle,
+  Loader2,
+  Circle,
+  Car,
+  UserPlus
 } from 'lucide-react';
-import { ForensicCase, Investigator, PersonOfInterest, CasePriority } from '@/types';
+import { useInvestigators } from '@/hooks/useCases';
+import { invalidateCase } from '@/hooks/queryKeys';
+import { useInvestigatorStore } from '@/stores/investigator';
+import { casePath } from '@/lib/caseModules';
+import { formatBytes, humanize } from '@/lib/format';
+import { CASE_PRIORITIES, INCIDENT_TYPES, PERSON_CONDITIONS, PERSON_ROLES } from '@/lib/options';
+import {
+  createCaseWithDetails,
+  CreationStep,
+  NewCaseInput,
+  plannedSteps,
+  StepStatus
+} from '@/features/case-management/createCase';
+import { Case, CasePriority, Id, IncidentType, PersonCondition, PersonRole } from '@/types/api';
 
 interface CreateCaseModalProps {
   isOpen: boolean;
   onClose: () => void;
-  investigators: Investigator[];
-  onCreateCase: (newCase: ForensicCase) => void;
 }
 
-export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
-  isOpen,
-  onClose,
-  investigators,
-  onCreateCase
-}) => {
+interface PersonDraft {
+  name: string;
+  role: PersonRole;
+  age: string;
+  condition: PersonCondition | '';
+  contact: string;
+  notes: string;
+}
+
+interface VehicleDraft {
+  label: string;
+  plate: string;
+  make: string;
+  colour: string;
+}
+
+const EMPTY_PERSON: PersonDraft = { name: '', role: 'witness', age: '', condition: '', contact: '', notes: '' };
+const EMPTY_VEHICLE: VehicleDraft = { label: '', plate: '', make: '', colour: '' };
+
+const labelClass = 'block text-xs font-mono text-slate-300 font-semibold mb-1.5 uppercase';
+const inputClass =
+  'w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-100 placeholder-slate-600 font-mono focus:outline-none focus:border-cyan-500';
+const smallInputClass =
+  'w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-200 placeholder-slate-600 font-mono focus:outline-none focus:border-cyan-500';
+
+const STEP_TITLES = ['Case details', 'Location & evidence', 'People & vehicles'] as const;
+
+const parseCoordinate = (value: string, min: number, max: number): number | null | 'invalid' => {
+  if (!value.trim()) return null;
+  const n = Number(value);
+  return Number.isFinite(n) && n >= min && n <= max ? n : 'invalid';
+};
+
+export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({ isOpen, onClose }) => {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { data: investigators } = useInvestigators();
+  const currentInvestigatorId = useInvestigatorStore((s) => s.investigatorId);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [stepError, setStepError] = useState<string | null>(null);
 
-  // Form State
+  // Step 1
   const [title, setTitle] = useState('');
-  const [priority, setPriority] = useState<CasePriority>('CRITICAL');
-  const [incidentLocation, setIncidentLocation] = useState('');
+  const [incidentType, setIncidentType] = useState<IncidentType>('road_accident');
+  const [priority, setPriority] = useState<CasePriority>('medium');
+  const [incidentAt, setIncidentAt] = useState('');
+  const [leadInvestigatorId, setLeadInvestigatorId] = useState<Id | ''>('');
+  const [teamIds, setTeamIds] = useState<Id[]>([]);
   const [description, setDescription] = useState('');
-  const [leadInvestigatorId, setLeadInvestigatorId] = useState(investigators[0]?.id || '');
 
-  // File Upload state simulation
-  const [uploadedFiles, setUploadedFiles] = useState<{ name: string; size: string; type: string }[]>([
-    { name: 'Autopsy_Exam_Report_ME-90.pdf', size: '12.4 MB', type: 'Autopsy' },
-    { name: 'DNA_Sequencing_NovaSeq_B42.fasta', size: '450.0 MB', type: 'DNA' },
-    { name: 'GPS_Telemetry_Tower409.json', size: '82.1 MB', type: 'GPS' }
-  ]);
+  // Step 2
+  const [address, setAddress] = useState('');
+  const [lat, setLat] = useState('');
+  const [lng, setLng] = useState('');
+  const [files, setFiles] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
 
-  // POIs state
-  const [pois, setPois] = useState<{ name: string; role: 'Suspect' | 'Witness'; notes: string }[]>([
-    { name: 'Victor Vance', role: 'Suspect', notes: 'Cell tower ping places suspect at scene.' }
-  ]);
-  const [newPoiName, setNewPoiName] = useState('');
-  const [newPoiRole, setNewPoiRole] = useState<'Suspect' | 'Witness'>('Suspect');
-  const [newPoiNotes, setNewPoiNotes] = useState('');
+  // Step 3
+  const [persons, setPersons] = useState<PersonDraft[]>([]);
+  const [personDraft, setPersonDraft] = useState<PersonDraft>(EMPTY_PERSON);
+  const [vehicles, setVehicles] = useState<VehicleDraft[]>([]);
+  const [vehicleDraft, setVehicleDraft] = useState<VehicleDraft>(EMPTY_VEHICLE);
+
+  // Submission
+  const [progress, setProgress] = useState<CreationStep[] | null>(null);
+  const [createdCase, setCreatedCase] = useState<Case | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const submitting = progress !== null && createdCase === null && submitError === null;
+
+  // Default the lead to whoever is using the app.
+  useEffect(() => {
+    if (isOpen && leadInvestigatorId === '' && currentInvestigatorId !== null) setLeadInvestigatorId(currentInvestigatorId);
+  }, [isOpen, currentInvestigatorId, leadInvestigatorId]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !submitting) close();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  });
 
   if (!isOpen) return null;
 
-  const handleAddPoi = () => {
-    if (!newPoiName.trim()) return;
-    setPois([...pois, { name: newPoiName, role: newPoiRole, notes: newPoiNotes }]);
-    setNewPoiName('');
-    setNewPoiNotes('');
+  const reset = () => {
+    setStep(1);
+    setStepError(null);
+    setTitle('');
+    setIncidentType('road_accident');
+    setPriority('medium');
+    setIncidentAt('');
+    setLeadInvestigatorId('');
+    setTeamIds([]);
+    setDescription('');
+    setAddress('');
+    setLat('');
+    setLng('');
+    setFiles([]);
+    setPersons([]);
+    setPersonDraft(EMPTY_PERSON);
+    setVehicles([]);
+    setVehicleDraft(EMPTY_VEHICLE);
+    setProgress(null);
+    setCreatedCase(null);
+    setSubmitError(null);
   };
 
-  const handleRemovePoi = (index: number) => {
-    setPois(pois.filter((_, i) => i !== index));
+  function close() {
+    reset();
+    onClose();
+  }
+
+  const validateStep = (current: 1 | 2 | 3): string | null => {
+    if (current === 1 && !title.trim()) return 'Enter a case title.';
+    if (current === 2) {
+      if (parseCoordinate(lat, -90, 90) === 'invalid') return 'Latitude must be a number between -90 and 90.';
+      if (parseCoordinate(lng, -180, 180) === 'invalid') return 'Longitude must be a number between -180 and 180.';
+      if ((lat.trim() || lng.trim()) && !address.trim()) return 'Enter the incident address for these coordinates.';
+    }
+    return null;
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
+  const goNext = () => {
+    const error = validateStep(step);
+    setStepError(error);
+    if (!error) setStep((step + 1) as 2 | 3);
   };
 
-  const handleDragLeave = () => {
-    setIsDragging(false);
+  const addFiles = (list: FileList | null) => {
+    if (!list?.length) return;
+    const incoming = [...list];
+    setFiles((prev) => [...prev, ...incoming.filter((f) => !prev.some((p) => p.name === f.name && p.size === f.size))]);
   };
 
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      const file = e.dataTransfer.files[0];
-      setUploadedFiles([
-        ...uploadedFiles,
-        {
-          name: file.name,
-          size: `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
-          type: file.name.includes('dna') ? 'DNA' : file.name.includes('gps') ? 'GPS' : 'Autopsy'
-        }
-      ]);
+  const addPerson = () => {
+    if (!personDraft.name.trim()) return;
+    setPersons([...persons, personDraft]);
+    setPersonDraft(EMPTY_PERSON);
+  };
+
+  const addVehicle = () => {
+    if (!vehicleDraft.label.trim() && !vehicleDraft.plate.trim()) return;
+    setVehicles([...vehicles, vehicleDraft]);
+    setVehicleDraft(EMPTY_VEHICLE);
+  };
+
+  const handleSubmit = async () => {
+    for (const s of [1, 2] as const) {
+      const error = validateStep(s);
+      if (error) {
+        setStep(s);
+        setStepError(error);
+        return;
+      }
+    }
+    // Entries typed but not yet added with the "Add" buttons still count.
+    const allPersons = personDraft.name.trim() ? [...persons, personDraft] : persons;
+    const allVehicles = vehicleDraft.label.trim() || vehicleDraft.plate.trim() ? [...vehicles, vehicleDraft] : vehicles;
+
+    const latitude = parseCoordinate(lat, -90, 90);
+    const longitude = parseCoordinate(lng, -180, 180);
+    const input: NewCaseInput = {
+      case: {
+        title: title.trim(),
+        incident_type: incidentType,
+        priority,
+        description: description.trim(),
+        incident_at: incidentAt ? new Date(incidentAt).toISOString() : null,
+        lead_investigator_id: leadInvestigatorId === '' ? null : leadInvestigatorId,
+        investigator_ids: [...new Set([...(leadInvestigatorId === '' ? [] : [leadInvestigatorId]), ...teamIds])]
+      },
+      location: address.trim()
+        ? {
+            kind: 'incident_site',
+            address: address.trim(),
+            lat: typeof latitude === 'number' ? latitude : null,
+            lng: typeof longitude === 'number' ? longitude : null
+          }
+        : null,
+      persons: allPersons.map((p) => ({
+        name: p.name.trim(),
+        role: p.role,
+        age: p.age.trim() ? Number(p.age) : null,
+        condition: p.condition || null,
+        contact: p.contact.trim(),
+        notes: p.notes.trim()
+      })),
+      vehicles: allVehicles.map((v) => ({
+        kind: 'vehicle',
+        label: v.label.trim() || v.plate.trim(),
+        details: Object.fromEntries(
+          Object.entries({ plate: v.plate.trim(), make: v.make.trim(), colour: v.colour.trim() }).filter(([, value]) => value)
+        )
+      })),
+      files
+    };
+
+    setSubmitError(null);
+    setProgress(plannedSteps(input));
+    const update = (key: string, status: StepStatus, error?: string) =>
+      setProgress((prev) => prev?.map((s) => (s.key === key ? { ...s, status, error } : s)) ?? null);
+
+    try {
+      const { created, failed } = await createCaseWithDetails(input, update);
+      await invalidateCase(queryClient, created.id);
+      if (failed === 0) {
+        navigate(casePath(created.id));
+        close();
+      } else {
+        setCreatedCase(created);
+      }
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : 'The case could not be created.');
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    const lead = investigators.find((i) => i.id === leadInvestigatorId) || investigators[0];
-    const newCaseId = `FX-2026-${Math.floor(1000 + Math.random() * 9000)}`;
-
-    const createdCase: ForensicCase = {
-      id: newCaseId,
-      title: title || 'Operation Phantom Grid: Unspecified Incident',
-      status: 'Forensic Testing',
-      priority,
-      leadInvestigator: lead,
-      dateCreated: new Date().toISOString().split('T')[0],
-      lastUpdated: new Date().toISOString().split('T')[0],
-      incidentLocation: incidentLocation || 'District 7 Metropolitan Sector',
-      description: description || 'New investigation initiated with AI telemetry and automated evidence ingest.',
-      evidenceCount: uploadedFiles.length,
-      aiConfidenceScore: 92.5,
-      progressPercent: 35,
-      victim: {
-        id: `VIC-${Math.floor(1000 + Math.random() * 9000)}`,
-        name: 'Victim Subject Alpha',
-        age: 44,
-        occupation: 'Executive',
-        status: 'Deceased - Confirmed',
-        causeOfDeath: 'Under Forensic Testing (Autopsy in Progress)',
-        timeOfDeath: `${new Date().toISOString().split('T')[0]} 21:00 UTC`,
-        dnaMatchVerification: 'STR Loci Swab Analysis Active',
-        autopsySummary: 'Ingested evidence files queued for multi-spectral decomposition and toxicology screening.'
-      },
-      evidenceList: uploadedFiles.map((f, idx) => ({
-        id: `EVD-NEW-${idx}`,
-        caseId: newCaseId,
-        title: f.name,
-        type: (f.type as any) || 'Digital File',
-        dateAdded: new Date().toISOString(),
-        fileSize: f.size,
-        sha256: '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08',
-        chainOfCustody: [{ officer: lead.name, timestamp: new Date().toISOString(), action: 'Ingested to Evidence Locker' }],
-        summary: 'Newly uploaded evidence file pending deep spectral and neural feature extraction.',
-        aiInsights: 'File integrity verified via SHA-256 hash checksum.'
-      })),
-      personsOfInterest: pois.map((p, idx) => ({
-        id: `POI-NEW-${idx}`,
-        name: p.name,
-        role: p.role,
-        threatLevel: p.role === 'Suspect' ? 'High' : 'Moderate',
-        alibiStatus: 'Unverified',
-        notes: p.notes
-      })),
-      timeline: [
-        {
-          id: 'TL-INIT-1',
-          caseId: newCaseId,
-          timestamp: new Date().toISOString(),
-          timeDisplay: '00:01 PST',
-          title: 'Case Dossier Created',
-          description: `Case dossier initialized by ${lead.name}. ${uploadedFiles.length} evidence files ingested.`,
-          category: 'Telecom',
-          isAiFlagged: true,
-          aiBreakthroughReason: 'AI Evidence Hash & Telemetry Ingestion Complete.'
-        }
-      ],
-      injuries: [
-        {
-          id: 'INJ-NEW-1',
-          region: 'head',
-          title: 'Primary Cranial Impact',
-          type: 'Blunt Force Trauma',
-          severity: 'Severe',
-          depth: '1.5 cm',
-          description: 'Cranial contusion identified from autopsy scan.',
-          estimatedTimeOfInjury: '22:15 PST',
-          aiNotes: 'Spectral analysis aligns with heavy metallic object.',
-          coordinates: { x: 50, y: 15 }
-        }
-      ],
-      networkNodes: [
-        { id: 'NODE-NewSuspect', label: pois[0]?.name || 'Suspect Alpha', sublabel: 'Prime Suspect', type: 'Suspect', x: 300, y: 180, threatLevel: 'High', color: '#ef4444' },
-        { id: 'NODE-NewVictim', label: 'Victim Subject 1', sublabel: 'Deceased', type: 'Victim', x: 500, y: 280, threatLevel: 'Low', color: '#3b82f6' }
-      ],
-      networkLinks: [
-        { source: 'NODE-NewSuspect', target: 'NODE-NewVictim', label: 'Under Investigation', strength: 4, isSuspicious: true }
-      ]
-    };
-
-    onCreateCase(createdCase);
-    onClose();
-  };
+  const investigatorName = (id: Id) => investigators?.find((i) => i.id === id)?.name ?? `#${id}`;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="create-case-title"
+    >
       <div className="w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         {/* Modal Header */}
         <div className="px-6 py-4 border-b border-slate-800 bg-slate-950/60 flex items-center justify-between">
@@ -194,105 +274,161 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
               <FolderPlus className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-sm font-mono font-bold text-slate-100 uppercase tracking-wider">
-                INITIATE NEW FORENSIC INVESTIGATION
+              <h2 id="create-case-title" className="text-sm font-mono font-bold text-slate-100 uppercase tracking-wider">
+                New Investigation
               </h2>
               <p className="text-[11px] text-slate-400 font-mono">
-                Step {step} of 3 • AI Automated Ingest Pipeline
+                {progress ? 'Saving' : `Step ${step} of 3 • ${STEP_TITLES[step - 1]}`}
               </p>
             </div>
           </div>
 
           <button
-            onClick={onClose}
-            className="p-2 rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
+            onClick={close}
+            disabled={submitting}
+            className="p-2 rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors disabled:opacity-40"
+            aria-label="Close"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Step Progress Indicator */}
-        <div className="px-6 py-3 bg-slate-950/90 border-b border-slate-800/80 flex items-center justify-between font-mono text-xs">
-          <div className={`flex items-center gap-2 ${step === 1 ? 'text-cyan-400 font-bold' : 'text-slate-500'}`}>
-            <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${step === 1 ? 'bg-cyan-500 text-slate-950' : 'bg-slate-800'}`}>1</span>
-            <span>Case Overview</span>
+        {!progress && (
+          <div className="px-6 py-3 bg-slate-950/90 border-b border-slate-800/80 flex items-center justify-between font-mono text-xs">
+            {STEP_TITLES.map((label, i) => {
+              const n = i + 1;
+              return (
+                <React.Fragment key={label}>
+                  {i > 0 && <div className="w-8 h-px bg-slate-800"></div>}
+                  <div className={`flex items-center gap-2 ${step === n ? 'text-cyan-400 font-bold' : 'text-slate-500'}`}>
+                    <span
+                      className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${
+                        step === n ? 'bg-cyan-500 text-slate-950' : 'bg-slate-800'
+                      }`}
+                    >
+                      {n}
+                    </span>
+                    <span>{label}</span>
+                  </div>
+                </React.Fragment>
+              );
+            })}
           </div>
+        )}
 
-          <div className="w-8 h-px bg-slate-800"></div>
+        <div className="p-6 overflow-y-auto space-y-5 flex-1">
+          {/* SUBMISSION PROGRESS */}
+          {progress && (
+            <div className="space-y-3 font-mono">
+              <ul className="space-y-2">
+                {progress.map((s) => (
+                  <li key={s.key} className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs">
+                    <div className="flex items-center gap-2">
+                      {s.status === 'done' && <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
+                      {s.status === 'running' && <Loader2 className="w-4 h-4 text-cyan-400 animate-spin" />}
+                      {s.status === 'failed' && <AlertTriangle className="w-4 h-4 text-red-400" />}
+                      {s.status === 'pending' && <Circle className="w-4 h-4 text-slate-600" />}
+                      <span className={s.status === 'failed' ? 'text-red-200' : 'text-slate-200'}>{s.label}</span>
+                    </div>
+                    {s.error && <p className="text-[11px] text-red-300 mt-1 pl-6">{s.error}</p>}
+                  </li>
+                ))}
+              </ul>
 
-          <div className={`flex items-center gap-2 ${step === 2 ? 'text-cyan-400 font-bold' : 'text-slate-500'}`}>
-            <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${step === 2 ? 'bg-cyan-500 text-slate-950' : 'bg-slate-800'}`}>2</span>
-            <span>Evidence Upload</span>
-          </div>
+              {submitError && (
+                <div className="p-3 rounded-xl bg-red-950/30 border border-red-500/30 text-xs text-red-200">
+                  The case was not created: {submitError}
+                </div>
+              )}
+              {createdCase && (
+                <div className="p-3 rounded-xl bg-amber-950/30 border border-amber-500/30 text-xs text-amber-100">
+                  Case {createdCase.case_number} was created, but the items marked above didn't save. You can add them
+                  from the case workspace.
+                </div>
+              )}
+            </div>
+          )}
 
-          <div className="w-8 h-px bg-slate-800"></div>
-
-          <div className={`flex items-center gap-2 ${step === 3 ? 'text-cyan-400 font-bold' : 'text-slate-500'}`}>
-            <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${step === 3 ? 'bg-cyan-500 text-slate-950' : 'bg-slate-800'}`}>3</span>
-            <span>Team & POIs</span>
-          </div>
-        </div>
-
-        {/* Form Content Body */}
-        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-5 flex-1">
           {/* STEP 1: Case Details */}
-          {step === 1 && (
-            <div className="space-y-4 animate-in fade-in duration-150">
+          {!progress && step === 1 && (
+            <div className="space-y-4">
               <div>
-                <label className="block text-xs font-mono text-slate-300 font-semibold mb-1.5 uppercase">
+                <label htmlFor="case-title" className={labelClass}>
                   Case Title *
                 </label>
                 <input
+                  id="case-title"
                   type="text"
-                  required
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g. Operation Cipher Ghost: Harbor Penthouse Homicide"
-                  className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-100 placeholder-slate-600 font-mono focus:outline-none focus:border-cyan-500"
+                  placeholder="e.g. Collision at Ring Road and 5th Avenue junction"
+                  className={inputClass}
+                  autoFocus
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-xs font-mono text-slate-300 font-semibold mb-1.5 uppercase">
-                    Priority Level
+                  <label htmlFor="case-type" className={labelClass}>
+                    Incident Type
                   </label>
                   <select
-                    value={priority}
-                    onChange={(e) => setPriority(e.target.value as CasePriority)}
-                    className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 font-mono focus:outline-none focus:border-cyan-500"
+                    id="case-type"
+                    value={incidentType}
+                    onChange={(e) => setIncidentType(e.target.value as IncidentType)}
+                    className={inputClass}
                   >
-                    <option value="CRITICAL">Critical (Immediate AI Analysis)</option>
-                    <option value="HIGH">High Priority</option>
-                    <option value="MEDIUM">Medium Priority</option>
-                    <option value="LOW">Low Priority</option>
+                    {INCIDENT_TYPES.map((t) => (
+                      <option key={t} value={t}>
+                        {humanize(t)}
+                      </option>
+                    ))}
                   </select>
                 </div>
-
                 <div>
-                  <label className="block text-xs font-mono text-slate-300 font-semibold mb-1.5 uppercase">
-                    Incident Location
+                  <label htmlFor="case-priority" className={labelClass}>
+                    Priority
+                  </label>
+                  <select
+                    id="case-priority"
+                    value={priority}
+                    onChange={(e) => setPriority(e.target.value as CasePriority)}
+                    className={inputClass}
+                  >
+                    {CASE_PRIORITIES.map((p) => (
+                      <option key={p} value={p}>
+                        {humanize(p)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="case-incident-at" className={labelClass}>
+                    Incident Date & Time
                   </label>
                   <input
-                    type="text"
-                    value={incidentLocation}
-                    onChange={(e) => setIncidentLocation(e.target.value)}
-                    placeholder="e.g. Skyline Plaza Penthouse B, Sector 4"
-                    className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-100 placeholder-slate-600 font-mono focus:outline-none focus:border-cyan-500"
+                    id="case-incident-at"
+                    type="datetime-local"
+                    value={incidentAt}
+                    onChange={(e) => setIncidentAt(e.target.value)}
+                    className={`${inputClass} [color-scheme:dark]`}
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-mono text-slate-300 font-semibold mb-1.5 uppercase">
+                <label htmlFor="case-lead" className={labelClass}>
                   Lead Investigator
                 </label>
                 <select
+                  id="case-lead"
                   value={leadInvestigatorId}
-                  onChange={(e) => setLeadInvestigatorId(e.target.value)}
-                  className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 font-mono focus:outline-none focus:border-cyan-500"
+                  onChange={(e) => setLeadInvestigatorId(e.target.value ? Number(e.target.value) : '')}
+                  className={inputClass}
                 >
-                  {investigators.map((inv) => (
+                  <option value="">Not assigned</option>
+                  {investigators?.map((inv) => (
                     <option key={inv.id} value={inv.id}>
                       {inv.name} — {inv.role}
                     </option>
@@ -300,91 +436,159 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
                 </select>
               </div>
 
+              <fieldset>
+                <legend className={labelClass}>Team</legend>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {investigators?.map((inv) => (
+                    <label
+                      key={inv.id}
+                      className="flex items-center gap-2 p-2 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-300 cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={teamIds.includes(inv.id) || inv.id === leadInvestigatorId}
+                        disabled={inv.id === leadInvestigatorId}
+                        onChange={(e) =>
+                          setTeamIds(e.target.checked ? [...teamIds, inv.id] : teamIds.filter((id) => id !== inv.id))
+                        }
+                        className="accent-cyan-500"
+                      />
+                      <span className="truncate">{inv.name}</span>
+                      {inv.id === leadInvestigatorId && <span className="text-[10px] text-cyan-400">lead</span>}
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+
               <div>
-                <label className="block text-xs font-mono text-slate-300 font-semibold mb-1.5 uppercase">
-                  Incident Summary & Briefing
+                <label htmlFor="case-description" className={labelClass}>
+                  Incident Summary
                 </label>
                 <textarea
+                  id="case-description"
                   rows={4}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Provide preliminary autopsy notes, crime scene observations, and suspect alibi context..."
-                  className="w-full p-3 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-100 placeholder-slate-600 font-mono focus:outline-none focus:border-cyan-500 resize-none"
+                  placeholder="What is known so far: what happened, where, and who was involved."
+                  className={`${inputClass} resize-none`}
                 ></textarea>
               </div>
             </div>
           )}
 
-          {/* STEP 2: File / Evidence Drag & Drop Zone */}
-          {step === 2 && (
-            <div className="space-y-4 animate-in fade-in duration-150">
+          {/* STEP 2: Location and Evidence */}
+          {!progress && step === 2 && (
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="case-address" className={labelClass}>
+                  Incident Location
+                </label>
+                <input
+                  id="case-address"
+                  type="text"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="e.g. Ring Road and 5th Avenue junction, Sector 12"
+                  className={inputClass}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="case-lat" className={labelClass}>
+                    Latitude (optional)
+                  </label>
+                  <input
+                    id="case-lat"
+                    inputMode="decimal"
+                    value={lat}
+                    onChange={(e) => setLat(e.target.value)}
+                    placeholder="12.9716"
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="case-lng" className={labelClass}>
+                    Longitude (optional)
+                  </label>
+                  <input
+                    id="case-lng"
+                    inputMode="decimal"
+                    value={lng}
+                    onChange={(e) => setLng(e.target.value)}
+                    placeholder="77.5946"
+                    className={inputClass}
+                  />
+                </div>
+              </div>
+
               <div
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-                className={`border-2 border-dashed rounded-2xl p-6 text-center transition-all cursor-pointer ${
-                  isDragging
-                    ? 'border-cyan-400 bg-cyan-500/10'
-                    : 'border-slate-800 bg-slate-950/60 hover:border-slate-700'
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setIsDragging(true);
+                }}
+                onDragLeave={() => setIsDragging(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setIsDragging(false);
+                  addFiles(e.dataTransfer.files);
+                }}
+                className={`border-2 border-dashed rounded-2xl p-6 text-center transition-all ${
+                  isDragging ? 'border-cyan-400 bg-cyan-500/10' : 'border-slate-800 bg-slate-950/60'
                 }`}
               >
                 <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 flex items-center justify-center mx-auto mb-3">
                   <UploadCloud className="w-6 h-6" />
                 </div>
-                <p className="text-xs font-mono font-bold text-slate-200 uppercase">
-                  DRAG & DROP EVIDENCE FILES HERE
-                </p>
+                <p className="text-xs font-mono font-bold text-slate-200 uppercase">Drag & drop evidence files here</p>
                 <p className="text-[11px] text-slate-400 mt-1">
-                  Supports Autopsy PDFs, DNA sequencing (.fasta), GPS logs (.gpx/JSON), Suspect profiles, & Witness transcripts (.mp3)
+                  PDFs, Word documents, text, photos, audio and short videos. The original is stored and hashed.
                 </p>
                 <button
                   type="button"
-                  onClick={() => {
-                    setUploadedFiles([
-                      ...uploadedFiles,
-                      { name: 'Witness_Transcript_Audio_Interrogation.mp3', size: '24.2 MB', type: 'Audio/Transcript' }
-                    ]);
-                  }}
+                  onClick={() => fileInputRef.current?.click()}
                   className="mt-3 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-mono rounded-lg border border-slate-700 inline-block"
                 >
-                  Or Select Files from System
+                  Select Files
                 </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => {
+                    addFiles(e.target.files);
+                    e.target.value = '';
+                  }}
+                  data-testid="evidence-file-input"
+                />
               </div>
 
-              {/* Uploaded File List */}
               <div>
                 <span className="text-xs font-mono text-slate-400 uppercase block mb-2 font-semibold">
-                  Pending Files for AI Ingestion ({uploadedFiles.length})
+                  Files to upload ({files.length})
                 </span>
-
                 <div className="space-y-2">
-                  {uploadedFiles.map((file, i) => (
+                  {files.map((file, i) => (
                     <div
-                      key={i}
+                      key={`${file.name}-${i}`}
                       className="p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-3 text-xs font-mono"
                     >
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
                         <div className="p-2 rounded-lg bg-slate-900 text-cyan-400 border border-slate-800">
-                          {file.type === 'DNA' ? (
-                            <Dna className="w-4 h-4 text-emerald-400" />
-                          ) : file.type === 'GPS' ? (
-                            <Radio className="w-4 h-4 text-amber-400" />
-                          ) : (
-                            <FileText className="w-4 h-4 text-cyan-400" />
-                          )}
+                          <FileText className="w-4 h-4" />
                         </div>
-                        <div>
-                          <span className="text-slate-200 font-semibold block">{file.name}</span>
+                        <div className="min-w-0">
+                          <span className="text-slate-200 font-semibold block truncate">{file.name}</span>
                           <span className="text-[10px] text-slate-500">
-                            Size: {file.size} • Hash SHA-256 Validated
+                            {formatBytes(file.size)} • {file.type || 'unknown type'}
                           </span>
                         </div>
                       </div>
-
                       <button
                         type="button"
-                        onClick={() => setUploadedFiles(uploadedFiles.filter((_, idx) => idx !== i))}
+                        onClick={() => setFiles(files.filter((_, idx) => idx !== i))}
                         className="text-slate-500 hover:text-red-400 p-1 transition-colors"
+                        aria-label={`Remove ${file.name}`}
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -395,124 +599,274 @@ export const CreateCaseModal: React.FC<CreateCaseModalProps> = ({
             </div>
           )}
 
-          {/* STEP 3: Assign Persons of Interest */}
-          {step === 3 && (
-            <div className="space-y-4 animate-in fade-in duration-150">
+          {/* STEP 3: People and Vehicles */}
+          {!progress && step === 3 && (
+            <div className="space-y-5">
               <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
-                <span className="text-xs font-mono font-bold text-slate-200 uppercase block">
-                  Add Person of Interest (POI)
+                <span className="text-xs font-mono font-bold text-slate-200 uppercase flex items-center gap-2">
+                  <UserPlus className="w-4 h-4 text-cyan-400" /> Add a person
                 </span>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <input
-                    type="text"
-                    value={newPoiName}
-                    onChange={(e) => setNewPoiName(e.target.value)}
-                    placeholder="Full Name (e.g. Victor Vance)"
-                    className="px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-200 font-mono focus:outline-none focus:border-cyan-500"
+                    aria-label="Person name"
+                    value={personDraft.name}
+                    onChange={(e) => setPersonDraft({ ...personDraft, name: e.target.value })}
+                    placeholder="Full name"
+                    className={`${smallInputClass} sm:col-span-2`}
                   />
-
                   <select
-                    value={newPoiRole}
-                    onChange={(e) => setNewPoiRole(e.target.value as 'Suspect' | 'Witness')}
-                    className="px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-200 font-mono focus:outline-none focus:border-cyan-500"
+                    aria-label="Person role"
+                    value={personDraft.role}
+                    onChange={(e) => setPersonDraft({ ...personDraft, role: e.target.value as PersonRole })}
+                    className={smallInputClass}
                   >
-                    <option value="Suspect">Suspect</option>
-                    <option value="Witness">Witness</option>
+                    {PERSON_ROLES.map((r) => (
+                      <option key={r} value={r}>
+                        {humanize(r)}
+                      </option>
+                    ))}
                   </select>
+                  <input
+                    aria-label="Person age"
+                    inputMode="numeric"
+                    value={personDraft.age}
+                    onChange={(e) => setPersonDraft({ ...personDraft, age: e.target.value.replace(/\D/g, '') })}
+                    placeholder="Age"
+                    className={smallInputClass}
+                  />
+                  <select
+                    aria-label="Person condition"
+                    value={personDraft.condition}
+                    onChange={(e) => setPersonDraft({ ...personDraft, condition: e.target.value as PersonCondition | '' })}
+                    className={smallInputClass}
+                  >
+                    <option value="">Condition unknown</option>
+                    {PERSON_CONDITIONS.map((c) => (
+                      <option key={c} value={c}>
+                        {humanize(c)}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    aria-label="Person contact"
+                    value={personDraft.contact}
+                    onChange={(e) => setPersonDraft({ ...personDraft, contact: e.target.value })}
+                    placeholder="Contact"
+                    className={smallInputClass}
+                  />
                 </div>
-
                 <input
-                  type="text"
-                  value={newPoiNotes}
-                  onChange={(e) => setNewPoiNotes(e.target.value)}
-                  placeholder="Key observations / Alibi statements..."
-                  className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-200 font-mono focus:outline-none focus:border-cyan-500"
+                  aria-label="Person notes"
+                  value={personDraft.notes}
+                  onChange={(e) => setPersonDraft({ ...personDraft, notes: e.target.value })}
+                  placeholder="Notes, such as what they saw or their part in the incident"
+                  className={smallInputClass}
                 />
-
                 <button
                   type="button"
-                  onClick={handleAddPoi}
-                  className="px-3 py-1.5 rounded-lg bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 text-xs font-mono flex items-center gap-1.5"
+                  onClick={addPerson}
+                  disabled={!personDraft.name.trim()}
+                  className="px-3 py-1.5 rounded-lg bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 text-xs font-mono flex items-center gap-1.5 disabled:opacity-40"
                 >
-                  <Plus className="w-3.5 h-3.5" />
-                  Add POI Subject
+                  <Plus className="w-3.5 h-3.5" /> Add person
                 </button>
               </div>
 
-              {/* POI List */}
-              <div className="space-y-2">
-                <span className="text-xs font-mono text-slate-400 uppercase block font-semibold">
-                  Key Subjects Assigned ({pois.length})
-                </span>
-
-                {pois.map((poi, idx) => (
-                  <div
-                    key={idx}
-                    className="p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-3 text-xs font-mono"
-                  >
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-slate-200">{poi.name}</span>
-                        <span
-                          className={`px-2 py-0.5 rounded text-[10px] ${
-                            poi.role === 'Suspect'
-                              ? 'bg-red-500/20 text-red-400 border border-red-500/30'
-                              : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
-                          }`}
-                        >
-                          {poi.role}
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-slate-400 mt-1">{poi.notes}</p>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => handleRemovePoi(idx)}
-                      className="text-slate-500 hover:text-red-400 p-1"
+              {persons.length > 0 && (
+                <div className="space-y-2">
+                  <span className="text-xs font-mono text-slate-400 uppercase block font-semibold">
+                    People ({persons.length})
+                  </span>
+                  {persons.map((p, idx) => (
+                    <div
+                      key={idx}
+                      className="p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-3 text-xs font-mono"
                     >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-slate-200">{p.name}</span>
+                          <span className="px-2 py-0.5 rounded text-[10px] bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                            {humanize(p.role)}
+                          </span>
+                          {p.condition && <span className="text-[10px] text-slate-400">{humanize(p.condition)}</span>}
+                        </div>
+                        <p className="text-[11px] text-slate-400 mt-1">
+                          {[p.age && `Age ${p.age}`, p.contact, p.notes].filter(Boolean).join(' • ')}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setPersons(persons.filter((_, i) => i !== idx))}
+                        className="text-slate-500 hover:text-red-400 p-1"
+                        aria-label={`Remove ${p.name}`}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
+                <span className="text-xs font-mono font-bold text-slate-200 uppercase flex items-center gap-2">
+                  <Car className="w-4 h-4 text-cyan-400" /> Add a vehicle
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                  <input
+                    aria-label="Vehicle description"
+                    value={vehicleDraft.label}
+                    onChange={(e) => setVehicleDraft({ ...vehicleDraft, label: e.target.value })}
+                    placeholder="Description, e.g. White hatchback"
+                    className={`${smallInputClass} sm:col-span-4`}
+                  />
+                  <input
+                    aria-label="Vehicle plate"
+                    value={vehicleDraft.plate}
+                    onChange={(e) => setVehicleDraft({ ...vehicleDraft, plate: e.target.value })}
+                    placeholder="Plate"
+                    className={smallInputClass}
+                  />
+                  <input
+                    aria-label="Vehicle make"
+                    value={vehicleDraft.make}
+                    onChange={(e) => setVehicleDraft({ ...vehicleDraft, make: e.target.value })}
+                    placeholder="Make and model"
+                    className={`${smallInputClass} sm:col-span-2`}
+                  />
+                  <input
+                    aria-label="Vehicle colour"
+                    value={vehicleDraft.colour}
+                    onChange={(e) => setVehicleDraft({ ...vehicleDraft, colour: e.target.value })}
+                    placeholder="Colour"
+                    className={smallInputClass}
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={addVehicle}
+                  disabled={!vehicleDraft.label.trim() && !vehicleDraft.plate.trim()}
+                  className="px-3 py-1.5 rounded-lg bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 text-xs font-mono flex items-center gap-1.5 disabled:opacity-40"
+                >
+                  <Plus className="w-3.5 h-3.5" /> Add vehicle
+                </button>
               </div>
+
+              {vehicles.length > 0 && (
+                <div className="space-y-2">
+                  <span className="text-xs font-mono text-slate-400 uppercase block font-semibold">
+                    Vehicles ({vehicles.length})
+                  </span>
+                  {vehicles.map((v, idx) => (
+                    <div
+                      key={idx}
+                      className="p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-3 text-xs font-mono"
+                    >
+                      <div>
+                        <span className="font-bold text-slate-200">{v.label || v.plate}</span>
+                        <p className="text-[11px] text-slate-400 mt-1">
+                          {[v.plate, v.make, v.colour].filter(Boolean).join(' • ')}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setVehicles(vehicles.filter((_, i) => i !== idx))}
+                        className="text-slate-500 hover:text-red-400 p-1"
+                        aria-label={`Remove ${v.label || v.plate}`}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {teamIds.length > 0 && (
+                <p className="text-[11px] text-slate-500 font-mono">
+                  Team: {teamIds.map(investigatorName).join(', ')}
+                </p>
+              )}
             </div>
           )}
 
-          {/* Bottom Action Footer */}
-          <div className="pt-4 border-t border-slate-800 flex items-center justify-between font-mono">
-            {step > 1 ? (
-              <button
-                type="button"
-                onClick={() => setStep((step - 1) as 1 | 2)}
-                className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 text-xs flex items-center gap-1.5"
-              >
-                <ArrowLeft className="w-3.5 h-3.5" /> Back
-              </button>
-            ) : (
-              <div></div>
-            )}
+          {stepError && !progress && (
+            <div className="p-3 rounded-xl bg-red-950/30 border border-red-500/30 text-xs text-red-200 font-mono" role="alert">
+              {stepError}
+            </div>
+          )}
+        </div>
 
-            {step < 3 ? (
+        {/* Bottom Action Footer */}
+        <div className="px-6 py-4 border-t border-slate-800 flex items-center justify-between font-mono">
+          {progress ? (
+            <>
               <button
+                key="back-to-form"
                 type="button"
-                onClick={() => setStep((step + 1) as 2 | 3)}
-                className="px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-[0_0_15px_rgba(6,182,212,0.3)]"
+                onClick={() => {
+                  setProgress(null);
+                  setSubmitError(null);
+                }}
+                disabled={submitting || createdCase !== null}
+                className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 text-xs flex items-center gap-1.5 disabled:opacity-0"
               >
-                Next Step <ArrowRight className="w-3.5 h-3.5" />
+                <ArrowLeft className="w-3.5 h-3.5" /> Back to form
               </button>
-            ) : (
-              <button
-                type="submit"
-                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-bold text-xs flex items-center gap-2 shadow-[0_0_20px_rgba(6,182,212,0.4)]"
-              >
-                <Zap className="w-4 h-4 fill-slate-950" />
-                INITIALIZE FORENSIC DOSSIER
-              </button>
-            )}
-          </div>
-        </form>
+              {createdCase && (
+                <button
+                  key="open-case"
+                  type="button"
+                  onClick={() => {
+                    navigate(casePath(createdCase.id));
+                    close();
+                  }}
+                  className="px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs flex items-center gap-1.5"
+                >
+                  Open case <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </>
+          ) : (
+            <>
+              {step > 1 ? (
+                <button
+                  key="back"
+                  type="button"
+                  onClick={() => {
+                    setStepError(null);
+                    setStep((step - 1) as 1 | 2);
+                  }}
+                  className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 text-xs flex items-center gap-1.5"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" /> Back
+                </button>
+              ) : (
+                <div></div>
+              )}
+
+              {/* Separate keys stop React reusing one <button> for Next and Create. */}
+              {step < 3 ? (
+                <button
+                  key="next"
+                  type="button"
+                  onClick={goNext}
+                  className="px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-[0_0_15px_rgba(6,182,212,0.3)]"
+                >
+                  Next Step <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              ) : (
+                <button
+                  key="create"
+                  type="button"
+                  onClick={handleSubmit}
+                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-bold text-xs flex items-center gap-2 shadow-[0_0_20px_rgba(6,182,212,0.4)]"
+                >
+                  <Zap className="w-4 h-4 fill-slate-950" />
+                  CREATE CASE
+                </button>
+              )}
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

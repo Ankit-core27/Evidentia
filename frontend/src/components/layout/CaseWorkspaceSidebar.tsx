@@ -1,24 +1,26 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronLeft } from 'lucide-react';
-import { CaseModule, ForensicCase } from '@/types';
+import { CaseModule } from '@/types';
 import { CASE_MODULES, casePath } from '@/lib/caseModules';
 
 interface CaseWorkspaceSidebarProps {
-  activeCase: ForensicCase;
+  caseId: string | number;
+  caseNumber: string;
+  title: string;
+  priority: string;
   activeModule: CaseModule;
+  badges?: Partial<Record<CaseModule, string | number>>;
 }
 
 export const CaseWorkspaceSidebar: React.FC<CaseWorkspaceSidebarProps> = ({
-  activeCase,
-  activeModule
+  caseId,
+  caseNumber,
+  title,
+  priority,
+  activeModule,
+  badges = {}
 }) => {
-  const badges: Partial<Record<CaseModule, string | number>> = {
-    evidence: activeCase.evidenceList.length || activeCase.evidenceCount,
-    timeline: activeCase.timeline.length,
-    witnesses: activeCase.personsOfInterest.length,
-    copilot: 'AI'
-  };
   const modulesList = CASE_MODULES.map((m) => ({ ...m, badge: badges[m.id] }));
 
   return (
@@ -38,21 +40,17 @@ export const CaseWorkspaceSidebar: React.FC<CaseWorkspaceSidebarProps> = ({
             <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">
               Active Workspace
             </span>
-            <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
-              {activeCase.priority}
+            <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 uppercase">
+              {priority}
             </span>
           </div>
-          <div className="text-xs font-bold text-slate-100 mt-0.5 truncate">
-            {activeCase.id}
-          </div>
-          <div className="text-[11px] text-slate-400 truncate mt-0.5">
-            {activeCase.title}
-          </div>
+          <div className="text-xs font-bold text-slate-100 mt-0.5 truncate">{caseNumber}</div>
+          <div className="text-[11px] text-slate-400 truncate mt-0.5">{title}</div>
         </div>
       </div>
 
       {/* Module Navigation Item List */}
-      <nav className="flex-1 overflow-y-auto p-2 space-y-1">
+      <nav className="flex-1 overflow-y-auto p-2 space-y-1" aria-label="Case modules">
         <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider px-3 py-1.5">
           Case Modules
         </div>
@@ -64,7 +62,8 @@ export const CaseWorkspaceSidebar: React.FC<CaseWorkspaceSidebarProps> = ({
           return (
             <Link
               key={m.id}
-              to={casePath(activeCase.id, m.id)}
+              to={casePath(caseId, m.id)}
+              aria-current={isActive ? 'page' : undefined}
               className={`w-full px-3 py-2 rounded-xl text-xs font-medium flex items-center justify-between transition-all group ${
                 isActive
                   ? 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/40 font-bold shadow-[0_0_12px_rgba(6,182,212,0.15)]'
@@ -97,18 +96,6 @@ export const CaseWorkspaceSidebar: React.FC<CaseWorkspaceSidebarProps> = ({
           );
         })}
       </nav>
-
-      {/* Bottom Clearance Info */}
-      <div className="p-3 border-t border-slate-800 bg-slate-950/80 text-[10px] text-slate-500 space-y-1">
-        <div className="flex items-center justify-between">
-          <span>CLEARANCE LEVEL</span>
-          <span className="text-cyan-400 font-bold">LEVEL 5 TOP SECRET</span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span>SHA-256 LOGS</span>
-          <span className="text-emerald-400 font-bold">LOCKED & SIGNED</span>
-        </div>
-      </div>
     </aside>
   );
 };
