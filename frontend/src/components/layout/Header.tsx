@@ -13,13 +13,12 @@ import {
   LayoutDashboard,
   ChevronDown
 } from 'lucide-react';
-import { CaseModule } from '@/types';
-import { Alert } from '@/types/api';
+import { ALERT_SEVERITY_DOT, alertPath } from '@/lib/alerts';
 import { CaseStatusBadge } from '@/components/shared/Badges';
 import { useAlerts } from '@/hooks/useDashboard';
 import { useCase, useCases } from '@/hooks/useCases';
 import { useClickOutside } from '@/hooks/useClickOutside';
-import { caseModuleLabel, casePath, parseCaseId } from '@/lib/caseModules';
+import { CaseModule, caseModuleLabel, casePath, parseCaseId } from '@/lib/caseModules';
 import { formatDateTime } from '@/lib/format';
 import { GlobalCaseSearch } from './GlobalCaseSearch';
 import { InvestigatorPicker } from './InvestigatorPicker';
@@ -35,16 +34,6 @@ const MACRO_TABS = [
   { to: '/evidence', label: 'Global Evidence', icon: Fingerprint },
   { to: '/reports', label: 'Intelligence Hub', icon: Cpu }
 ];
-
-/** The workspace module an alert should open. */
-const alertModule = (alert: Alert): CaseModule =>
-  alert.kind === 'processing' ? 'evidence' : alert.kind === 'conflict' || alert.kind === 'review' ? 'review' : 'overview';
-
-const SEVERITY_DOT: Record<Alert['severity'], string> = {
-  info: 'bg-cyan-400',
-  warning: 'bg-amber-400',
-  critical: 'bg-red-500'
-};
 
 export const Header: React.FC<HeaderProps> = ({ activeModule, onOpenCreateModal }) => {
   const navigate = useNavigate();
@@ -233,14 +222,14 @@ export const Header: React.FC<HeaderProps> = ({ activeModule, onOpenCreateModal 
                   <button
                     key={alert.id}
                     onClick={() => {
-                      navigate(casePath(alert.case_id, alertModule(alert)));
+                      navigate(alertPath(alert));
                       setShowAlertsMenu(false);
                     }}
                     className="w-full text-left p-2.5 rounded-lg bg-slate-950/60 border border-slate-800 hover:border-cyan-500/50 cursor-pointer transition-all group"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <span className="text-xs font-semibold text-slate-200 group-hover:text-cyan-300 flex items-center gap-1.5">
-                        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${SEVERITY_DOT[alert.severity]}`} />
+                        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${ALERT_SEVERITY_DOT[alert.severity]}`} />
                         {alert.title}
                       </span>
                       <span className="text-[10px] text-cyan-400 shrink-0">{alert.case_number}</span>

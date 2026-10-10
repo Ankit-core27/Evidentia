@@ -1,61 +1,36 @@
 import React from 'react';
-import { Navigate, useNavigate, useParams } from 'react-router-dom';
+import { Navigate, useParams } from 'react-router-dom';
 import { CaseWorkspaceSidebar } from '@/components/layout/CaseWorkspaceSidebar';
-import { useAppContext } from '@/components/layout/AppLayout';
 import { NotWiredYet } from '@/components/shared/NotWiredYet';
 import { ErrorState, LoadingState } from '@/components/shared/QueryState';
-import { CaseBanner } from '@/features/case-management/CaseBanner';
-import { CaseOverview } from '@/features/case-management/CaseOverview';
 import { CaseSummary } from '@/features/case-management/CaseSummary';
 import { CaseWorkspaceBanner } from '@/features/case-management/CaseWorkspaceBanner';
 import { PeopleModule } from '@/features/case-management/PeopleModule';
-import { PersonsModule } from '@/features/case-management/PersonsModule';
-import { CaseSettings } from '@/features/case-management/CaseSettings';
 import { SettingsModule } from '@/features/case-management/SettingsModule';
 import { EvidenceModule } from '@/features/evidence-management/EvidenceModule';
-import { CaseEvidenceModule } from '@/features/evidence-management/CaseEvidenceModule';
-import { CanvasModule } from '@/features/evidence-canvas/CanvasModule';
 import { CaseCanvasModule } from '@/features/evidence-canvas/CaseCanvasModule';
 import { IncidentTimeline } from '@/features/incident-timeline/IncidentTimeline';
-import { TimelineModule } from '@/features/incident-timeline/TimelineModule';
-import { AutopsyModule } from '@/features/anatomy/AutopsyModule';
-import { CrimeSceneModule } from '@/features/reconstruction/CrimeSceneModule';
 import { ReconstructionModule } from '@/features/reconstruction/ReconstructionModule';
 import { CopilotModule } from '@/features/ai-investigation/CopilotModule';
 import { ReviewModule } from '@/features/ai-investigation/ReviewModule';
-import { CopilotPanel } from '@/features/ai-investigation/CopilotPanel';
-import { useMockCopilot } from '@/features/ai-investigation/useMockCopilot';
-import { CaseReportModule } from '@/features/reports/CaseReportModule';
 import { CaseReportsModule } from '@/features/reports/CaseReportsModule';
 import { useCaseWorkspace } from '@/hooks/useCases';
 import { ApiError } from '@/lib/api';
-import { caseModuleLabel, casePath, isCaseModule, parseCaseId } from '@/lib/caseModules';
-import { CaseModule, ForensicCase } from '@/types';
+import { CaseModule, caseModuleLabel, casePath, isCaseModule, parseCaseId } from '@/lib/caseModules';
 import { NotFoundPage } from './NotFoundPage';
 
 // /cases/:caseId/:module? — one tab per feature module.
 export const CaseWorkspacePage: React.FC = () => {
   const { caseId, module } = useParams();
-  const { cases } = useAppContext();
 
   if (module !== undefined && !isCaseModule(module)) {
     return <Navigate to={casePath(caseId!)} replace />;
   }
   const activeModule: CaseModule = isCaseModule(module) ? module : 'overview';
 
-  const apiCaseId = parseCaseId(caseId);
-  if (apiCaseId !== null) {
-    return <CaseWorkspace key={apiCaseId} caseId={apiCaseId} activeModule={activeModule} />;
-  }
-
-  // Cases from the UI draft's mock data, still linked from the dashboard and global
-  // evidence pages until those read from the API (T5, T12).
-  const draftCase = cases.find((c) => c.id === caseId);
-  if (draftCase) {
-    return <DraftCaseWorkspace key={draftCase.id} forensicCase={draftCase} activeModule={activeModule} />;
-  }
-
-  return <CaseNotFound caseId={caseId} />;
+  const id = parseCaseId(caseId);
+  if (id === null) return <CaseNotFound caseId={caseId} />;
+  return <CaseWorkspace key={id} caseId={id} activeModule={activeModule} />;
 };
 
 const CaseNotFound: React.FC<{ caseId: string | undefined }> = ({ caseId }) => (
@@ -123,63 +98,6 @@ const CaseWorkspace: React.FC<{ caseId: number; activeModule: CaseModule }> = ({
         {activeModule === 'reports' && <CaseReportsModule caseId={c.id} />}
         {activeModule === 'settings' && <SettingsModule workspace={workspace} />}
         {pendingTask && <NotWiredYet module={caseModuleLabel(activeModule)} task={pendingTask} />}
-      </main>
-    </div>
-  );
-};
-
-interface DraftCaseWorkspaceProps {
-  forensicCase: ForensicCase;
-  activeModule: CaseModule;
-}
-
-/** The UI draft's workspace over its mock data. Removed once no screen links to draft cases. */
-const DraftCaseWorkspace: React.FC<DraftCaseWorkspaceProps> = ({ forensicCase, activeModule }) => {
-  const navigate = useNavigate();
-  const { updateCaseStatus, previewEvidence } = useAppContext();
-  const copilot = useMockCopilot(forensicCase);
-
-  const selectModule = (target: CaseModule) => navigate(casePath(forensicCase.id, target));
-
-  return (
-    <div className="flex flex-1 min-h-[calc(100vh-4rem)] bg-slate-950 text-slate-100 font-mono">
-      <CaseWorkspaceSidebar
-        caseId={forensicCase.id}
-        caseNumber={forensicCase.id}
-        title={forensicCase.title}
-        priority={forensicCase.priority}
-        activeModule={activeModule}
-        badges={{
-          evidence: forensicCase.evidenceList.length || forensicCase.evidenceCount,
-          timeline: forensicCase.timeline.length,
-          people: forensicCase.personsOfInterest.length,
-          copilot: 'AI'
-        }}
-      />
-
-      <main className="flex-1 p-4 lg:p-6 overflow-y-auto space-y-6">
-        <CaseBanner forensicCase={forensicCase} onUpdateStatus={updateCaseStatus} />
-
-        {activeModule === 'overview' && (
-          <CaseOverview
-            forensicCase={forensicCase}
-            onSelectModule={selectModule}
-            onPreviewEvidence={previewEvidence}
-            onAskCopilot={copilot.send}
-          />
-        )}
-        {activeModule === 'evidence' && (
-          <CaseEvidenceModule forensicCase={forensicCase} onPreviewEvidence={previewEvidence} />
-        )}
-        {activeModule === 'canvas' && <CanvasModule forensicCase={forensicCase} />}
-        {activeModule === 'timeline' && <TimelineModule forensicCase={forensicCase} />}
-        {activeModule === 'autopsy' && <AutopsyModule forensicCase={forensicCase} />}
-        {activeModule === 'reconstruction' && <CrimeSceneModule />}
-        {activeModule === 'people' && <PersonsModule forensicCase={forensicCase} />}
-        {activeModule === 'review' && <NotWiredYet module="AI Review" task="T7" />}
-        {activeModule === 'copilot' && <CopilotPanel messages={copilot.messages} onSend={copilot.send} />}
-        {activeModule === 'reports' && <CaseReportModule forensicCase={forensicCase} />}
-        {activeModule === 'settings' && <CaseSettings />}
       </main>
     </div>
   );

@@ -5,9 +5,8 @@ import { ProcessingBadge, ReviewBadge } from '@/components/shared/Badges';
 import { InitialsAvatar } from '@/components/shared/InitialsAvatar';
 import { EvidenceCanvas } from '@/features/evidence-canvas/EvidenceCanvas';
 import { useEvidenceInspector } from '@/hooks/useEvidenceInspector';
-import { casePath } from '@/lib/caseModules';
+import { CaseModule, casePath } from '@/lib/caseModules';
 import { formatBytes, humanize } from '@/lib/format';
-import { CaseModule } from '@/types';
 import { CaseWorkspace } from '@/types/api';
 
 const card = 'bg-slate-900/60 border border-slate-800 p-4 rounded-2xl';

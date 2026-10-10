@@ -9,12 +9,11 @@ import { useEvidenceDetail, useReprocessEvidence, useUpdateEvidence } from '@/ho
 import { useEvidenceInspector } from '@/hooks/useEvidenceInspector';
 import { useObservations } from '@/hooks/useReview';
 import { fileUrl } from '@/lib/api';
-import { casePath } from '@/lib/caseModules';
+import { CaseModule, casePath } from '@/lib/caseModules';
 import { recordLabel } from '@/lib/recordNames';
 import { AUDIT_ACTION_STYLES, describeAuditDetail } from '@/lib/audit';
 import { formatBytes, formatDateTime, humanize } from '@/lib/format';
 import { EVIDENCE_TYPES } from '@/lib/options';
-import { CaseModule } from '@/types';
 import { AuditEntry, EvidenceDetail, EvidenceLink, EvidenceType, RecordType } from '@/types/api';
 import { EVIDENCE_ICONS } from './evidenceIcons';
 import { EvidencePreview } from './EvidencePreview';
