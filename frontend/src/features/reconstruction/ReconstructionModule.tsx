@@ -1,13 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Maximize2, Minimize2, Pause, Play, Plus, Sparkles } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Maximize2, Minimize2, Pause, Play, Plus, RefreshCw, Sparkles } from 'lucide-react';
 import { PageHeader, SectionHeader } from '@/components/shared/PageHeader';
 import { EmptyState, ErrorState, LoadingState } from '@/components/shared/QueryState';
 import { Tabs } from '@/components/shared/Segmented';
 import { linkClass, primaryButtonClass, secondaryButtonClass, smallButtonClass } from '@/components/shared/formStyles';
 import { useReconstruction, useReconstructions } from '@/hooks/useReconstruction';
 import { casePath } from '@/lib/caseModules';
-import { formatTimeRange } from '@/lib/format';
+import { formatDateTime, formatTimeRange } from '@/lib/format';
 import { useFullscreenElement } from '@/hooks/useFullscreen';
 import { useStageStore } from '@/stores/stage';
 import { CaseWorkspace } from '@/types/api';
@@ -213,6 +213,25 @@ export const ReconstructionModule: React.FC<{ workspace: CaseWorkspace }> = ({ w
 
           {detail && (
             <div className="space-y-4">
+              {!!detail.case_changes_since && (
+                <div
+                  role="status"
+                  className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-md border border-warn/50 bg-warn/10 px-3 py-2 text-body"
+                  data-testid="scenario-out-of-date"
+                >
+                  <RefreshCw className="size-4 shrink-0 text-warn" aria-hidden />
+                  <p className="min-w-0 flex-1 text-ink-soft">
+                    The case’s evidence and records changed {detail.case_changes_since}{' '}
+                    {detail.case_changes_since === 1 ? 'time' : 'times'} since this scenario was{' '}
+                    {detail.origin === 'ai' ? 'generated' : 'made'}
+                    {detail.last_case_change_at ? ` (latest ${formatDateTime(detail.last_case_change_at)})` : ''}. A scenario is a
+                    snapshot, so its scene doesn’t show those changes until it is regenerated.
+                  </p>
+                  <button onClick={() => setDialog('generate')} className={smallButtonClass}>
+                    <Sparkles className="size-3.5" aria-hidden /> Regenerate from evidence
+                  </button>
+                </div>
+              )}
               {detail.scene && <SceneScriptPanel reconstruction={detail} workspace={workspace} />}
               {!detail.scene && detail.assumptions && (
                 <div className="pl-3 border-l-2 border-line-strong max-w-4xl">

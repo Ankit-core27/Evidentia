@@ -50,6 +50,8 @@ export const useCaseEvidence = (caseId: Id | undefined) => {
         predicate: (q) => q.queryKey[2] !== evidenceKey[2]
       });
       void queryClient.invalidateQueries({ queryKey: ['evidence'] });
+      // Scenario details live outside the case key; they report how much changed since.
+      void queryClient.invalidateQueries({ queryKey: ['reconstruction'] });
       void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard });
       void queryClient.invalidateQueries({ queryKey: queryKeys.alerts });
     }

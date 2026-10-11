@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field
@@ -88,6 +89,11 @@ class ReconstructionDetail(Reconstruction):
     scene: dict[str, Any] | None
     stages: list[StageDetail]
     annotations: list[SceneAnnotation]
+    # Changes to the case's evidence and records since this scenario was generated
+    # (or created): uploads, processed evidence, edits, reviews and deletions. A
+    # scenario is a snapshot, so these don't move its scene until it is regenerated.
+    case_changes_since: int = 0
+    last_case_change_at: datetime | None = None
 
 
 class SceneGenerateRequest(ApiModel):

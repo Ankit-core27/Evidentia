@@ -2385,6 +2385,13 @@ export interface components {
             stages: components["schemas"]["StageDetail"][];
             /** Annotations */
             annotations: components["schemas"]["SceneAnnotation"][];
+            /**
+             * Case Changes Since
+             * @default 0
+             */
+            case_changes_since?: number;
+            /** Last Case Change At */
+            last_case_change_at?: string | null;
         };
         /** ReconstructionStage */
         ReconstructionStage: {
