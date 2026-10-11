@@ -33,7 +33,8 @@ from app.models import (
 )
 from app.seed import SeedError, main, seed
 
-EXPECTED_COUNTS = {
+# The mock's four cases, then the Sahyadri Chowk case (app/seed_sahyadri.py).
+MOCK_COUNTS = {
     Investigator: 4,
     Case: 4,
     Evidence: 12,
@@ -53,6 +54,30 @@ EXPECTED_COUNTS = {
     # One upload per evidence item, plus a view, two reviews and a status change.
     AuditLog: 16,
 }
+SAHYADRI_COUNTS = {
+    Investigator: 1,
+    Case: 1,
+    Evidence: 13,
+    Person: 7,
+    CaseObject: 5,
+    Location: 5,
+    Event: 22,
+    Relationship: 16,
+    Observation: 17,
+    Conflict: 7,
+    Injury: 9,
+    # Two scenarios compiled from the case's scene script.
+    Reconstruction: 2,
+    ReconstructionStage: 7,
+    SceneObject: 37,
+    SceneAnnotation: 8,
+    EvidenceLink: 90,
+    # 13 uploads, 7 reviews and edits, the two scenarios with their stages and
+    # annotations, and the report.
+    AuditLog: 23,
+}
+EXPECTED_COUNTS = {model: MOCK_COUNTS[model] + SAHYADRI_COUNTS[model] for model in MOCK_COUNTS}
+SAHYADRI = 5
 
 
 def count(db, model) -> int:
@@ -67,7 +92,9 @@ def test_seed_loads_every_record_of_the_mock(db):
 def test_cases_match_the_mock(db):
     seed(db)
     cases = db.scalars(select(Case).order_by(Case.id)).all()
-    assert [case.case_number for case in cases] == ["FX-2026-0001", "FX-2026-0002", "FX-2026-0003", "FX-2026-0004"]
+    assert [case.case_number for case in cases] == [
+        "FX-2026-0001", "FX-2026-0002", "FX-2026-0003", "FX-2026-0004", "FX-2026-0005"
+    ]  # fmt: skip
     collision = cases[0]
     assert collision.status == "in_progress"
     assert collision.incident_at == datetime(2026, 10, 3, 16, 10, 12, tzinfo=UTC)
@@ -110,7 +137,7 @@ def test_signal_conflicts_point_at_their_observations(db):
 
 def test_reconstructions_have_staged_scene_objects(db):
     seed(db)
-    for reconstruction in db.scalars(select(Reconstruction)):
+    for reconstruction in db.scalars(select(Reconstruction).where(Reconstruction.case_id == 1)):
         stages = db.scalars(
             select(ReconstructionStage)
             .where(ReconstructionStage.reconstruction_id == reconstruction.id)
@@ -196,21 +223,68 @@ def test_second_run_refuses(db):
     seed(db)
     with pytest.raises(SeedError):
         seed(db)
-    assert count(db, Case) == 4
-    assert count(db, Evidence) == 12
+    assert count(db, Case) == EXPECTED_COUNTS[Case]
+    assert count(db, Evidence) == EXPECTED_COUNTS[Evidence]
 
 
 def test_cli_refuses_a_seeded_database_and_reset_reloads_it(capsys):
     assert main([]) == 0
-    assert "Seeded 4 investigators, 4 cases, 12 evidence files" in capsys.readouterr().out
+    assert "Seeded 5 investigators, 5 cases, 25 evidence files" in capsys.readouterr().out
     assert main([]) == 1
     assert "already has cases" in capsys.readouterr().err
 
     assert main(["--reset"]) == 0
     with SessionLocal() as db:
-        assert count(db, Case) == 4
-        assert count(db, Investigator) == 4
+        assert count(db, Case) == EXPECTED_COUNTS[Case]
+        assert count(db, Investigator) == EXPECTED_COUNTS[Investigator]
         stored = {e.file_path for e in db.scalars(select(Evidence))}
     # The reset removed the first run's files, so only the new ones are left.
     on_disk = {path.relative_to(storage_root()).as_posix() for path in storage_root().rglob("*") if path.is_file()}
     assert on_disk == stored
+
+
+def test_sahyadri_chowk_case_is_complete(db):
+    seed(db)
+    case = db.get(Case, SAHYADRI)
+    assert case.case_number == "FX-2026-0005"
+    assert db.get(Investigator, case.lead_investigator_id).name == "PSI Anil Pawar"
+    # Every file is a real PDF whose text is indexed page by page.
+    evidence = db.scalars(select(Evidence).where(Evidence.case_id == SAHYADRI)).all()
+    assert {e.mime_type for e in evidence} == {"application/pdf"}
+    for item in evidence:
+        assert sha256_of(item.file_path) == item.sha256
+        with pymupdf.open(absolute_path(item.file_path)) as pdf:
+            assert pdf.page_count == db.scalar(
+                select(func.count()).select_from(EvidenceChunk).where(EvidenceChunk.evidence_id == item.id)
+            )
+    # Every record in the case links to at least one passage of its evidence.
+    linked = {(l.target_type, l.target_id) for l in db.scalars(select(EvidenceLink))}
+    for model, kind in [(Person, "person"), (CaseObject, "object"), (Location, "location"), (Event, "event"),
+                        (Observation, "observation"), (Injury, "injury")]:  # fmt: skip
+        ids = db.scalars(select(model.id).where(model.case_id == SAHYADRI)).all()
+        assert all((kind, i) in linked for i in ids), kind
+    assert {c.status for c in db.scalars(select(Conflict).where(Conflict.case_id == SAHYADRI))} == {"open", "resolved"}
+
+
+def test_sahyadri_chowk_scenarios_are_compiled_from_the_survey(db, client):
+    seed(db)
+    scenarios = client.get(f"/api/cases/{SAHYADRI}/reconstructions").json()
+    assert [s["scenario"] for s in scenarios] == [
+        "Sedan entered on red at about 65 km/h",
+        "Rajesh Menon's account: amber at about 40 km/h",
+    ]
+    first = client.get(f"/api/reconstructions/{scenarios[0]['id']}").json()
+    assert [s["label"] for s in first["stages"]] == ["Approach", "Lane 7 green", "Impact", "Rest positions"]
+    assert [r["name"] for r in first["scene"]["roads"]] == ["Karve Road", "Lane 7"]
+    rest = {o["label"]: o for o in first["stages"][-1]["scene_objects"]}
+    # Survey: +4.2 E, +2.5 N is x 4.2, z -2.5.
+    assert rest["White Honda City"]["position"] == [4.2, 0.0, -2.5]
+    skid = next(a for a in first["annotations"] if a["kind"] == "measurement")
+    assert skid["data"]["length_m"] == 13.4
+    # Generated after the last change, so in step with the case until something changes.
+    assert first["case_changes_since"] == 0
+    event = first["stages"][0]["event_ids"][0]
+    client.patch(f"/api/events/{event}", json={"description": "Edited"}, headers={"X-Investigator-Id": "1"})
+    assert client.get(f"/api/reconstructions/{scenarios[0]['id']}").json()["case_changes_since"] == 1
+    reports = client.get(f"/api/cases/{SAHYADRI}/reports").json()
+    assert len(reports) == 1

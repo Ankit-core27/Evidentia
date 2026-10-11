@@ -1,6 +1,6 @@
 # Demo case: red-light collision at Sahyadri Chowk
 
-A complete, self-consistent road-accident case for a live run of Evidentia. It is meant to be uploaded through the real UI and processed by the real pipeline (Gemini extraction, indexing, conflict detection, reconstruction and report). It is not part of the mock data and is not loaded by `python -m app.seed`.
+A complete, self-consistent road-accident case for a live run of Evidentia. `python -m app.seed` loads it as case FX-2026-0005, already processed: the 13 files stored as PDFs with their hashes and indexed text, the persons, vehicles, locations, timeline, relationships, statements, conflicts and injuries an investigator would have after review, each linked to its source passage, the two scenarios compiled into the 3D scene by the real reconstruction compiler, and a summary report. Its data is in `backend/app/seed_sahyadri.py`. To run the live pipeline instead, upload the files below through the UI to a new case and process them with Gemini.
 
 All names, numbers and registrations in these files are invented.
 

@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
-import { Camera, ChevronDown, Expand, Eye, MapPin, Moon, Navigation, Route, Ruler, StickyNote, Sun, Tag, X } from 'lucide-react';
+import { Camera, ChevronDown, Expand, Eye, Minimize2, MapPin, Moon, Navigation, Route, Ruler, StickyNote, Sun, Tag, X } from 'lucide-react';
 import { inputClass, primaryButtonClass } from '@/components/shared/formStyles';
 import { useClickOutside } from '@/hooks/useClickOutside';
 import { useCreateAnnotation } from '@/hooks/useReconstruction';
+import { useSceneFullscreen } from '@/features/reconstruction/fullscreen';
 import { ReconstructionDetail, Vec3 } from '@/types/api';
 import { asVec3, visibleOn } from './Annotations';
 import { driverView } from './CaseSceneViewer';
@@ -37,10 +38,15 @@ export const ViewerOverlay: React.FC<{
   }, [s]);
 
   const startTool = (tool: ViewerTool) => s.setTool(s.tool === tool ? 'none' : tool);
+  // Inside the reconstruction panel, full screen takes the whole stage workspace (time
+  // slider, selection and evidence included); on its own, just the viewer.
+  const workspaceFullscreen = useSceneFullscreen();
   const fullscreen = () => {
-    if (document.fullscreenElement) void document.exitFullscreen();
+    if (workspaceFullscreen) workspaceFullscreen.toggle();
+    else if (document.fullscreenElement) void document.exitFullscreen();
     else void container.current?.requestFullscreen?.();
   };
+  const inFullscreen = workspaceFullscreen?.active ?? false;
 
   return (
     <div className="pointer-events-none absolute inset-0 flex flex-col justify-between gap-2 p-2">
@@ -76,8 +82,14 @@ export const ViewerOverlay: React.FC<{
           <button type="button" className={chip} onClick={() => flyTo(s.controls, defaultCamera.position, defaultCamera.target)} title="Reset view">
             <Eye className="size-3.5" aria-hidden /> <span className="hidden sm:inline">Reset</span>
           </button>
-          <button type="button" className={chip} onClick={fullscreen} title="Full screen" aria-label="Full screen">
-            <Expand className="size-3.5" aria-hidden />
+          <button
+            type="button"
+            className={chip}
+            onClick={fullscreen}
+            title={inFullscreen ? 'Exit full screen' : 'Full screen'}
+            aria-label={inFullscreen ? 'Exit full screen' : 'Full screen'}
+          >
+            {inFullscreen ? <Minimize2 className="size-3.5" aria-hidden /> : <Expand className="size-3.5" aria-hidden />}
           </button>
         </div>
       </div>

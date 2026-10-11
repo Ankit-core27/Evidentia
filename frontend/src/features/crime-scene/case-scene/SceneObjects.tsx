@@ -2,6 +2,7 @@ import React, { Suspense, useEffect, useMemo, useRef } from 'react';
 import { Html, Line, useGLTF } from '@react-three/drei';
 import { ThreeEvent, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
+import { between, usePlaybackStore } from '@/features/reconstruction/playback';
 import { CaseObject, ReconstructionDetail, SceneObject, Vec3 } from '@/types/api';
 import { Person, RIDER } from './Person';
 import { CatalogueModel, ModelBoundary } from './Props';
@@ -15,7 +16,8 @@ interface WheelNode {
 }
 
 // The stage's scene objects: vehicles, people (as posed mannequins, riders on their
-// bicycles) and items, moving smoothly between stages.
+// bicycles) and items, moving smoothly between stages. While the time slider sits
+// between two stages, each object is placed between its two placements.
 
 const MOVE_MS = 900;
 // Sizes of the authored files' models, which name a URL but not a size.
@@ -101,14 +103,30 @@ export const SceneObjects: React.FC<{
 }> = ({ scene, reconstruction, stageId, selectedId, objects, night, showLabels, showPaths, renderBadge, handlers }) => {
   const stage = reconstruction.stages.find((s) => s.id === stageId);
   const orderedStages = useMemo(() => [...reconstruction.stages].sort((a, b) => a.stage_order - b.stage_order), [reconstruction]);
+  const position = usePlaybackStore((s) => s.position);
+  // The two stages the time slider is between, if it is between this stage and a neighbour.
+  const tween = useMemo(() => {
+    const count = orderedStages.length;
+    if (count < 2) return null;
+    const near = Math.round(Math.min(Math.max(position, 0), count - 1));
+    if (orderedStages[near]?.id !== stageId) return null;
+    const { from, to, progress } = between(position, count);
+    if (progress <= 0.001 || progress >= 0.999) return null;
+    const index = (st: (typeof orderedStages)[number]) => new Map(st.scene_objects.map((o) => [objectKey(o), o]));
+    return { from: index(orderedStages[from]), to: index(orderedStages[to]), progress };
+  }, [orderedStages, position, stageId]);
   if (!stage) return null;
   return (
     <group name="scene objects">
       {stage.scene_objects.map((o, i) => {
         const record = o.object_id != null ? objects.find((r) => r.id === o.object_id) : undefined;
+        const a = tween?.from.get(objectKey(o));
+        const b = tween?.to.get(objectKey(o));
+        const pose = tween && a && b ? interpolate(a, b, tween.progress) : undefined;
         return (
           <Actor
             key={objectKey(o)}
+            pose={pose}
             labelLift={i * 1.8}
             object={o}
             record={record}
@@ -127,8 +145,20 @@ export const SceneObjects: React.FC<{
   );
 };
 
+/** A placement part of the way from a to b, turning the short way round. */
+function interpolate(a: SceneObject, b: SceneObject, k: number): Pick<SceneObject, 'position' | 'rotation'> {
+  const lerp = (x: number, y: number) => x + (y - x) * k;
+  const heading = shortest(a.rotation[1], b.rotation[1]);
+  return {
+    position: [lerp(a.position[0], b.position[0]), lerp(a.position[1], b.position[1]), lerp(a.position[2], b.position[2])],
+    rotation: [a.rotation[0], lerp(a.rotation[1], heading), a.rotation[2]]
+  };
+}
+
 const Actor: React.FC<{
   object: SceneObject;
+  /** A placement between stages from the time slider; it is followed without easing. */
+  pose?: Pick<SceneObject, 'position' | 'rotation'>;
   /** Staggers labels so vehicles side by side don't cover each other's. */
   labelLift: number;
   record: CaseObject | undefined;
@@ -139,7 +169,7 @@ const Actor: React.FC<{
   showLabel: boolean;
   badge: React.ReactNode;
   handlers: VehicleHandlers;
-}> = ({ object, labelLift, record, scene, selected, hovered, night, showLabel, badge, handlers }) => {
+}> = ({ object, pose, labelLift, record, scene, selected, hovered, night, showLabel, badge, handlers }) => {
   const group = useRef<THREE.Group>(null);
   const invalidate = useThree((s) => s.invalidate);
   const spec = specFor(scene, object.model_id);
@@ -150,23 +180,28 @@ const Actor: React.FC<{
   const appearance = scene?.appearance?.[object.label];
   const colour = record?.details.colour ?? appearance?.colour;
   const plate = record?.details.plate ?? appearance?.plate;
+  const placed = pose ?? object;
+  const [px, py, pz] = placed.position;
+  const heading = placed.rotation[1];
+  const following = !!pose;
   const target: Pose = useMemo(
-    () => ({
-      x: object.position[0],
-      y: Math.max(object.position[1], groundHeight(scene, object.position[0], object.position[2])),
-      z: object.position[2],
-      heading: object.rotation[1]
-    }),
-    [object, scene]
+    () => ({ x: px, y: Math.max(py, groundHeight(scene, px, pz)), z: pz, heading }),
+    [px, py, pz, heading, scene]
   );
-  // Animate from wherever the vehicle is now to the stage's placement.
-  const anim = useRef<{ from: Pose; to: Pose; start: number; current: Pose; travelled: number } | null>(null);
+  // Animate from wherever the vehicle is now to the stage's placement, or follow the
+  // time slider at once.
+  const anim = useRef<{ from: Pose; to: Pose; start: number; duration: number } | null>(null);
   const current = useRef<Pose>(target);
   useEffect(() => {
     const from = { ...current.current };
-    anim.current = { from, to: { ...target, heading: shortest(from.heading, target.heading) }, start: performance.now(), current: from, travelled: 0 };
+    anim.current = {
+      from,
+      to: { ...target, heading: shortest(from.heading, target.heading) },
+      start: performance.now(),
+      duration: following ? 0 : MOVE_MS
+    };
     invalidate();
-  }, [target, invalidate]);
+  }, [target, following, invalidate]);
   const wheels = useRef<WheelNode[]>([]);
   const wheelRadius = useRef(0.3);
   const tool = useViewerStore((s) => s.tool);
@@ -176,7 +211,7 @@ const Actor: React.FC<{
     const g = group.current;
     if (!g) return;
     if (a) {
-      const t = Math.min((performance.now() - a.start) / MOVE_MS, 1);
+      const t = a.duration > 0 ? Math.min((performance.now() - a.start) / a.duration, 1) : 1;
       const k = ease(t);
       const next: Pose = {
         x: a.from.x + (a.to.x - a.from.x) * k,

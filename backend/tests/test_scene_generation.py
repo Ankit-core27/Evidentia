@@ -111,7 +111,7 @@ def test_without_gemini_the_junction_case_is_drafted_from_its_records(client, se
     ).all()
     assert [(link.evidence_id, link.chunk_id is not None) for link in links] == [(1, True)]
     assert "travelling east on Ring Road" in links[0].passage
-    run = seeded.scalars(select(AiRun).where(AiRun.task == "scene_script")).one()
+    run = seeded.scalars(select(AiRun).where(AiRun.task == "scene_script", AiRun.case_id == 1)).one()
     assert (run.case_id, run.model) == (1, "rules-v1")
     audit = seeded.scalars(
         select(AuditLog).where(AuditLog.record_type == "reconstruction", AuditLog.record_id == created["id"])
@@ -296,3 +296,24 @@ def test_out_of_range_values_are_clamped_rather_than_rejected(client, db, monkey
     assert body["generator"] == "gemini"
     road = detail(client, body["reconstructions"][0]["id"])["scene"]["roads"][0]
     assert (road["lanes_each_way"], road["lane_width"]) == (3, 4.5)
+
+
+def test_a_scenario_counts_the_case_changes_made_since_it_was_generated(client, seeded):
+    made = generate(client, 1).json()["reconstructions"][0]
+    assert detail(client, made["id"])["case_changes_since"] == 0
+
+    event = client.get("/api/cases/1/events").json()[0]
+    assert client.patch(f"/api/events/{event['id']}", json={"description": "Edited"}, headers=HEADERS).status_code == 200
+    person = client.get("/api/cases/1/persons").json()[0]
+    assert client.patch(f"/api/persons/{person['id']}", json={"notes": "Re-interviewed"}, headers=HEADERS).status_code == 200
+
+    after = detail(client, made["id"])
+    assert after["case_changes_since"] == 2
+    assert after["last_case_change_at"] is not None
+    # Changes elsewhere don't count.
+    other = client.get("/api/cases/2/events").json()[0]
+    client.patch(f"/api/events/{other['id']}", json={"description": "Other case"}, headers=HEADERS)
+    assert detail(client, made["id"])["case_changes_since"] == 2
+    # Regenerating starts the count again.
+    again = generate(client, 1).json()["reconstructions"][0]
+    assert detail(client, again["id"])["case_changes_since"] == 0

@@ -1,5 +1,7 @@
 import React, { useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
+import { useOverlayRoot } from '@/hooks/useFullscreen';
 import { iconButtonClass } from './formStyles';
 
 interface DialogProps {
@@ -51,6 +53,7 @@ export const useFocusTrap = (ref: React.RefObject<HTMLElement | null>, active: b
 /** A modal dialog: Escape and the backdrop close it unless `busy`. */
 export const Dialog: React.FC<DialogProps> = ({ open, title, onClose, children, footer, busy = false, width = 'max-w-lg' }) => {
   const panelRef = useRef<HTMLDivElement>(null);
+  const root = useOverlayRoot();
   useFocusTrap(panelRef, open);
 
   useEffect(() => {
@@ -62,9 +65,10 @@ export const Dialog: React.FC<DialogProps> = ({ open, title, onClose, children, 
     return () => document.removeEventListener('keydown', onKey);
   }, [open, busy, onClose]);
 
-  if (!open) return null;
+  if (!open || !root) return null;
 
-  return (
+  // Portalled, so a dialog opened from a full-screen view shows inside it.
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/60"
       onMouseDown={(e) => {
@@ -88,6 +92,7 @@ export const Dialog: React.FC<DialogProps> = ({ open, title, onClose, children, 
         <div className="p-5 overflow-y-auto space-y-4">{children}</div>
         {footer && <div className="px-5 py-3 border-t border-line flex items-center justify-end gap-2 shrink-0">{footer}</div>}
       </div>
-    </div>
+    </div>,
+    root
   );
 };

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { Download, Loader2, RotateCcw, X } from 'lucide-react';
 import { ProcessingBadge } from '@/components/shared/Badges';
@@ -16,6 +17,7 @@ import { Tabs } from '@/components/shared/Segmented';
 import { useCaseWorkspace } from '@/hooks/useCases';
 import { useEvidenceDetail, useReprocessEvidence, useUpdateEvidence } from '@/hooks/useEvidence';
 import { useEvidenceInspector } from '@/hooks/useEvidenceInspector';
+import { useOverlayRoot } from '@/hooks/useFullscreen';
 import { useObservations } from '@/hooks/useReview';
 import { fileUrl } from '@/lib/api';
 import { CaseModule, casePath } from '@/lib/caseModules';
@@ -31,11 +33,13 @@ type Tab = 'preview' | 'text' | 'details' | 'links' | 'custody';
 
 /**
  * The evidence inspector: a side drawer opened by ?evidence=<id> anywhere in the app.
- * Mounted once in AppLayout.
+ * Mounted once in AppLayout, and portalled into a full-screen view when one is open,
+ * so evidence opened from the full-screen 3D scene shows over it.
  */
 export const EvidenceInspector: React.FC = () => {
   const { evidenceId, passage, close } = useEvidenceInspector();
   const query = useEvidenceDetail(evidenceId);
+  const root = useOverlayRoot();
   const panelRef = useRef<HTMLElement>(null);
   useFocusTrap(panelRef, evidenceId !== null);
 
@@ -48,9 +52,9 @@ export const EvidenceInspector: React.FC = () => {
     return () => document.removeEventListener('keydown', onKey);
   }, [evidenceId, close]);
 
-  if (evidenceId === null) return null;
+  if (evidenceId === null || !root) return null;
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex justify-end bg-black/60" onMouseDown={(e) => e.target === e.currentTarget && close()}>
       <aside
         ref={panelRef}
@@ -74,7 +78,8 @@ export const EvidenceInspector: React.FC = () => {
           </div>
         )}
       </aside>
-    </div>
+    </div>,
+    root
   );
 };
 

@@ -4,10 +4,15 @@ look the same against the real backend as they do in mock mode.
     python -m app.seed          # loads into an empty database; refuses if any cases exist
     python -m app.seed --reset  # drops and recreates every table first
 
-It loads the four investigators, four cases and the full road-accident case:
+It loads the investigators, four cases and the full road-accident case:
 persons, vehicles and the phone, locations, events, relationships, observations,
 the signal-colour conflicts, injuries, both reconstruction scenarios with their
 stages and scene objects, the evidence links and the audit history.
+
+It also loads the Sahyadri Chowk case (app/seed_sahyadri.py), the complete demo
+case built from the 13 files in docs/demo-case/evidence. Its files are stored as
+PDFs, its records are linked to their passages, and its scenarios, 3D scene and
+report are made by the real reconstruction generator and report builder.
 
 Evidence files are real. PDFs are written with PyMuPDF, the call recording and the
 scene photos are generated as in files.ts, and the CCTV clip is
@@ -63,6 +68,14 @@ from app.models import (
     SceneAnnotation,
     SceneObject,
 )
+from app import seed_sahyadri as sahyadri
+from app.models import AiRun, Report
+from app.schemas.reports import ReportOptions
+from app.services.reconstruction.compiler import check_script, save_script
+from app.services.reconstruction.dossier import build_dossier
+from app.services.reconstruction.script import SceneScript
+from app.services.ai.scene_script import TASK as SCENE_TASK
+from app.services.reports.builder import build_report_content, content_sha256
 from app.services.search.indexing import index_evidence
 
 SEED_DATA = BACKEND_DIR / "seed_data"
@@ -484,6 +497,29 @@ def evidence_seeds() -> list[EvidenceSeed]:
             text=COMPLAINANT_STATEMENT,
             summary="Balcony door forced; jewellery missing. Discovered at 17:30.",
         ),
+        *sahyadri_evidence_seeds(),
+    ]
+
+
+def sahyadri_evidence_seeds() -> list[EvidenceSeed]:
+    texts = sahyadri.evidence_texts()
+    return [
+        EvidenceSeed(
+            id=key,
+            case_id=sahyadri.CASE_KEY,
+            type=type_,
+            title=title,
+            description=description,
+            source=source,
+            collected_at=collected_at,
+            file_name=name.removesuffix(".md") + ".pdf",
+            mime_type="application/pdf",
+            data=make_pdf(texts[key], title),
+            text="\n\n".join(texts[key]),
+            pages=texts[key],
+            summary=summary,
+        )
+        for key, name, type_, title, description, source, collected_at, summary in sahyadri.EVIDENCE
     ]
 
 
@@ -1003,7 +1039,7 @@ def _load(db: Session, stored: list[str]) -> None:
     def ref(kind: str, key: int) -> int:
         return rows[kind][key].id
 
-    _insert(db, rows, "investigator", Investigator, INVESTIGATORS)
+    _insert(db, rows, "investigator", Investigator, INVESTIGATORS + sahyadri.INVESTIGATORS)
 
     # Case numbers are FX-<year>-<id padded to 4>, set after the insert as the API
     # does. An UPDATE that names updated_at keeps the seeded value instead of now.
@@ -1012,7 +1048,7 @@ def _load(db: Session, stored: list[str]) -> None:
         rows,
         "case",
         Case,
-        [{**spec, "case_number": f"FX-PENDING-{spec['id']}"} for spec in CASES],
+        [{**spec, "case_number": f"FX-PENDING-{spec['id']}"} for spec in [*CASES, sahyadri.CASE]],
         lead_investigator_id="investigator",
         investigator_ids="investigator",
     )
@@ -1057,16 +1093,19 @@ def _load(db: Session, stored: list[str]) -> None:
         detail = {"title": spec.title, "file_name": spec.file_name, "sha256": file.sha256}
         audit.append((4, "uploaded", "evidence", evidence, case_id, detail, spec.collected_at))
 
-    _insert(db, rows, "person", Person, PERSONS, case_id="case")
-    _insert(db, rows, "object", CaseObject, OBJECTS, case_id="case")
-    _insert(db, rows, "location", Location, LOCATIONS, case_id="case")
-    _insert(db, rows, "event", Event, EVENTS, case_id="case", location_id="location")
+    _insert(db, rows, "person", Person, PERSONS + sahyadri.PERSONS, case_id="case")
+    _insert(db, rows, "object", CaseObject, OBJECTS + sahyadri.OBJECTS, case_id="case")
+    _insert(db, rows, "location", Location, LOCATIONS + sahyadri.LOCATIONS, case_id="case")
+    _insert(db, rows, "event", Event, EVENTS + sahyadri.EVENTS, case_id="case", location_id="location")
     _insert(
         db,
         rows,
         "relationship",
         Relationship,
-        [_point(rows, _point(rows, spec, "from_type", "from_id"), "to_type", "to_id") for spec in RELATIONSHIPS],
+        [
+            _point(rows, _point(rows, spec, "from_type", "from_id"), "to_type", "to_id")
+            for spec in RELATIONSHIPS + sahyadri.RELATIONSHIPS
+        ],
         case_id="case",
     )
     _insert(
@@ -1074,13 +1113,15 @@ def _load(db: Session, stored: list[str]) -> None:
         rows,
         "observation",
         Observation,
-        [_point(rows, spec, "subject_type", "subject_id") for spec in OBSERVATIONS],
+        [_point(rows, spec, "subject_type", "subject_id") for spec in OBSERVATIONS + sahyadri.OBSERVATIONS],
         case_id="case",
     )
-    _insert(db, rows, "conflict", Conflict, CONFLICTS, case_id="case", observation_ids="observation")
-    _insert(db, rows, "injury", Injury, INJURIES, case_id="case", person_id="person")
+    _insert(
+        db, rows, "conflict", Conflict, CONFLICTS + sahyadri.CONFLICTS, case_id="case", observation_ids="observation"
+    )
+    _insert(db, rows, "injury", Injury, INJURIES + sahyadri.INJURIES, case_id="case", person_id="person")
 
-    for evidence_key, target_type, target_key, passage in LINKS:
+    for evidence_key, target_type, target_key, passage in LINKS + sahyadri.LINKS:
         evidence_id = ref("evidence", evidence_key)
         db.add(
             EvidenceLink(
@@ -1098,7 +1139,7 @@ def _load(db: Session, stored: list[str]) -> None:
     _insert(db, rows, "scene_object", SceneObject, SCENE_OBJECTS, stage_id="stage", object_id="object")
     _insert(db, rows, "annotation", SceneAnnotation, ANNOTATIONS, reconstruction_id="reconstruction", stage_id="stage")
 
-    for actor, action, record_type, record_key, detail, when in AUDIT:
+    for actor, action, record_type, record_key, detail, when in AUDIT + sahyadri.AUDIT:
         record = rows[record_type][record_key]
         case_id = record.id if record_type == "case" else record.case_id
         audit.append((actor, action, record_type, record, case_id, detail, when))
@@ -1106,6 +1147,77 @@ def _load(db: Session, stored: list[str]) -> None:
     for actor, action, record_type, record, case_id, detail, when in audit:
         entry = record_audit(db, ref("investigator", actor), action, record_type, record.id, case_id=case_id, detail=detail)
         entry.at = when
+    db.flush()
+
+    _reconstruct_and_report(db, rows, ref)
+    _order_audit(db)
+
+
+# The scene script for the Sahyadri Chowk case is written for the seed, in the format
+# Gemini's planner returns, and compiled like one.
+SEED_SCRIPT_MODEL = "seed-script-v1"
+
+
+def _reconstruct_and_report(db: Session, rows: Rows, ref) -> None:
+    """Builds the Sahyadri Chowk scenarios with the real reconstruction checker and
+    compiler from the case's scene script, and its summary report with the real report
+    builder, then dates them as if done on the day."""
+    case = rows["case"][sahyadri.CASE_KEY]
+    lead = ref("investigator", sahyadri.LEAD)
+    dossier = build_dossier(db, case)
+    script = SceneScript.model_validate(sahyadri.scene_script(ref))
+    warnings = check_script(dossier, script)
+    if warnings:
+        raise SeedError("The Sahyadri Chowk scene script needed fixes: " + " ".join(warnings))
+    db.add(AiRun(case_id=case.id, task=SCENE_TASK, model=SEED_SCRIPT_MODEL, output=script.model_dump(mode="json")))
+    reconstructions = save_script(
+        db, dossier, script, generator="seed", model=SEED_SCRIPT_MODEL, warnings=[], actor_id=lead
+    )
+    db.flush()
+    when = sahyadri.GENERATED_AT
+    for reconstruction in reconstructions:
+        scene = dict(reconstruction.scene)
+        scene["generated"] = {**scene["generated"], "at": when.isoformat(timespec="seconds")}
+        reconstruction.scene = scene
+    for entry in db.scalars(
+        select(AuditLog).where(
+            AuditLog.case_id == case.id, AuditLog.record_type.in_(["reconstruction", "annotation", "stage"])
+        )
+    ):
+        entry.at = when
+    for run in db.scalars(select(AiRun).where(AiRun.case_id == case.id)):
+        run.created_at = when
+
+    content = build_report_content(
+        db, case, "summary", ReportOptions(include_ai_insights=True, include_custody=True)
+    )
+    report = Report(
+        case_id=case.id,
+        template="summary",
+        options={"include_ai_insights": True, "include_custody": True},
+        content=content,
+        sha256=content_sha256(content),
+        created_by=lead,
+        created_at=sahyadri.REPORT_AT,
+    )
+    db.add(report)
+    db.flush()
+    record_audit(db, lead, "exported", "report", report.id, case_id=case.id, detail={"template": "summary"}).at = (
+        sahyadri.REPORT_AT
+    )
+    db.flush()
+
+
+def _order_audit(db: Session) -> None:
+    """Rewrites the audit log in time order. The compiler and report builder log as
+    they go, so their entries would otherwise sit after later-dated ones."""
+    entries = db.scalars(select(AuditLog)).all()
+    columns = [c.key for c in AuditLog.__table__.columns if c.key != "id"]
+    copies = [{c: getattr(e, c) for c in columns} for e in sorted(entries, key=lambda e: (e.at, e.id))]
+    for entry in entries:
+        db.delete(entry)
+    db.flush()
+    db.add_all(AuditLog(**values) for values in copies)
     db.flush()
 
 

@@ -109,7 +109,7 @@ export interface RoomSpec {
 }
 
 export interface GeneratedInfo {
-  by: 'gemini' | 'rules';
+  by: 'gemini' | 'rules' | 'seed';
   model: string;
   at: string;
   summary: string;

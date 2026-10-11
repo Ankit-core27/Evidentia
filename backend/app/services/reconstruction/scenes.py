@@ -3,13 +3,15 @@ ReconstructionDetail payload and the stage placement replacement."""
 
 from collections import defaultdict
 from collections.abc import Iterable, Sequence
+from datetime import datetime
 
 from fastapi import HTTPException
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from app.core.records import delete_links_to
-from app.models import Base, Reconstruction, ReconstructionStage, SceneAnnotation, SceneObject
+from app.models import AuditLog, Base, Evidence, Reconstruction, ReconstructionStage, SceneAnnotation, SceneObject
+from app.models.base import as_utc
 from app.schemas.reconstruction import (
     Reconstruction as ReconstructionOut,
     ReconstructionDetail,
@@ -35,6 +37,51 @@ def missing_from_case(db: Session, model: type[Base], ids: Iterable[int], case_i
     return [record_id for record_id in wanted if record_id not in found]
 
 
+# Records a scenario is drawn from; a change to any of them can change the scene.
+SOURCE_RECORDS = ("evidence", "person", "object", "location", "event", "relationship", "observation", "conflict", "injury")
+SOURCE_ACTIONS = ("uploaded", "modified", "reviewed")
+
+
+def made_at(db: Session, reconstruction: Reconstruction) -> datetime | None:
+    """When a scenario was generated, or created through the API. None for scenarios
+    loaded without either (seeded, authored layouts)."""
+    created = db.scalar(
+        select(func.min(AuditLog.at)).where(
+            AuditLog.record_type == "reconstruction", AuditLog.record_id == reconstruction.id
+        )
+    )
+    if created is not None:
+        return as_utc(created)
+    generated = (reconstruction.scene or {}).get("generated") or {}
+    try:
+        return as_utc(datetime.fromisoformat(generated["at"]))
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
+def case_changes_since(db: Session, case_id: int, since: datetime | None) -> tuple[int, datetime | None]:
+    """How many changes the case's evidence and records have had since a time, and when
+    the latest was: audited edits, uploads and reviews, plus evidence the pipeline
+    finished processing (its AI proposals aren't audited one by one)."""
+    if since is None:
+        return 0, None
+    audited = db.execute(
+        select(func.count(), func.max(AuditLog.at)).where(
+            AuditLog.case_id == case_id,
+            AuditLog.record_type.in_(SOURCE_RECORDS),
+            AuditLog.action.in_(SOURCE_ACTIONS),
+            AuditLog.at > since,
+        )
+    ).one()
+    processed = db.execute(
+        select(func.count(), func.max(Evidence.processed_at)).where(
+            Evidence.case_id == case_id, Evidence.processed_at > since
+        )
+    ).one()
+    latest = max((as_utc(t) for t in (audited[1], processed[1]) if t is not None), default=None)
+    return (audited[0] or 0) + (processed[0] or 0), latest
+
+
 def reconstruction_detail(db: Session, reconstruction: Reconstruction) -> ReconstructionDetail:
     """Stages in stage_order, each with its scene objects, plus the annotations."""
     stages = db.scalars(
@@ -53,6 +100,7 @@ def reconstruction_detail(db: Session, reconstruction: Reconstruction) -> Recons
         .where(SceneAnnotation.reconstruction_id == reconstruction.id)
         .order_by(SceneAnnotation.id)
     ).all()
+    changes, latest = case_changes_since(db, reconstruction.case_id, made_at(db, reconstruction))
     return ReconstructionDetail(
         **ReconstructionOut.model_validate(reconstruction).model_dump(),
         scene=reconstruction.scene,
@@ -64,6 +112,8 @@ def reconstruction_detail(db: Session, reconstruction: Reconstruction) -> Recons
             for stage in stages
         ],
         annotations=[SceneAnnotationOut.model_validate(a) for a in annotations],
+        case_changes_since=changes,
+        last_case_change_at=latest,
     )
 
 
