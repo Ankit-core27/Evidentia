@@ -40,7 +40,7 @@ export const EmptyState: React.FC<{ title: string; message?: string; action?: Re
   action,
   className = ''
 }) => (
-  <div className={`px-4 py-8 rounded-md border border-line text-center space-y-1 ${className}`}>
+  <div className={`px-4 py-8 rounded-md border border-line bg-surface text-center space-y-1 ${className}`}>
     <div className="text-body font-medium text-ink-soft">{title}</div>
     {message && <p className="text-xs text-ink-muted max-w-md mx-auto">{message}</p>}
     {action && <div className="pt-3">{action}</div>}

@@ -113,7 +113,7 @@ export const CasesIndexView: React.FC<CasesIndexViewProps> = ({
       )}
 
       {!!casesQuery.data?.length && (
-        <div className="relative rounded-md border border-line overflow-x-auto">
+        <div className="relative rounded-md border border-line bg-surface overflow-x-auto">
           <table className="w-full text-left">
             <thead>
               <tr className="border-b border-line text-xs text-ink-muted">

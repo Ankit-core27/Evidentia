@@ -30,7 +30,7 @@ type Editing =
 
 const ROLE_ORDER = ['victim', 'suspect', 'witness', 'other'];
 
-const listClass = 'rounded-md border border-line divide-y divide-line';
+const listClass = 'rounded-md border border-line bg-surface divide-y divide-line';
 const rowClass = 'px-3 py-2.5 space-y-2';
 
 /** Persons, vehicles and other objects, and locations: add, edit, delete, and review AI proposals. */

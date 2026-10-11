@@ -80,7 +80,7 @@ export const CompareScenarios: React.FC<{ workspace: CaseWorkspace; scenarios: R
       <p className="text-xs text-ink-muted flex items-center gap-2">
         <span className="w-0.5 h-3 bg-warn" aria-hidden /> Marked events sit at this stage in one scenario but not the other.
       </p>
-      <div className="rounded-md border border-line divide-y divide-line">
+      <div className="rounded-md border border-line bg-surface divide-y divide-line">
         {Array.from({ length: rows }, (_, i) => (
           <div key={i} className="grid grid-cols-2 divide-x divide-line">
             {cell(left.data, right.data, i)}

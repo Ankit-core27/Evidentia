@@ -91,7 +91,7 @@ export const EvidenceUploader: React.FC<{ caseId: Id }> = ({ caseId }) => {
       </div>
 
       {items.length > 0 && (
-        <div className="rounded-md border border-line">
+        <div className="rounded-md border border-line bg-surface">
           <div className="flex items-center justify-between px-3 h-8 border-b border-line text-xs text-ink-muted">
             <span>Uploads</span>
             {items.every((i) => i.status !== 'uploading') && (

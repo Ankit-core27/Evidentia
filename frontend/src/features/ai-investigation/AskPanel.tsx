@@ -84,7 +84,7 @@ export const AskPanel: React.FC<{ caseId: Id }> = ({ caseId }) => {
     <div className="space-y-3">
       <div
         ref={feedRef}
-        className="rounded-md border border-line px-4 py-4 h-[min(60vh,560px)] overflow-y-auto"
+        className="rounded-md border border-line bg-surface px-4 py-4 h-[min(60vh,560px)] overflow-y-auto"
         aria-live="polite"
         data-testid="copilot-feed"
       >

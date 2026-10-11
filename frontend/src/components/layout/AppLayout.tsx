@@ -26,8 +26,16 @@ export const AppLayout: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-canvas text-ink flex flex-col">
+    <div className="relative isolate min-h-screen text-ink flex flex-col">
       <ScrollRestoration />
+
+      {/* Animated backdrop behind every page (served from the repo-root assets/ folder). */}
+      <img
+        src="/backgrounds/forensic-evidence-loop.svg"
+        alt=""
+        aria-hidden
+        className="pointer-events-none fixed inset-0 -z-10 size-full object-cover motion-reduce:hidden"
+      />
 
       {/* Agency navigation, or the case breadcrumb inside a workspace */}
       <Header activeModule={activeModule} onOpenCreateModal={() => setIsCreateModalOpen(true)} />

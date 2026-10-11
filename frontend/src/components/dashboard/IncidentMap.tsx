@@ -157,7 +157,7 @@ export const IncidentMap: React.FC<{ points: IncidentPoint[] }> = ({ points }) =
 
       {selected ? (
         <div
-          className="px-3 py-2.5 rounded-md border border-line flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3"
+          className="px-3 py-2.5 rounded-md border border-line bg-surface flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3"
           data-testid="incident-map-selection"
         >
           <div className="min-w-0">

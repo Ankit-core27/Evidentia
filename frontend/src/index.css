@@ -120,6 +120,20 @@
   }
 }
 
+/* Thematic drawings behind agency page headers (components/layout/SectionArt): each stroke draws in. */
+.section-art path {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: section-art-draw 1.4s cubic-bezier(0.65, 0, 0.35, 1) forwards;
+  animation-delay: calc(var(--i, 0) * 70ms);
+}
+
+@keyframes section-art-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
 /* Report export is the browser's print of the report's print copy (features/reports/ReportBuilder). */
 .print-root {
   display: none;

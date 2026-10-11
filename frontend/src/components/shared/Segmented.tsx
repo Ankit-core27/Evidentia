@@ -74,7 +74,7 @@ export function FilterChips<T extends string>({
             className={`h-7 px-2.5 rounded border text-xs whitespace-nowrap transition-colors ${
               selected
                 ? 'border-accent/60 bg-accent/10 text-ink'
-                : 'border-line-strong text-ink-muted hover:text-ink hover:border-control'
+                : 'border-line-strong bg-surface text-ink-muted hover:text-ink hover:border-control'
             }`}
           >
             {o.label}

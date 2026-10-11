@@ -11,7 +11,7 @@ import { CaseModule, casePath } from '@/lib/caseModules';
 import { formatBytes, humanize } from '@/lib/format';
 import { CaseWorkspace } from '@/types/api';
 
-const list = 'rounded-md border border-line divide-y divide-line';
+const list = 'rounded-md border border-line bg-surface divide-y divide-line';
 const row = 'px-3 py-2.5';
 
 /** Overview of a case: everything recorded so far, straight from the workspace call. */

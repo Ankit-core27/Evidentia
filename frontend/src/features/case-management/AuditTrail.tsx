@@ -53,7 +53,7 @@ export const AuditTrail: React.FC<{ workspace: CaseWorkspace }> = ({ workspace }
           {shown.length === 0 ? (
             <EmptyState title="No audit entries" message={action ? `Nothing was ${action} yet.` : undefined} />
           ) : (
-            <ol className="rounded-md border border-line divide-y divide-line" data-testid="audit-entries">
+            <ol className="rounded-md border border-line bg-surface divide-y divide-line" data-testid="audit-entries">
               {shown.slice(0, limit).map((entry) => {
                 const label = recordLabel(workspace, entry.record_type, entry.record_id, observations.data);
                 const detail = describeAuditDetail(entry);
