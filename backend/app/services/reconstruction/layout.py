@@ -438,7 +438,7 @@ def camera(
         fx, fz = focus if focus is not None else (mx, mz)
         cx, cz = fx * 0.75 + mx * 0.25, fz * 0.75 + mz * 0.25
         span = max(max(xs) - min(xs), max(zs) - min(zs), 16)
-        distance = min(max(span * 0.85, 26), 70)
+        distance = min(max(span * 0.7, 26), 44)
         elevation = math.radians(40)
         if behind is not None:
             # Straight back down the vehicle's approach, so the view runs along the
