@@ -28,6 +28,9 @@ class Evidence(Base):
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
     # When the pipeline last finished (done or failed); feeds the alerts feed.
     processed_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
+    # Who holds the evidence now. Changed only by registration and an accepted custody
+    # transfer (app/services/evidence/custody.py), each recorded as a custody event.
+    custodian_id: Mapped[int | None] = mapped_column(ForeignKey("investigators.id", ondelete="SET NULL"))
 
 
 class EvidenceChunk(Base):

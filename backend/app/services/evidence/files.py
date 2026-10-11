@@ -8,7 +8,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.records import record_audit
-from app.core.storage import save_original, sha256_of
+from app.core.storage import StoredFile, absolute_path, save_original, sha256_of
+from app.services.evidence.custody import record_registration
 from app.models import Evidence
 from app.models.base import utcnow
 from app.schemas.common import EvidenceType
@@ -36,10 +37,21 @@ def ingest_file(
     db: Session, case_id: int, filename: str, mime_type: str | None, source: BinaryIO, actor_id: int | None
 ) -> Evidence:
     """Stores one uploaded file under storage/<case_id>/ and adds its evidence row,
-    queued for the pipeline, with an "uploaded" audit entry. The caller commits and
-    queues process_evidence."""
+    queued for the pipeline, with an "uploaded" audit entry and its first custody
+    event (REGISTERED, with the SHA-256 of the stored bytes). The caller commits
+    once, so the evidence never commits without its custody record, and queues
+    process_evidence."""
     mime = mime_type or DEFAULT_MIME_TYPE
     stored = save_original(case_id, filename, source)
+    try:
+        return _register(db, case_id, filename, mime, stored, actor_id)
+    except Exception:
+        # Not registered, so the stored copy goes too.
+        absolute_path(stored.file_path).unlink(missing_ok=True)
+        raise
+
+
+def _register(db: Session, case_id: int, filename: str, mime: str, stored: StoredFile, actor_id: int | None) -> Evidence:
     evidence = Evidence(
         case_id=case_id,
         type=evidence_type_for(mime),
@@ -61,6 +73,7 @@ def ingest_file(
         case_id=case_id,
         detail={"file_name": filename, "sha256": stored.sha256},
     )
+    record_registration(db, evidence, actor_id, note="Registered on upload.")
     return evidence
 
 

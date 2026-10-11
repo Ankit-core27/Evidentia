@@ -25,6 +25,8 @@ export const queryKeys = {
   audit: (caseId: Id) => ['case', caseId, 'audit'] as const,
   evidenceList: (filters: EvidenceFilters = {}) => ['evidence', 'list', filters] as const,
   evidence: (evidenceId: Id) => ['evidence', evidenceId] as const,
+  /** Under the evidence key, so anything that refreshes an evidence item refreshes its custody too. */
+  custody: (evidenceId: Id) => ['evidence', evidenceId, 'custody'] as const,
   reconstruction: (reconstructionId: Id) => ['reconstruction', reconstructionId] as const,
   report: (reportId: Id) => ['report', reportId] as const,
   dashboard: ['dashboard'] as const,

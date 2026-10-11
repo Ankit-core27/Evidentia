@@ -92,6 +92,16 @@ export type AuditEntry = Schemas['AuditEntry'];
 /** POST /api/cases/{id}/verify. */
 export type VerifyResult = Schemas['VerifyResult'];
 
+// Chain of custody (app/routers/custody.py)
+export type CustodyHistory = Schemas['CustodyHistory'];
+export type CustodyEvent = Schemas['CustodyEvent'];
+export type CustodyAction = CustodyEvent['action'];
+export type CustodyTransfer = Schemas['CustodyTransfer'];
+export type TransferStatus = CustodyTransfer['status'];
+export type TransferCreate = Schemas['TransferCreate'];
+export type IntegrityCheck = Schemas['IntegrityCheck'];
+export type IntegrityResult = IntegrityCheck['result'];
+
 export interface EvidenceFilters {
   q?: string;
   type?: EvidenceType;

@@ -17,7 +17,8 @@ Every view reads the same case records, so the graph, the timeline, the 3D scene
 | Area | What it does |
 | --- | --- |
 | Cases | Create and manage cases, assign investigators, track status and priority |
-| Evidence | Upload documents, statements, photos, audio and video; preview originals; hashes, custody ledger and integrity check |
+| Evidence | Upload documents, statements, photos, audio and video; preview originals; SHA-256 hashes and integrity checks |
+| Chain of custody | Every item's custodian and an append-only history of its registration, handovers (accepted by the recipient), analyses and integrity checks |
 | AI review | Text extraction, OCR and transcription; proposed records with their source passages, queued for review; conflicting statements |
 | Ask the evidence | Case-scoped questions answered from the evidence, with cited passages |
 | Canvas | Relationship graph of persons, vehicles, places and evidence |
