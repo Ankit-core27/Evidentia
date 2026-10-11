@@ -15,12 +15,21 @@ declare global {
 window.CESIUM_BASE_URL ??= '/cesium';
 
 const ION_TOKEN = (import.meta.env.VITE_CESIUM_ION_TOKEN as string | undefined)?.trim() || '';
+const GOOGLE_KEY = (import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined)?.trim() || '';
+/**
+ * Google Photorealistic 3D Tiles: the textured photogrammetry of Google Earth (buildings,
+ * trees, roads and terrain in one mesh). Streamed straight from Google with a Maps
+ * Platform key (Map Tiles API enabled), or through Cesium ion with an ion token.
+ */
+const PHOTOREALISTIC = Boolean(GOOGLE_KEY || ION_TOKEN);
 
 const COLOURS = {
   incident: Cesium.Color.fromCssColorString('#f07a72'),
   accent: Cesium.Color.fromCssColorString('#37aebd'),
-  modelled: Cesium.Color.fromCssColorString('#8a9aa6').withAlpha(0.95),
-  footprint: Cesium.Color.fromCssColorString('#4d5861').withAlpha(0.9),
+  // Over the photorealistic mesh, authored buildings are tinted glass, so the real
+  // building shows through.
+  modelled: Cesium.Color.fromCssColorString('#8a9aa6').withAlpha(PHOTOREALISTIC ? 0.3 : 0.95),
+  footprint: Cesium.Color.fromCssColorString('#4d5861').withAlpha(PHOTOREALISTIC ? 0.25 : 0.9),
   location: {
     witness_position: Cesium.Color.fromCssColorString('#8eaef0'),
     vehicle_position: Cesium.Color.fromCssColorString('#6cc7a8'),
@@ -31,9 +40,9 @@ const COLOURS = {
 };
 
 export interface AreaStatus {
-  terrain: 'loading' | 'world' | 'ellipsoid' | 'failed';
-  buildings: 'loading' | 'osm' | 'authored-only' | 'failed';
-  imagery: 'ion' | 'esri';
+  terrain: 'loading' | 'world' | 'ellipsoid' | 'photorealistic' | 'photorealistic-failed' | 'failed';
+  buildings: 'loading' | 'osm' | 'photorealistic' | 'authored-only' | 'failed';
+  imagery: 'ion' | 'esri' | 'google';
 }
 
 export interface AreaViewerHandle {
@@ -143,14 +152,14 @@ export const CesiumAreaViewer = forwardRef<AreaViewerHandle, Props>(function Ces
     const el = container.current;
     if (!el) return;
     if (ION_TOKEN) Cesium.Ion.defaultAccessToken = ION_TOKEN;
+    if (GOOGLE_KEY) Cesium.GoogleMaps.defaultApiKey = GOOGLE_KEY;
     const status: AreaStatus = {
-      terrain: ION_TOKEN ? 'loading' : 'ellipsoid',
-      buildings: ION_TOKEN ? 'loading' : 'authored-only',
-      imagery: ION_TOKEN ? 'ion' : 'esri'
+      terrain: PHOTOREALISTIC ? 'loading' : 'ellipsoid',
+      buildings: PHOTOREALISTIC ? 'loading' : 'authored-only',
+      imagery: PHOTOREALISTIC ? 'google' : 'esri'
     };
     const report = () => latest.current.onStatus({ ...status });
 
-    const terrain = ION_TOKEN ? Cesium.Terrain.fromWorldTerrain({ requestVertexNormals: true }) : undefined;
     const viewer = new Cesium.Viewer(el, {
       baseLayer: ION_TOKEN
         ? Cesium.ImageryLayer.fromWorldImagery({})
@@ -158,7 +167,6 @@ export const CesiumAreaViewer = forwardRef<AreaViewerHandle, Props>(function Ces
           new Cesium.ImageryLayer(
             new Cesium.UrlTemplateImageryProvider({ url: SATELLITE.url, maximumLevel: SATELLITE.maxZoom, credit: SATELLITE.attribution })
           ),
-      terrain,
       animation: false,
       timeline: false,
       baseLayerPicker: false,
@@ -176,18 +184,27 @@ export const CesiumAreaViewer = forwardRef<AreaViewerHandle, Props>(function Ces
     const scene = viewer.scene;
     scene.backgroundColor = Cesium.Color.fromCssColorString('#0b0d0e');
     scene.globe.baseColor = Cesium.Color.fromCssColorString('#0f1113');
-    scene.globe.depthTestAgainstTerrain = Boolean(ION_TOKEN);
-    if (ION_TOKEN && scene.globe.imageryLayers.length > 0) {
-      // Darken satellite imagery towards the interface.
-      const layer = scene.globe.imageryLayers.get(0);
-      layer.brightness = 0.55;
-      layer.saturation = 0.6;
-    }
+    scene.globe.depthTestAgainstTerrain = true;
     viewer.cesiumWidget.screenSpaceEventHandler.removeInputAction(Cesium.ScreenSpaceEventType.LEFT_DOUBLE_CLICK);
     report();
 
     let disposed = false;
-    if (terrain) {
+    // Without the photorealistic mesh, the globe shows satellite imagery; with an ion
+    // token it also gets world terrain and OSM buildings.
+    const flatFallback = () => {
+      scene.globe.show = true;
+      if (!ION_TOKEN) {
+        status.terrain = PHOTOREALISTIC ? 'photorealistic-failed' : 'ellipsoid';
+        status.buildings = 'authored-only';
+        status.imagery = 'esri';
+        report();
+        return;
+      }
+      status.imagery = 'ion';
+      status.terrain = 'loading';
+      status.buildings = 'loading';
+      const terrain = Cesium.Terrain.fromWorldTerrain({ requestVertexNormals: true });
+      scene.setTerrain(terrain);
       terrain.readyEvent.addEventListener(async (provider) => {
         status.terrain = 'world';
         report();
@@ -207,8 +224,6 @@ export const CesiumAreaViewer = forwardRef<AreaViewerHandle, Props>(function Ces
         status.terrain = 'failed';
         report();
       });
-    }
-    if (ION_TOKEN) {
       Cesium.createOsmBuildingsAsync({ style: new Cesium.Cesium3DTileStyle({ color: "color('#3a4148', 0.92)" }) })
         .then((tileset) => {
           if (disposed) return;
@@ -220,6 +235,42 @@ export const CesiumAreaViewer = forwardRef<AreaViewerHandle, Props>(function Ces
           status.buildings = 'failed';
           report();
         });
+      report();
+    };
+
+    if (PHOTOREALISTIC) {
+      Cesium.createGooglePhotorealistic3DTileset(GOOGLE_KEY ? { key: GOOGLE_KEY } : undefined, {
+        // Google's terms ask for its credits on screen, which Cesium shows by default.
+        showCreditsOnScreen: true,
+        maximumScreenSpaceError: 8
+      })
+        .then(async (tileset) => {
+          if (disposed) return;
+          scene.primitives.add(tileset);
+          // The mesh is the ground; hiding the globe keeps it from showing through.
+          scene.globe.show = false;
+          status.terrain = 'photorealistic';
+          status.buildings = 'photorealistic';
+          report();
+          // Find the real ground height at the incident, so the camera and markers sit on it.
+          const c = center();
+          if (!c) return;
+          try {
+            const [sample] = await scene.sampleHeightMostDetailed([Cesium.Cartographic.fromDegrees(c.lng, c.lat)], [tileset]);
+            if (!disposed && sample.height !== undefined) {
+              groundRef.current = sample.height;
+              if (!latest.current.initialCamera) flyToOverview(0);
+            }
+          } catch {
+            // Keep the ellipsoid height; markers are clamped to the mesh anyway.
+          }
+        })
+        .catch(() => {
+          if (disposed) return;
+          flatFallback();
+        });
+    } else {
+      flatFallback();
     }
 
     const initial = latest.current.initialCamera;
@@ -396,7 +447,7 @@ export const CesiumAreaViewer = forwardRef<AreaViewerHandle, Props>(function Ces
       if (!entity?.polygon) continue;
       const selected = selection?.source === 'manifest' && selection.id === b.id;
       entity.show = selected || withinRadius(b, incident, radiusM);
-      entity.polygon.material = new Cesium.ColorMaterialProperty(selected ? COLOURS.accent.withAlpha(0.85) : b.model ? COLOURS.modelled : COLOURS.footprint);
+      entity.polygon.material = new Cesium.ColorMaterialProperty(selected ? COLOURS.accent.withAlpha(PHOTOREALISTIC ? 0.45 : 0.85) : b.model ? COLOURS.modelled : COLOURS.footprint);
     }
     const osm = osmPick.current;
     if (osm) {
