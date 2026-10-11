@@ -31,8 +31,8 @@ async function write(root, file) {
   root.traverse((o) => {
     if (o.isMesh) triangles += o.geometry.index.count / 3;
   });
-  const size = new THREE.Box3().setFromObject(root).getSize(new THREE.Vector3());
-  console.log(`${file}: ${(glb.byteLength / 1024).toFixed(0)} KB, ${triangles} triangles, ${size.toArray().map((v) => v.toFixed(2)).join(' x ')} m`);
+  const size = new THREE.Box3().setFromObject(root).getSize(new THREE.Vector3()).toArray();
+  console.log(`${file}: ${(glb.byteLength / 1024).toFixed(0)} KB, ${triangles} triangles, ${size.map((v) => v.toFixed(2)).join(' x ')} m`);
 }
 
 await write(buildPerson(), 'person.glb');

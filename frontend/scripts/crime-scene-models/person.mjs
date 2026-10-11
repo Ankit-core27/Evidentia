@@ -1,10 +1,13 @@
 // A posable forensic mannequin: an adult of 1.72 m in a T-shirt, trousers and shoes.
 // Frame: faces +x, y up, metres, origin on the ground midway between the feet; the
-// figure's left side is -z. Each body segment is sculpted as an implicit surface (smooth
-// unions of anatomical primitives) and polygonised with surface nets, then hung under a
-// joint group at its anatomical pivot, so rotating a joint bends the body naturally.
-// Every segment overlaps its parent with a rounded cap centred on the shared pivot,
-// which keeps bent joints closed.
+// figure's left side is -z.
+//
+// The body is sculpted as implicit surfaces (smooth unions of anatomical forms), each
+// limb chain or garment as one continuous field. Fields are split between joint groups at
+// anatomical pivots (see split): in the rest pose the pieces meet as one seamless surface,
+// and each piece ends in a cap around its pivot, so bent joints stay closed. Pieces are
+// polygonised with surface nets, thinned by quadric edge collapse and shaded with normals
+// taken from the field, so they stay smooth at a modest triangle count.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { curve } from './geometry.mjs';
@@ -50,7 +53,19 @@ function inter(k, ...fs) {
 function cut(k, a, b) {
   return withPlain((x, y, z) => -sminK(-a(x, y, z), b(x, y, z), k), [a, b], (ga, gb) => cut(k, ga, gb));
 }
-const grow = (f, r) => (x, y, z) => f(x, y, z) - r;
+
+/** The shell of half-width w around a field's surface. */
+const band = (f, w) => (x, y, z) => Math.abs(f(x, y, z)) - w;
+/** A smooth Gaussian bump of height h (negative for a hollow), for sculpting by displacement. */
+const bump = ([cx, cy, cz], [rx, ry, rz], h) => (x, y, z) => h * Math.exp(-(((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 + ((z - cz) / rz) ** 2));
+/** Raises a field's surface by the sum of the given displacement fields. */
+const displace = (f, ...bumps) => (x, y, z) => {
+  let d = f(x, y, z);
+  for (const b of bumps) d -= b(x, y, z);
+  return d;
+};
+/** Both sides of a symmetric feature: f(1) on the right, f(-1) on the left. */
+const sym = (f) => [f(1), f(-1)];
 
 /** Rotation matrix rows from Euler angles (XYZ, like three), used to take world offsets into a local frame. */
 function basis(rx = 0, ry = 0, rz = 0) {
@@ -402,9 +417,13 @@ function simplify(pos, idx, target) {
     } while (u !== undefined && u !== start && steps <= next.size);
     if (u !== start || steps !== next.size) locked[v] = 1;
   }
-  for (let v = 0; v < nv; v += 1) if (locked[v] === 1) for (const f of vf[v]) for (let k = 0; k < 3; k += 1) if (!locked[F[3 * f + k]]) locked[F[3 * f + k]] = 2;
+  for (let v = 0; v < nv; v += 1) {
+    if (locked[v] !== 1) continue;
+    for (const f of vf[v]) for (let k = 0; k < 3; k += 1) if (!locked[F[3 * f + k]]) locked[F[3 * f + k]] = 2;
+  }
   const qerr = (q, x, y, z) =>
-    q[0] * x * x + 2 * q[1] * x * y + 2 * q[2] * x * z + 2 * q[3] * x + q[4] * y * y + 2 * q[5] * y * z + 2 * q[6] * y + q[7] * z * z + 2 * q[8] * z + q[9];
+    q[0] * x * x + 2 * q[1] * x * y + 2 * q[2] * x * z + 2 * q[3] * x +
+    q[4] * y * y + 2 * q[5] * y * z + 2 * q[6] * y + q[7] * z * z + 2 * q[8] * z + q[9];
   const qs = new Float64Array(10);
   const best = (a, b) => {
     for (let i = 0; i < 10; i += 1) qs[i] = Q[10 * a + i] + Q[10 * b + i];
@@ -680,7 +699,8 @@ const neckColumn = () =>
   );
 
 /** The shirt over the trapezius, from the collar to the shoulder point (s = 1 right, -1 left). */
-const shoulderLine = (s) => tube([-0.042, 1.45, 0.045 * s], [-0.024, 1.405, 0.162 * s], FWD, { front: 0.046, back: 0.052, lat: [[0, 0.034], [0.12, 0.03]], round: 0.03 });
+const shoulderLine = (s) =>
+  tube([-0.042, 1.45, 0.045 * s], [-0.024, 1.405, 0.162 * s], FWD, { front: 0.046, back: 0.052, lat: [[0, 0.034], [0.12, 0.03]], round: 0.03 });
 /** The shirt over the deltoid; the chest and the sleeve share it so the shoulder reads as one. */
 const deltoid = (s) => ellipsoid([-0.014, 1.388, 0.19 * s], [0.05, 0.05, 0.046]);
 
@@ -688,9 +708,12 @@ const deltoid = (s) => ellipsoid([-0.014, 1.388, 0.19 * s], [0.05, 0.05, 0.046])
 function shirtField() {
   const body = tube([0, 0.915, 0], [0, 1.48, 0], FWD, {
     du: [[0, -0.004], [0.3, 0], [0.45, -0.008], [0.565, -0.035]],
-    front: [[0, 0.111], [0.085, 0.107], [0.17, 0.104], [0.25, 0.106], [0.33, 0.113], [0.39, 0.116], [0.44, 0.111], [0.49, 0.097], [0.53, 0.078], [0.565, 0.052]],
-    back: [[0, 0.124], [0.06, 0.112], [0.12, 0.099], [0.2, 0.095], [0.3, 0.102], [0.38, 0.108], [0.45, 0.106], [0.5, 0.098], [0.54, 0.085], [0.565, 0.065]],
-    lat: [[0, 0.181], [0.06, 0.175], [0.13, 0.165], [0.2, 0.16], [0.3, 0.163], [0.38, 0.167], [0.43, 0.164], [0.47, 0.151], [0.5, 0.134], [0.53, 0.112], [0.565, 0.08]],
+    front: [[0, 0.111], [0.085, 0.107], [0.17, 0.104], [0.25, 0.106], [0.33, 0.113],
+      [0.39, 0.116], [0.44, 0.111], [0.49, 0.097], [0.53, 0.078], [0.565, 0.052]],
+    back: [[0, 0.124], [0.06, 0.112], [0.12, 0.099], [0.2, 0.095], [0.3, 0.102],
+      [0.38, 0.108], [0.45, 0.106], [0.5, 0.098], [0.54, 0.085], [0.565, 0.065]],
+    lat: [[0, 0.181], [0.06, 0.175], [0.13, 0.165], [0.2, 0.16], [0.3, 0.163], [0.38, 0.167],
+      [0.43, 0.164], [0.47, 0.151], [0.5, 0.134], [0.53, 0.112], [0.565, 0.08]],
     n: [[0, 2.4], [0.35, 2.6], [0.565, 2.2]],
     round: 0.006
   });
@@ -716,7 +739,7 @@ function trunkShirtParts() {
     chest: [
       { mat: 'top', field: split(shirt, J, UP, 'child', opts), min: [-0.15, 1.17, -0.25], max: [0.15, 1.5, 0.25], h: 0.0065, tris: 2600 },
       // Ribbed crew neck where the shirt meets the neck.
-      { mat: 'top', field: (x, y, z) => -sminK(-(Math.abs(cone(...NECK_AXIS, 0.0655, 0.0655)(x, y, z)) - 0.0055), -(Math.abs(solid(x, y, z)) - 0.006), 0.004),
+      { mat: 'top', field: inter(0.004, band(cone(...NECK_AXIS, 0.0655, 0.0655), 0.0055), band(solid, 0.006)),
         min: [-0.16, 1.38, -0.1], max: [0.08, 1.56, 0.1], h: 0.003, tris: 900 }
     ]
   };
@@ -730,18 +753,12 @@ function neckParts() {
 // Head ------------------------------------------------------------------------------------
 
 const CRANIUM = [[-0.012, 1.632, 0], [0.1, 0.09, 0.077]];
-const sym = (f) => [f(1), f(-1)];
 
-/** A smooth Gaussian bump of height h (negative for a hollow), for sculpting by displacement. */
-const bump = ([cx, cy, cz], [rx, ry, rz], h) => (x, y, z) => h * Math.exp(-(((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 + ((z - cz) / rz) ** 2));
-const displace = (f, ...bumps) => (x, y, z) => {
-  let d = f(x, y, z);
-  for (const b of bumps) d -= b(x, y, z);
-  return d;
-};
 
 /** Hairline height around the head, by azimuth from the front (0) to the nape (pi). */
-const hairline = curve([[0, 1.67], [0.4, 1.675], [0.75, 1.663], [1.05, 1.638], [1.25, 1.606], [1.4, 1.604], [1.55, 1.628], [1.85, 1.63], [2.15, 1.604], [2.5, 1.572], [3.15, 1.558]]);
+const hairline = curve([
+  [0, 1.67], [0.4, 1.675], [0.75, 1.663], [1.05, 1.638], [1.25, 1.606], [1.4, 1.604], [1.55, 1.628], [1.85, 1.63], [2.15, 1.604], [2.5, 1.572], [3.15, 1.558]
+]);
 const hairAt = (x, z) => hairline(Math.abs(Math.atan2(z, x + 0.012)));
 
 /** Cranium and face masses before the features; the hair follows this. */
@@ -811,7 +828,8 @@ function headParts() {
 // Arms (left; lateral is -z) ----------------------------------------------------------------
 
 const ARM = {
-  front: [[0, 0.048], [0.08, 0.05], [0.15, 0.05], [0.21, 0.046], [0.27, 0.039], [0.3, 0.038], [0.33, 0.042], [0.37, 0.046], [0.41, 0.043], [0.47, 0.033], [0.53, 0.029], [0.56, 0.028]],
+  front: [[0, 0.048], [0.08, 0.05], [0.15, 0.05], [0.21, 0.046], [0.27, 0.039], [0.3, 0.038],
+    [0.33, 0.042], [0.37, 0.046], [0.41, 0.043], [0.47, 0.033], [0.53, 0.029], [0.56, 0.028]],
   back: [[0, 0.05], [0.08, 0.053], [0.15, 0.05], [0.22, 0.045], [0.28, 0.04], [0.31, 0.04], [0.35, 0.042], [0.4, 0.039], [0.47, 0.031], [0.56, 0.027]],
   lat: [[0, 0.052], [0.08, 0.05], [0.15, 0.045], [0.22, 0.041], [0.3, 0.04], [0.35, 0.043], [0.41, 0.037], [0.48, 0.025], [0.56, 0.02]],
   med: [[0, 0.046], [0.1, 0.044], [0.2, 0.041], [0.3, 0.038], [0.35, 0.04], [0.41, 0.034], [0.48, 0.024], [0.56, 0.02]]
@@ -911,7 +929,9 @@ function armParts() {
   const sleeve = union(
     0.035,
     inter(0.01, union(0.045, shoulderLine(-1), deltoid(-1)), plane([0, 0, -0.135], [0, 0, 1])),
-    tube(S, W, FWD, { front: grown(ARM.front, 0), back: grown(ARM.back, 0), lat: grown(ARM.lat, -0.001), med: grown(ARM.med, 0), du, dv, to: 0.15, round: 0.004 })
+    tube(S, W, FWD, {
+      front: grown(ARM.front, 0), back: grown(ARM.back, 0), lat: grown(ARM.lat, -0.001), med: grown(ARM.med, 0), du, dv, to: 0.15, round: 0.004
+    })
   );
   const upper = inter(0, split(skin, E, eElbow, 'parent', elbowOpts), plane(fr.at(0.11), fr.e.clone().negate().toArray()));
   const fore = union(0, split(split(skin, E, eElbow, 'child', elbowOpts), W, eWrist, 'parent', wristOpts), sphere(E, 0.031));
@@ -939,7 +959,8 @@ function legField() {
   const L = Math.hypot(A[0] - H[0], A[1] - H[1], A[2] - H[2]);
   const leg = tube(H, A, FWD, {
     du: [[0, 0], [sK, uK], [L, 0]],
-    front: [[0, 0.084], [0.1, 0.083], [0.22, 0.075], [0.32, 0.066], [0.39, 0.062], [0.42, 0.061], [0.5, 0.057], [0.65, 0.055], [0.8, 0.056], [0.86, 0.057]],
+    front: [[0, 0.084], [0.1, 0.083], [0.22, 0.075], [0.32, 0.066], [0.39, 0.062],
+      [0.42, 0.061], [0.5, 0.057], [0.65, 0.055], [0.8, 0.056], [0.86, 0.057]],
     back: [[0, 0.084], [0.08, 0.088], [0.2, 0.08], [0.32, 0.066], [0.4, 0.06], [0.47, 0.063], [0.56, 0.063], [0.68, 0.058], [0.86, 0.059]],
     lat: [[0, 0.085], [0.1, 0.086], [0.22, 0.077], [0.32, 0.067], [0.4, 0.061], [0.55, 0.059], [0.86, 0.057]],
     med: [[0, 0.083], [0.1, 0.08], [0.22, 0.071], [0.32, 0.062], [0.4, 0.058], [0.55, 0.057], [0.86, 0.056]],
@@ -985,7 +1006,8 @@ function trouserParts() {
     const u = px * fr.f.x + py * fr.f.y + pz * fr.f.z;
     return s - (0.815 - 0.45 * u);
   };
-  const thigh = union(0, inter(0, split(split(trousers, J, n, 'child', hipOpts), K, eKnee, 'parent', kneeOpts), (x, y, z) => z - 0.001), sphere(H, 0.08));
+  const thighOnly = split(split(trousers, J, n, 'child', hipOpts), K, eKnee, 'parent', kneeOpts);
+  const thigh = union(0, inter(0, thighOnly, (x, y, z) => z - 0.001), sphere(H, 0.08));
   const shin = union(0, inter(0.004, split(leg, K, eKnee, 'child', kneeOpts), hem), sphere(K, 0.05));
   return {
     pelvis: [{ mat: 'bottom', field: pelvis, min: [-0.16, 0.74, -0.2], max: [0.13, 1.06, 0.2], h: 0.0075, tris: 1800 }],
@@ -1053,7 +1075,9 @@ function parts() {
 function materials() {
   const physical = (name, opts) => new THREE.MeshPhysicalMaterial({ name, ...opts });
   return {
-    skin: physical('skin', { color: 0xb9b2a8, roughness: 0.55, clearcoat: 0.3, clearcoatRoughness: 0.35, sheen: 1, sheenColor: 0x3a3632, sheenRoughness: 0.5 }),
+    skin: physical('skin', {
+      color: 0xb9b2a8, roughness: 0.55, clearcoat: 0.3, clearcoatRoughness: 0.35, sheen: 1, sheenColor: 0x3a3632, sheenRoughness: 0.5
+    }),
     top: physical('top', { color: 0x5d6b7a, roughness: 0.88, sheen: 1, sheenColor: 0x4b5562, sheenRoughness: 0.8 }),
     bottom: physical('bottom', { color: 0x2f3540, roughness: 0.84, sheen: 1, sheenColor: 0x3a404c, sheenRoughness: 0.75 }),
     shoes: physical('shoes', { color: 0x1b1b1d, roughness: 0.42, clearcoat: 0.4, clearcoatRoughness: 0.3 }),
