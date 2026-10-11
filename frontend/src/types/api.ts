@@ -194,8 +194,13 @@ export type ReconstructionStage = Schemas['ReconstructionStage'];
 export type StageCreate = Schemas['StageCreate'];
 export type SceneAnnotation = Schemas['SceneAnnotation'];
 export type SceneAnnotationCreate = Schemas['SceneAnnotationCreate'];
-/** GET /api/reconstructions/{id}. */
+/** GET /api/reconstructions/{id}. `scene` is a generated layout (see SceneFile in features/crime-scene). */
 export type ReconstructionDetail = Schemas['ReconstructionDetail'];
+/** POST /api/cases/{id}/reconstructions/generate. */
+export type SceneGenerateRequest = Schemas['SceneGenerateRequest'];
+export type SceneGeneration = Schemas['SceneGeneration'];
+/** What a planner wrote after reading the case: positions in metres east and north, bearings in degrees. */
+export type SceneScript = Schemas['SceneScript'];
 
 // ---------------------------------------------------------------------------
 // Reports and audit

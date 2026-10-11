@@ -3,7 +3,9 @@ import { Html, Line, useGLTF } from '@react-three/drei';
 import { ThreeEvent, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { CaseObject, ReconstructionDetail, SceneObject, Vec3 } from '@/types/api';
-import { SceneFile, groundHeight } from './sceneFile';
+import { Person, RIDER } from './Person';
+import { CatalogueModel, ModelBoundary } from './Props';
+import { ModelSpec, SceneFile, baseModel, groundHeight, modelSpec, modelVariant } from './sceneFile';
 import { plateTexture } from './textures';
 import { useViewerStore } from './viewerStore';
 
@@ -12,15 +14,24 @@ interface WheelNode {
   sign: number;
 }
 
-// The stage's scene objects as vehicles (or labelled boxes for anything without a model),
-// moving smoothly between stages.
+// The stage's scene objects: vehicles, people (as posed mannequins, riders on their
+// bicycles) and items, moving smoothly between stages.
 
 const MOVE_MS = 900;
+// Sizes of the authored files' models, which name a URL but not a size.
 const FOOTPRINTS: Record<string, [number, number, number]> = {
   hatchback: [3.85, 1.74, 1.53],
   'delivery-van': [3.8, 1.58, 2.12]
 };
 const DEFAULT_FOOTPRINT: [number, number, number] = [4, 2, 1.6];
+
+/** The catalogue entry for a scene object, sized from the authored footprints if need be. */
+function specFor(scene: SceneFile | undefined, modelId: string): ModelSpec {
+  const spec = modelSpec(scene, modelId);
+  const id = baseModel(modelId);
+  if (spec && typeof scene?.models[id] !== 'string') return spec;
+  return { kind: 'vehicle', name: id, url: spec?.url, restyle: true, size: FOOTPRINTS[id] ?? DEFAULT_FOOTPRINT };
+}
 
 /** Paint for the colour names case records use. */
 const PAINT: Record<string, string> = {
@@ -41,6 +52,16 @@ const PAINT: Record<string, string> = {
   brown: '#5b3b24',
   beige: '#d8c7a4'
 };
+
+/** Paint for a colour as case records name it ("White", "dark grey") or a hex value. */
+function paintColour(name: string | undefined) {
+  const key = name?.toLowerCase().trim();
+  if (!key) return undefined;
+  if (PAINT[key]) return PAINT[key];
+  if (/^#[0-9a-f]{6}$/.test(key)) return key;
+  const word = Object.keys(PAINT).find((k) => key.includes(k));
+  return word ? PAINT[word] : undefined;
+}
 
 /** A key that follows the same object from stage to stage. */
 export const objectKey = (o: SceneObject) => (o.object_id != null ? `object:${o.object_id}` : `label:${o.label}`);
@@ -66,7 +87,7 @@ export interface VehicleHandlers {
   onSelect: (id: number) => void;
 }
 
-export const SceneVehicles: React.FC<{
+export const SceneObjects: React.FC<{
   scene: SceneFile | undefined;
   reconstruction: ReconstructionDetail;
   stageId: number;
@@ -86,7 +107,7 @@ export const SceneVehicles: React.FC<{
       {stage.scene_objects.map((o, i) => {
         const record = o.object_id != null ? objects.find((r) => r.id === o.object_id) : undefined;
         return (
-          <Vehicle
+          <Actor
             key={objectKey(o)}
             labelLift={i * 1.8}
             object={o}
@@ -106,7 +127,7 @@ export const SceneVehicles: React.FC<{
   );
 };
 
-const Vehicle: React.FC<{
+const Actor: React.FC<{
   object: SceneObject;
   /** Staggers labels so vehicles side by side don't cover each other's. */
   labelLift: number;
@@ -121,8 +142,14 @@ const Vehicle: React.FC<{
 }> = ({ object, labelLift, record, scene, selected, hovered, night, showLabel, badge, handlers }) => {
   const group = useRef<THREE.Group>(null);
   const invalidate = useThree((s) => s.invalidate);
-  const footprint = FOOTPRINTS[object.model_id] ?? DEFAULT_FOOTPRINT;
-  const [length, width, height] = [footprint[0] * object.scale[0], footprint[1] * object.scale[2], footprint[2] * object.scale[1]];
+  const spec = specFor(scene, object.model_id);
+  const variant = modelVariant(object.model_id);
+  const lying = variant === 'lying' || variant === 'fallen';
+  const footprint = spec.size;
+  const [length, width, height] = [footprint[0] * object.scale[0], footprint[1] * object.scale[2], (lying ? 0.4 : footprint[2]) * object.scale[1]];
+  const appearance = scene?.appearance?.[object.label];
+  const colour = record?.details.colour ?? appearance?.colour;
+  const plate = record?.details.plate ?? appearance?.plate;
   const target: Pose = useMemo(
     () => ({
       x: object.position[0],
@@ -193,7 +220,7 @@ const Vehicle: React.FC<{
         document.body.style.cursor = '';
       }}
     >
-      <ModelOrBox object={object} record={record} scene={scene} size={[length, width, height]} night={night} wheels={wheels} wheelRadius={wheelRadius} />
+      <Body spec={spec} object={object} variant={variant} colour={colour} plate={plate} night={night} wheels={wheels} wheelRadius={wheelRadius} />
       {(selected || hovered) && (
         <mesh rotation-x={-Math.PI / 2} position-y={0.03} scale={ringScale} renderOrder={2}>
           <ringGeometry args={[0.93, 1, 72]} />
@@ -208,7 +235,7 @@ const Vehicle: React.FC<{
             }`}
           >
             <span className="font-medium">{object.label}</span>
-            {record?.details.plate && <span className="font-mono text-2xs opacity-80">{record.details.plate}</span>}
+            {plate && <span className="font-mono text-2xs opacity-80">{plate}</span>}
             {badge}
           </div>
         </Html>
@@ -217,52 +244,68 @@ const Vehicle: React.FC<{
   );
 };
 
-const ModelOrBox: React.FC<{
+/** What a scene object looks like: a restyled vehicle, a rider on a bicycle, a posed person or an item. */
+const Body: React.FC<{
+  spec: ModelSpec;
   object: SceneObject;
-  record: CaseObject | undefined;
-  scene: SceneFile | undefined;
-  size: [number, number, number];
+  variant: string;
+  colour?: string;
+  plate?: string;
   night: boolean;
   wheels: React.MutableRefObject<WheelNode[]>;
   wheelRadius: React.MutableRefObject<number>;
-}> = (props) => {
-  const url = props.scene?.models[props.object.model_id];
-  const fallback = <FallbackBox size={props.size} label={props.object.label} />;
-  if (!url) return fallback;
-  return (
-    <ModelBoundary fallback={fallback}>
-      <Suspense fallback={fallback}>
-        <Model url={url} {...props} />
-      </Suspense>
-    </ModelBoundary>
-  );
+}> = ({ spec, object, variant, colour, plate, night, wheels, wheelRadius }) => {
+  const id = baseModel(object.model_id);
+  if (spec.kind === 'person') return <Person pose={variant || 'standing'} url={spec.url} />;
+  const fallback = <CatalogueModel spec={{ ...spec, url: undefined }} />;
+  const vehicle =
+    spec.kind === 'vehicle' && spec.url ? (
+      <ModelBoundary fallback={fallback}>
+        <Suspense fallback={fallback}>
+          <Model url={spec.url} size={spec.size} restyle={!!spec.restyle} object={object} colour={colour} plate={plate} night={night} wheels={wheels} wheelRadius={wheelRadius} />
+        </Suspense>
+      </ModelBoundary>
+    ) : (
+      <CatalogueModel spec={spec} seed={object.id} />
+    );
+  const rider = RIDER[id];
+  if (rider && variant === 'fallen') {
+    // The machine on its side, and its rider on the ground beside it.
+    return (
+      <group>
+        <group rotation-x={Math.PI / 2 - 0.12} position-y={spec.size[1] / 2}>
+          {vehicle}
+        </group>
+        <group position={[0.6, 0, -1.1]} rotation-y={0.6}>
+          <Person pose="lying" />
+        </group>
+      </group>
+    );
+  }
+  if (rider && variant === 'ridden') {
+    return (
+      <group>
+        {vehicle}
+        <group position={rider.offset}>
+          <Person pose={rider.pose} />
+        </group>
+      </group>
+    );
+  }
+  return vehicle;
 };
-
-class ModelBoundary extends React.Component<{ fallback: React.ReactNode; children: React.ReactNode }, { failed: boolean }> {
-  state = { failed: false };
-  static getDerivedStateFromError() {
-    return { failed: true };
-  }
-  render() {
-    return this.state.failed ? this.props.fallback : this.props.children;
-  }
-}
-
-const FallbackBox: React.FC<{ size: [number, number, number]; label: string }> = ({ size }) => (
-  <mesh position-y={size[2] / 2} castShadow receiveShadow>
-    <boxGeometry args={[size[0], size[2], size[1]]} />
-    <meshStandardMaterial color="#9aa3aa" roughness={0.6} />
-  </mesh>
-);
 
 const Model: React.FC<{
   url: string;
+  size: [number, number, number];
+  restyle: boolean;
   object: SceneObject;
-  record: CaseObject | undefined;
+  colour?: string;
+  plate?: string;
   night: boolean;
   wheels: React.MutableRefObject<WheelNode[]>;
   wheelRadius: React.MutableRefObject<number>;
-}> = ({ url, object, record, night, wheels, wheelRadius }) => {
+}> = ({ url, size, restyle, object, colour, plate, night, wheels, wheelRadius }) => {
   const gltf = useGLTF(url);
   const invalidate = useThree((s) => s.invalidate);
   // Each vehicle gets its own copy, with materials it can restyle.
@@ -281,14 +324,14 @@ const Model: React.FC<{
       if (mat.name === 'paint' || mat.name.startsWith('plate') || ['headlight', 'taillight', 'indicator'].includes(mat.name)) {
         const own = mat.clone();
         mesh.material = own;
-        if (own.name === 'paint') {
-          const colour = record?.details.colour?.toLowerCase().trim();
-          if (colour && PAINT[colour]) own.color.set(PAINT[colour]);
+        if (own.name === 'paint' && restyle) {
+          const paint = paintColour(colour);
+          if (paint) own.color.set(paint);
         }
-        if (own.name.startsWith('plate')) {
+        if (own.name.startsWith('plate') && restyle) {
           const background = `#${own.color.getHexString()}`;
-          if (record?.details.plate) {
-            own.map = plateTexture(record.details.plate, background);
+          if (plate) {
+            own.map = plateTexture(plate, background);
             own.color.set('#ffffff');
           }
         }
@@ -302,7 +345,7 @@ const Model: React.FC<{
       wheelRadius.current = Math.max((box.max.y - box.min.y) / 2, 0.1);
     }
     return { root, lamps };
-  }, [gltf, record, wheels, wheelRadius]);
+  }, [gltf, colour, plate, restyle, wheels, wheelRadius]);
 
   useEffect(() => {
     for (const m of lamps) {
@@ -316,10 +359,16 @@ const Model: React.FC<{
   const beamTarget = useMemo(() => new THREE.Object3D(), []);
   const box = useMemo(() => new THREE.Box3().setFromObject(root), [root]);
   const front = box.max.x;
+  // Files are built to their catalogue size; scale any that aren't.
+  const native = box.getSize(new THREE.Vector3());
+  const fit: [number, number, number] =
+    native.x > 0 && Math.abs(native.x / size[0] - 1) > 0.05 ? [size[0] / native.x, size[2] / native.y, size[1] / native.z] : [1, 1, 1];
+  // A bicycle's front reflector glows but throws no beam.
+  const hasLamps = lamps.some((m) => m.name === 'headlight') && !object.model_id.startsWith('bicycle');
   return (
-    <group name={`${object.model_id} model`}>
+    <group name={`${object.model_id} model`} scale={fit}>
       <primitive object={root} />
-      {night && (
+      {night && hasLamps && (
         <>
           <primitive object={beamTarget} position={[front + 18, 0, 0]} />
           <spotLight position={[front - 0.1, 0.75, 0]} target={beamTarget} color="#fff4dc" intensity={90} distance={45} angle={0.42} penumbra={0.55} decay={1.4} />

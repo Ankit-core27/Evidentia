@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { SceneObject, Vec3 } from '@/types/api';
+import type { SceneFile } from '@/features/crime-scene/case-scene/sceneFile';
 import { SceneViewerProps } from './sceneViewer';
 
 const FOOTPRINTS: Record<string, [number, number]> = {
@@ -26,6 +27,13 @@ export const SchematicSceneView: React.FC<SceneViewerProps> = ({
   onSelectSceneObject
 }) => {
   const stage = reconstruction.stages.find((s) => s.id === stageId);
+  // A generated layout carries its roads, rooms and model sizes; authored ones are drawn objects-only.
+  const scene = reconstruction.scene as unknown as SceneFile | null;
+  const footprint = (modelId: string): [number, number] => {
+    const entry = scene?.models[modelId.split(':')[0]];
+    if (entry && typeof entry !== 'string') return [entry.size[0], entry.size[1]];
+    return FOOTPRINTS[modelId] ?? DEFAULT_FOOTPRINT;
+  };
   const annotations = reconstruction.annotations.filter((a) => a.stage_id === null || a.stage_id === stageId);
 
   // One frame for every stage, so objects visibly move when the stage changes.
@@ -37,6 +45,9 @@ export const SchematicSceneView: React.FC<SceneViewerProps> = ({
         if (v) points.push([v[0], v[2]]);
       });
     });
+    for (const r of (reconstruction.scene as unknown as SceneFile | null)?.rooms ?? []) {
+      points.push([r.x - r.width / 2, r.z - r.depth / 2], [r.x + r.width / 2, r.z + r.depth / 2]);
+    }
     if (!points.length) points.push([0, 0]);
     const xs = points.map((p) => p[0]);
     const zs = points.map((p) => p[1]);
@@ -57,7 +68,7 @@ export const SchematicSceneView: React.FC<SceneViewerProps> = ({
   }
 
   const renderObject = (o: SceneObject) => {
-    const [baseLength, baseWidth] = FOOTPRINTS[o.model_id] ?? DEFAULT_FOOTPRINT;
+    const [baseLength, baseWidth] = footprint(o.model_id);
     const length = baseLength * o.scale[0];
     const width = baseWidth * o.scale[2];
     const selected = o.id === selectedSceneObjectId;
@@ -89,7 +100,10 @@ export const SchematicSceneView: React.FC<SceneViewerProps> = ({
           strokeWidth={selected ? 0.25 : 0.12}
         />
         {/* Front of the object */}
-        <polygon points={`${length / 2 - 0.9},-0.5 ${length / 2 - 0.2},0 ${length / 2 - 0.9},0.5`} className="fill-warn" />
+        <polygon
+          points={`${length / 2 - Math.min(0.9, length * 0.4)},${-Math.min(0.5, width / 2)} ${length / 2 - 0.05},0 ${length / 2 - Math.min(0.9, length * 0.4)},${Math.min(0.5, width / 2)}`}
+          className="fill-warn"
+        />
       </g>
     );
   };
@@ -104,6 +118,22 @@ export const SchematicSceneView: React.FC<SceneViewerProps> = ({
       data-testid="scene-schematic"
     >
       {gridLines}
+      {scene?.roads.map((r) => {
+        const half = r.lanes_each_way * r.lane_width;
+        return r.axis === 'x' ? (
+          <rect key={r.name} x={r.from} y={-half} width={r.to - r.from} height={half * 2} className="fill-line/60" />
+        ) : (
+          <rect key={r.name} x={-half} y={r.from} width={half * 2} height={r.to - r.from} className="fill-line/60" />
+        );
+      })}
+      {scene?.rooms?.map((r) => (
+        <g key={r.id}>
+          <rect x={r.x - r.width / 2} y={r.z - r.depth / 2} width={r.width} height={r.depth} className="fill-raised/40 stroke-ink-soft" strokeWidth={0.12} />
+          <text x={r.x} y={r.z - r.depth / 2 + 0.9} className="fill-ink-muted" fontSize={0.6} textAnchor="middle" style={HALO}>
+            {r.name}
+          </text>
+        </g>
+      ))}
       {annotations.map((a) => {
         const from = asVec3(a.data.from);
         const to = asVec3(a.data.to);
@@ -157,7 +187,7 @@ export const SchematicSceneView: React.FC<SceneViewerProps> = ({
         </text>
       </g>
       <text x={bounds.minX + bounds.width - 1} y={bounds.minZ + bounds.height - 1} className="fill-ink-muted" fontSize={1} textAnchor="end" style={HALO}>
-        Grid {GRID_M} m · schematic until the 3D viewer lands
+        Grid {GRID_M} m
       </text>
     </svg>
   );

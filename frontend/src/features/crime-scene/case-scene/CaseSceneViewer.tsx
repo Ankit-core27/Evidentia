@@ -8,11 +8,14 @@ import { useEvidenceInspector } from '@/hooks/useEvidenceInspector';
 import { CaseWorkspace, EvidenceLink, SceneObject, Vec3 } from '@/types/api';
 import { SceneViewerProps } from '@/features/reconstruction/sceneViewer';
 import { Annotations, Measurement } from './Annotations';
+import { Ground } from './Ground';
 import { Junction } from './Junction';
 import { Lighting } from './Lighting';
-import { SceneVehicles } from './SceneVehicles';
+import { Rooms } from './Rooms';
+import { SceneObjects } from './SceneObjects';
 import { StreetFurniture } from './StreetFurniture';
-import { SceneFile, useSceneFile } from './sceneFile';
+import { Traces } from './Traces';
+import { EvidenceRef, ModelSpec, SceneFile, useSceneLayout } from './sceneFile';
 import { ViewerOverlay } from './ViewerOverlay';
 import { useViewerStore } from './viewerStore';
 
@@ -20,14 +23,14 @@ import { useViewerStore } from './viewerStore';
 const FALLBACK_CAMERA: { position: Vec3; target: Vec3 } = { position: [-30, 30, 30], target: [-4, 0, 2] };
 
 /** Evidence linked to a scene object directly, or to the vehicle or item it stands for. */
-export function evidenceFor(workspace: CaseWorkspace | undefined, o: SceneObject) {
+export function evidenceFor(workspace: CaseWorkspace | undefined, o: SceneObject): EvidenceRef[] {
   if (!workspace) return [];
   const seen = new Map<number, EvidenceLink>();
   for (const l of workspace.links) {
     const hit = (l.target_type === 'scene_object' && l.target_id === o.id) || (l.target_type === 'object' && o.object_id != null && l.target_id === o.object_id);
     if (hit && !seen.has(l.evidence_id)) seen.set(l.evidence_id, l);
   }
-  return [...seen.values()].map((link) => ({ link, evidence: workspace.evidence.find((e) => e.id === link.evidence_id) })).filter((x) => !!x.evidence);
+  return [...seen.values()].map((l) => ({ evidence_id: l.evidence_id, passage: l.passage }));
 }
 
 /**
@@ -35,7 +38,7 @@ export function evidenceFor(workspace: CaseWorkspace | undefined, o: SceneObject
  * the stage's scene objects, annotations, and tools to measure, take notes and save views.
  */
 export const CaseSceneViewer: React.FC<SceneViewerProps> = ({ reconstruction, stageId, selectedSceneObjectId, onSelectSceneObject }) => {
-  const sceneQuery = useSceneFile(reconstruction.scene_file);
+  const layout = useSceneLayout(reconstruction);
   const workspaceQuery = useCaseWorkspace(reconstruction.case_id);
   const container = useRef<HTMLDivElement>(null);
   const { timeOfDay, showLabels, showPaths } = useViewerStore();
@@ -43,9 +46,10 @@ export const CaseSceneViewer: React.FC<SceneViewerProps> = ({ reconstruction, st
   // Labels render in their own React root (drei's Html) without the router, so the
   // evidence inspector is opened from here.
   const { open: openEvidence } = useEvidenceInspector();
-  const scene = sceneQuery.data;
+  const scene = layout.scene;
   const night = timeOfDay === 'night';
   const camera = scene?.camera ?? FALLBACK_CAMERA;
+  const indoor = scene?.setting?.kind === 'indoor';
 
   return (
     <div ref={container} className="relative h-full w-full overflow-hidden bg-[#0b0d0e]" data-testid="scene-3d">
@@ -60,7 +64,7 @@ export const CaseSceneViewer: React.FC<SceneViewerProps> = ({ reconstruction, st
         <Suspense fallback={null}>
           <SceneContent
             scene={scene}
-            sceneReady={!reconstruction.scene_file || sceneQuery.isSuccess || sceneQuery.isError}
+            sceneReady={layout.ready}
             reconstruction={reconstruction}
             stageId={stageId}
             selectedId={selectedSceneObjectId}
@@ -72,6 +76,7 @@ export const CaseSceneViewer: React.FC<SceneViewerProps> = ({ reconstruction, st
             hovered={hovered}
             onHover={setHovered}
             camera={camera}
+            indoor={indoor}
             onOpenEvidence={openEvidence}
           />
         </Suspense>
@@ -79,7 +84,7 @@ export const CaseSceneViewer: React.FC<SceneViewerProps> = ({ reconstruction, st
       <ViewerOverlay
         container={container}
         scene={scene}
-        sceneError={sceneQuery.isError ? (sceneQuery.error as Error).message : null}
+        sceneError={layout.error}
         reconstruction={reconstruction}
         stageId={stageId}
         defaultCamera={camera}
@@ -113,6 +118,7 @@ const SceneContent: React.FC<{
   hovered: number | null;
   onHover: (id: number | null) => void;
   camera: { position: Vec3; target: Vec3 };
+  indoor: boolean;
   onOpenEvidence: (evidenceId: number, passage?: string | null) => void;
 }> = (p) => {
   const { tool, picks, hover, addPick, setHover } = useViewerStore();
@@ -135,15 +141,22 @@ const SceneContent: React.FC<{
     setHover([round(e.point.x), round(e.point.y), round(e.point.z)]);
   };
 
+  const renderEvidence = (refs: EvidenceRef[], label: string) => (
+    <EvidenceBadge workspace={p.workspace} refs={refs} label={label} testId={`trace-evidence-${label}`} onOpen={p.onOpenEvidence} />
+  );
+  const scene = p.scene;
   return (
     <>
       <Lighting night={p.night} />
-      <CameraRig camera={p.camera} ready={p.sceneReady} />
+      <CameraRig camera={p.camera} ready={p.sceneReady} indoor={p.indoor} />
       <group onClick={onClick} onPointerMove={onMove}>
-        {p.scene && (
+        {scene && (
           <>
-            <Junction scene={p.scene} />
-            <StreetFurniture scene={p.scene} night={p.night} focus={[0, 0]} />
+            {scene.roads.length > 0 && <Junction scene={scene} />}
+            {scene.roads.length === 0 && <Ground scene={scene} />}
+            {scene.rooms && scene.rooms.length > 0 && <Rooms rooms={scene.rooms} night={p.night} />}
+            <StreetFurniture scene={scene} night={p.night} focus={scene.focus ?? [0, 0]} showLabels={p.showLabels} renderEvidence={renderEvidence} />
+            <Traces items={scene.static} showLabels={p.showLabels} renderEvidence={renderEvidence} />
           </>
         )}
         {!p.scene && (
@@ -152,7 +165,7 @@ const SceneContent: React.FC<{
             <meshStandardMaterial color="#55585b" roughness={1} />
           </mesh>
         )}
-        <SceneVehicles
+        <SceneObjects
           scene={p.scene}
           reconstruction={p.reconstruction}
           stageId={p.stageId}
@@ -161,7 +174,9 @@ const SceneContent: React.FC<{
           night={p.night}
           showLabels={p.showLabels}
           showPaths={p.showPaths}
-          renderBadge={(o) => <EvidenceBadge workspace={p.workspace} object={o} onOpen={p.onOpenEvidence} />}
+          renderBadge={(o) => (
+            <EvidenceBadge workspace={p.workspace} refs={evidenceFor(p.workspace, o)} label={o.label} testId={`evidence-marker-${o.id}`} onOpen={p.onOpenEvidence} />
+          )}
           handlers={{ hovered: p.hovered, onHover: p.onHover, onSelect: (id) => p.onSelect(id) }}
         />
       </group>
@@ -181,7 +196,7 @@ const SceneContent: React.FC<{
 const round = (n: number) => Math.round(n * 1000) / 1000;
 
 /** Orbit, pan and zoom; sets the scene's opening view once the scene file has loaded. */
-const CameraRig: React.FC<{ camera: { position: Vec3; target: Vec3 }; ready: boolean }> = ({ camera, ready }) => {
+const CameraRig: React.FC<{ camera: { position: Vec3; target: Vec3 }; ready: boolean; indoor: boolean }> = ({ camera, ready, indoor }) => {
   const ref = useRef<CameraControls>(null);
   const setControls = useViewerStore((s) => s.setControls);
   const setAzimuth = useViewerStore((s) => s.setAzimuth);
@@ -206,8 +221,8 @@ const CameraRig: React.FC<{ camera: { position: Vec3; target: Vec3 }; ready: boo
     <CameraControls
       ref={ref}
       makeDefault
-      minDistance={1.2}
-      maxDistance={240}
+      minDistance={indoor ? 0.6 : 1.2}
+      maxDistance={indoor ? 90 : 240}
       maxPolarAngle={Math.PI / 2 - 0.03}
       dollyToCursor
       smoothTime={0.35}
@@ -215,13 +230,18 @@ const CameraRig: React.FC<{ camera: { position: Vec3; target: Vec3 }; ready: boo
   );
 };
 
-/** The evidence count on a vehicle's label; opens a list that links to the evidence inspector. */
+/** The evidence count on a label; opens a list that links to the evidence inspector. */
 const EvidenceBadge: React.FC<{
   workspace: CaseWorkspace | undefined;
-  object: SceneObject;
+  refs: EvidenceRef[];
+  label: string;
+  testId: string;
   onOpen: (evidenceId: number, passage?: string | null) => void;
-}> = ({ workspace, object, onOpen }) => {
-  const items = useMemo(() => evidenceFor(workspace, object), [workspace, object]);
+}> = ({ workspace, refs, label, testId, onOpen }) => {
+  const items = useMemo(
+    () => refs.map((ref) => ({ ref, evidence: workspace?.evidence.find((e) => e.id === ref.evidence_id) })).filter((x) => !!x.evidence),
+    [workspace, refs]
+  );
   const [open, setOpen] = useState(false);
   if (!items.length) return null;
   return (
@@ -234,26 +254,26 @@ const EvidenceBadge: React.FC<{
         }}
         className="inline-flex items-center gap-0.5 rounded bg-warn px-1.5 py-0.5 font-mono text-2xs font-semibold text-[#1a1408]"
         aria-expanded={open}
-        aria-label={`${items.length} evidence items linked to ${object.label}`}
-        data-testid={`evidence-marker-${object.id}`}
+        aria-label={`${items.length} evidence items linked to ${label}`}
+        data-testid={testId}
       >
         <FileText className="size-3" aria-hidden />
         {items.length}
       </button>
       {open && (
         <span className="absolute left-1/2 top-full z-10 mt-1.5 flex w-64 -translate-x-1/2 flex-col rounded border border-line-strong bg-surface p-1 text-left shadow-lg">
-          {items.map(({ link, evidence }) => (
+          {items.map(({ ref, evidence }, i) => (
             <button
-              key={link.evidence_id}
+              key={`${ref.evidence_id}-${i}`}
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
-                onOpen(link.evidence_id, link.passage);
+                onOpen(ref.evidence_id, ref.passage);
               }}
               className="rounded px-2 py-1.5 text-left text-xs text-ink hover:bg-raised"
             >
               <span className="block font-medium">{evidence!.title}</span>
-              {link.passage && <span className="mt-0.5 line-clamp-2 block text-2xs text-ink-muted">“{link.passage}”</span>}
+              {ref.passage && <span className="mt-0.5 line-clamp-2 block whitespace-normal text-2xs text-ink-muted">“{ref.passage}”</span>}
             </button>
           ))}
         </span>
@@ -262,14 +282,23 @@ const EvidenceBadge: React.FC<{
   );
 };
 
-/** Camera position and target for a driver's eye view from a scene object's placement. */
-export function driverView(o: SceneObject, groundY: number): { position: Vec3; target: Vec3 } {
+/** Camera position and target for the eye view of whoever is at a scene object's placement. */
+export function driverView(o: SceneObject, groundY: number, spec?: ModelSpec): { position: Vec3; target: Vec3 } {
   // Right-hand drive: the driver sits right of centre (+z in the vehicle's frame).
   const seat: Record<string, [number, number, number]> = {
     hatchback: [-0.15, 1.18, 0.36],
-    'delivery-van': [1.3, 1.58, 0.36]
+    sedan: [-0.2, 1.15, 0.37],
+    'delivery-van': [1.3, 1.58, 0.36],
+    truck: [3.3, 2.45, 0.55],
+    bus: [4.9, 2.2, 0.75],
+    'auto-rickshaw': [0.55, 1.35, 0],
+    motorcycle: [-0.1, 1.45, 0],
+    bicycle: [-0.15, 1.55, 0],
+    person: [0.08, 1.6, 0]
   };
-  const [f, up, r] = seat[o.model_id] ?? [0, 1.3, 0.35];
+  const id = o.model_id.split(':')[0];
+  const size = spec?.size ?? [4, 1.8, 1.5];
+  const [f, up, r] = seat[id] ?? [size[0] * 0.05, size[2] * 0.8, size[1] * 0.2];
   const h = o.rotation[1];
   const fx = Math.cos(h);
   const fz = -Math.sin(h);

@@ -573,6 +573,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/cases/{case_id}/reconstructions/generate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Generate Reconstruction
+         * @description Reads the case's evidence and records, writes a scene script (with Gemini, or
+         *     from the records without a key) and saves one reconstruction per scenario.
+         */
+        post: operations["generate_reconstruction_api_cases__case_id__reconstructions_generate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/reconstructions/{reconstruction_id}": {
         parameters: {
             query?: never;
@@ -1389,6 +1410,57 @@ export interface components {
             investigators: components["schemas"]["InvestigatorWithStats"][];
         };
         /**
+         * Entity
+         * @description A vehicle, person or item that takes part in the scenarios.
+         */
+        Entity: {
+            /**
+             * Ref
+             * @description A short id, such as "v1", "p1" or "i1".
+             */
+            ref: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "vehicle" | "person" | "item";
+            /**
+             * Model
+             * @description A model id from the catalogue.
+             */
+            model: string;
+            /**
+             * Label
+             * @description As an investigator would name it, such as "White hatchback" or "Anita Desai".
+             */
+            label: string;
+            /**
+             * Object Id
+             * @description The ID of the case's vehicle or item record this stands for.
+             */
+            object_id?: number | null;
+            /**
+             * Person Id
+             * @description The ID of the case's person record this stands for.
+             */
+            person_id?: number | null;
+            /**
+             * Colour
+             * @default
+             */
+            colour?: string;
+            /**
+             * Plate
+             * @default
+             */
+            plate?: string;
+            /**
+             * Sources
+             * @default []
+             */
+            sources?: components["schemas"]["Source"][];
+        };
+        /**
          * Evidence
          * @description Evidence metadata. The stored file path and the extracted text stay server-side.
          */
@@ -1785,6 +1857,75 @@ export interface components {
             /** Active Cases */
             active_cases: number;
         };
+        /** Junction */
+        Junction: {
+            /**
+             * Signals
+             * @description True if traffic signals control the junction.
+             * @default false
+             */
+            signals?: boolean;
+            /**
+             * Zebra Crossings
+             * @default false
+             */
+            zebra_crossings?: boolean;
+        };
+        /**
+         * Landmark
+         * @description Something fixed that helps place the incident: a shop, a bus stop, a parked bus,
+         *     furniture in a room.
+         */
+        Landmark: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "building" | "shop" | "bus_stop" | "tree" | "streetlight" | "signal" | "wall" | "parked_vehicle" | "furniture";
+            /** Label */
+            label: string;
+            /**
+             * Model
+             * @description For furniture and parked vehicles: a model id from the catalogue.
+             * @default
+             */
+            model?: string;
+            position: components["schemas"]["Point"];
+            /**
+             * Heading Deg
+             * @description The bearing its front faces.
+             * @default 0
+             */
+            heading_deg?: number;
+            /**
+             * Width M
+             * @description For buildings and walls; 0 to use a typical size.
+             * @default 0
+             */
+            width_m?: number;
+            /**
+             * Depth M
+             * @default 0
+             */
+            depth_m?: number;
+            /**
+             * Floors
+             * @description 0 to 30; 0 for a typical height.
+             * @default 0
+             */
+            floors?: number;
+            /**
+             * Sign
+             * @description The text on a shop sign.
+             * @default
+             */
+            sign?: string;
+            /**
+             * Sources
+             * @default []
+             */
+            sources?: components["schemas"]["Source"][];
+        };
         /** Location */
         Location: {
             /**
@@ -2010,6 +2151,42 @@ export interface components {
             /** Statements */
             statements: string[];
         };
+        /** Opening */
+        Opening: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "door" | "window" | "opening";
+            /**
+             * Wall
+             * @enum {string}
+             */
+            wall: "north" | "south" | "east" | "west";
+            /**
+             * Offset M
+             * @description From the middle of the wall: positive is east along north and south walls, north along east and west walls.
+             * @default 0
+             */
+            offset_m?: number;
+            /**
+             * Width M
+             * @description 0.3 to 6 m.
+             * @default 0.9
+             */
+            width_m?: number;
+            /**
+             * State
+             * @default closed
+             * @enum {string}
+             */
+            state?: "closed" | "open" | "forced" | "broken";
+            /**
+             * Label
+             * @default
+             */
+            label?: string;
+        };
         /** Person */
         Person: {
             /**
@@ -2107,6 +2284,45 @@ export interface components {
             /** Review Status */
             review_status?: ("pending" | "confirmed" | "rejected") | null;
         };
+        /** Placement */
+        Placement: {
+            /**
+             * Ref
+             * @description The ref of an entity.
+             */
+            ref: string;
+            position: components["schemas"]["Point"];
+            /**
+             * Heading Deg
+             * @description The bearing the entity faces.
+             */
+            heading_deg: number;
+            /**
+             * Pose
+             * @description For people. Use "driving" for a person inside a vehicle; they are then not drawn.
+             * @default standing
+             * @enum {string}
+             */
+            pose?: "standing" | "walking" | "running" | "lying" | "seated" | "crouching" | "driving";
+            /**
+             * Note
+             * @default
+             */
+            note?: string;
+        };
+        /** Point */
+        Point: {
+            /**
+             * East
+             * @description Metres east of the origin; negative is west.
+             */
+            east: number;
+            /**
+             * North
+             * @description Metres north of the origin; negative is south.
+             */
+            north: number;
+        };
         /** Reconstruction */
         Reconstruction: {
             /** Id */
@@ -2121,6 +2337,11 @@ export interface components {
             assumptions: string;
             /** Scene File */
             scene_file: string | null;
+            /**
+             * Origin
+             * @enum {string}
+             */
+            origin: "ai" | "investigator";
         };
         /** ReconstructionCreate */
         ReconstructionCreate: {
@@ -2151,6 +2372,15 @@ export interface components {
             assumptions: string;
             /** Scene File */
             scene_file: string | null;
+            /**
+             * Origin
+             * @enum {string}
+             */
+            origin: "ai" | "investigator";
+            /** Scene */
+            scene: {
+                [key: string]: unknown;
+            } | null;
             /** Stages */
             stages: components["schemas"]["StageDetail"][];
             /** Annotations */
@@ -2440,6 +2670,97 @@ export interface components {
             /** Assumptions */
             assumptions: string;
         };
+        /** Road */
+        Road: {
+            /** Name */
+            name: string;
+            /**
+             * Runs
+             * @enum {string}
+             */
+            runs: "east-west" | "north-south";
+            /**
+             * Arms
+             * @description The directions the road extends from the origin: both ends for a road that passes through, one end for the minor road of a T-junction.
+             */
+            arms: ("north" | "south" | "east" | "west")[];
+            /**
+             * Lanes Each Way
+             * @description 1 to 3.
+             * @default 1
+             */
+            lanes_each_way?: number;
+            /**
+             * Lane Width M
+             * @description 2.5 to 4.5 m.
+             * @default 3.5
+             */
+            lane_width_m?: number;
+        };
+        /** Room */
+        Room: {
+            /**
+             * Ref
+             * @description A short id, such as "r1".
+             */
+            ref: string;
+            /**
+             * Name
+             * @description Such as "Living room" or "Warehouse floor".
+             */
+            name: string;
+            centre: components["schemas"]["Point"];
+            /**
+             * Width M
+             * @description East-west size, 1 to 80 m.
+             */
+            width_m: number;
+            /**
+             * Depth M
+             * @description North-south size, 1 to 80 m.
+             */
+            depth_m: number;
+            /**
+             * Height M
+             * @description 2 to 12 m.
+             * @default 2.8
+             */
+            height_m?: number;
+            /**
+             * Floor
+             * @default tile
+             * @enum {string}
+             */
+            floor?: "wood" | "tile" | "marble" | "concrete" | "carpet";
+            /**
+             * Openings
+             * @default []
+             */
+            openings?: components["schemas"]["Opening"][];
+        };
+        /** Scenario */
+        Scenario: {
+            /**
+             * Title
+             * @description A short claim, such as "Van moved off before its green".
+             */
+            title: string;
+            /**
+             * Assumptions
+             * @description What this scenario takes as true where the evidence is unsettled.
+             */
+            assumptions: string[];
+            /**
+             * Supported By
+             * @default []
+             */
+            supported_by?: components["schemas"]["Source"][];
+            /**
+             * Stages
+             * @description Two to five stages in time order.
+             */
+            stages: components["schemas"]["Stage"][];
+        };
         /** SceneAnnotation */
         SceneAnnotation: {
             /** Id */
@@ -2474,6 +2795,32 @@ export interface components {
             data?: {
                 [key: string]: unknown;
             };
+        };
+        /**
+         * SceneGenerateRequest
+         * @description POST /api/cases/{id}/reconstructions/generate.
+         */
+        SceneGenerateRequest: {
+            /**
+             * Instructions
+             * @default
+             */
+            instructions?: string;
+        };
+        /** SceneGeneration */
+        SceneGeneration: {
+            /**
+             * Generator
+             * @enum {string}
+             */
+            generator: "gemini" | "rules";
+            /** Model */
+            model: string;
+            script: components["schemas"]["SceneScript"];
+            /** Warnings */
+            warnings: string[];
+            /** Reconstructions */
+            reconstructions: components["schemas"]["Reconstruction"][];
         };
         /** SceneObject */
         SceneObject: {
@@ -2560,6 +2907,40 @@ export interface components {
                 number
             ];
         };
+        /** SceneScript */
+        SceneScript: {
+            /** Title */
+            title: string;
+            /**
+             * Summary
+             * @description Two to four neutral sentences on what the reconstruction shows.
+             */
+            summary: string;
+            setting: components["schemas"]["Setting"];
+            /** Entities */
+            entities: components["schemas"]["Entity"][];
+            /**
+             * Traces
+             * @default []
+             */
+            traces?: components["schemas"]["Trace"][];
+            /**
+             * Viewpoints
+             * @default []
+             */
+            viewpoints?: components["schemas"]["Viewpoint"][];
+            /**
+             * Scenarios
+             * @description One scenario, or one per competing account (at most three).
+             */
+            scenarios: components["schemas"]["Scenario"][];
+            /**
+             * Open Questions
+             * @description What the evidence doesn't settle and an investigator should find out.
+             * @default []
+             */
+            open_questions?: string[];
+        };
         /** SearchHit */
         SearchHit: {
             /** Chunk Id */
@@ -2574,6 +2955,102 @@ export interface components {
             passage: string;
             /** Score */
             score: number;
+        };
+        /** Setting */
+        Setting: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "road" | "indoor" | "outdoor";
+            /**
+             * Description
+             * @description One sentence on the place.
+             */
+            description: string;
+            /**
+             * Address
+             * @default
+             */
+            address?: string;
+            /**
+             * Time Of Day
+             * @default day
+             * @enum {string}
+             */
+            time_of_day?: "day" | "night" | "dawn" | "dusk";
+            /**
+             * Drive Side
+             * @description The side of the road traffic keeps to.
+             * @default left
+             * @enum {string}
+             */
+            drive_side?: "left" | "right";
+            /**
+             * Roads
+             * @description For road scenes: one road, or two at right angles meeting at the origin.
+             * @default []
+             */
+            roads?: components["schemas"]["Road"][];
+            /**
+             * @default {
+             *       "signals": false,
+             *       "zebra_crossings": false
+             *     }
+             */
+            junction?: components["schemas"]["Junction"];
+            /**
+             * Rooms
+             * @description For indoor scenes.
+             * @default []
+             */
+            rooms?: components["schemas"]["Room"][];
+            /**
+             * Landmarks
+             * @default []
+             */
+            landmarks?: components["schemas"]["Landmark"][];
+        };
+        /** Source */
+        Source: {
+            /**
+             * Evidence Id
+             * @description The ID of the evidence item.
+             */
+            evidence_id: number;
+            /**
+             * Passage
+             * @description The shortest sentence or clause of that evidence's text that supports this, copied verbatim.
+             * @default
+             */
+            passage?: string;
+        };
+        /** Stage */
+        Stage: {
+            /**
+             * Label
+             * @description Two or three words, such as "Approach", "Impact" or "Rest positions".
+             */
+            label: string;
+            /**
+             * Time
+             * @description Local time, such as 21:40:12, or empty if unknown.
+             * @default
+             */
+            time?: string;
+            /**
+             * Description
+             * @description One or two sentences on what happens at this moment.
+             */
+            description: string;
+            /**
+             * Event Ids
+             * @description IDs of the case's events at this moment.
+             * @default []
+             */
+            event_ids?: number[];
+            /** Placements */
+            placements: components["schemas"]["Placement"][];
         };
         /** StageCreate */
         StageCreate: {
@@ -2602,6 +3079,34 @@ export interface components {
             /** Scene Objects */
             scene_objects: components["schemas"]["SceneObject"][];
         };
+        /**
+         * Trace
+         * @description Physical evidence recorded at the scene, such as skid marks or blood.
+         */
+        Trace: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "skid_marks" | "debris" | "glass" | "blood" | "impact_point" | "fire_origin" | "burn_area" | "forced_entry" | "footprints" | "evidence_marker";
+            /** Label */
+            label: string;
+            /** @description Where it is, or where it starts for skid marks and footprints. */
+            position: components["schemas"]["Point"];
+            /** @description Where skid marks or footprints end. */
+            end?: components["schemas"]["Point"] | null;
+            /**
+             * Radius M
+             * @description For areas such as debris fields, blood pools and burn areas, up to 30 m.
+             * @default 0
+             */
+            radius_m?: number;
+            /**
+             * Sources
+             * @default []
+             */
+            sources?: components["schemas"]["Source"][];
+        };
         /** ValidationError */
         ValidationError: {
             /** Location */
@@ -2629,6 +3134,24 @@ export interface components {
              * Format: date-time
              */
             verified_at: string;
+        };
+        /** Viewpoint */
+        Viewpoint: {
+            /**
+             * Label
+             * @description Such as "Anita Desai's view".
+             */
+            label: string;
+            /** Person Id */
+            person_id?: number | null;
+            position: components["schemas"]["Point"];
+            /**
+             * Eye Height M
+             * @description 0.3 to 40 m.
+             * @default 1.6
+             */
+            eye_height_m?: number;
+            looks_at: components["schemas"]["Point"];
         };
     };
     responses: never;
@@ -4144,6 +4667,43 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Reconstruction"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    generate_reconstruction_api_cases__case_id__reconstructions_generate_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-investigator-id"?: number | null;
+            };
+            path: {
+                case_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["SceneGenerateRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SceneGeneration"];
                 };
             };
             /** @description Validation Error */

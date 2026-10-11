@@ -290,7 +290,7 @@ export function place(geo, x, y, z, rx = 0, ry = 0, rz = 0) {
   return geo;
 }
 
-/** Mirrors a geometry across the z = 0 plane, keeping faces outward. */
+/** Mirrors a geometry across the z = 0 plane, turning each face back so it still points outward. */
 export function mirrorZ(geo) {
   const g = geo.clone();
   g.scale(1, 1, -1);
@@ -299,7 +299,230 @@ export function mirrorZ(geo) {
     const a = index.array;
     for (let i = 0; i < a.length; i += 3) [a[i + 1], a[i + 2]] = [a[i + 2], a[i + 1]];
     index.needsUpdate = true;
+  } else {
+    // Unindexed (boxes, extrusions): swap the second and third vertex of every triangle.
+    for (const attr of Object.values(g.attributes)) {
+      const n = attr.itemSize;
+      const a = attr.array;
+      for (let v = 0; v + 2 < attr.count; v += 3) {
+        for (let k = 0; k < n; k += 1) [a[(v + 1) * n + k], a[(v + 2) * n + k]] = [a[(v + 2) * n + k], a[(v + 1) * n + k]];
+      }
+      attr.needsUpdate = true;
+    }
   }
   g.computeVertexNormals();
   return g;
+}
+
+/**
+ * Skins a stack of closed rings (arrays of THREE.Vector3, all the same length) into surfaces.
+ * material(s, i) names the material of the quad between rings s and s + 1 that starts at point i,
+ * or returns null to leave a hole. Faces point outward when each ring runs clockwise seen from the
+ * end the stack grows towards. capStart / capEnd close the first and last rings with a fan.
+ * Returns { [material]: BufferGeometry }.
+ */
+export function skin(rings, material, { capStart = null, capEnd = null } = {}) {
+  const n = rings[0].length;
+  const out = {};
+  const get = (m) => (out[m] ??= { pos: [], idx: [], map: new Map() });
+  const vert = (g, s, i) => {
+    const key = s * n + i;
+    let v = g.map.get(key);
+    if (v === undefined) {
+      const p = rings[s][i];
+      v = g.pos.length / 3;
+      g.pos.push(p.x, p.y, p.z);
+      g.map.set(key, v);
+    }
+    return v;
+  };
+  for (let s = 0; s < rings.length - 1; s += 1) {
+    for (let i = 0; i < n; i += 1) {
+      const m = material(s, i);
+      if (!m) continue;
+      const j = (i + 1) % n;
+      const g = get(m);
+      const a = vert(g, s, i);
+      const b = vert(g, s, j);
+      const c = vert(g, s + 1, j);
+      const d = vert(g, s + 1, i);
+      g.idx.push(a, c, b, a, d, c);
+    }
+  }
+  const cap = (s, m, flip) => {
+    if (!m) return;
+    const g = get(`${m}#cap${s}`);
+    const ring = rings[s];
+    const c = ring.reduce((acc, p) => acc.add(p), new THREE.Vector3()).divideScalar(n);
+    const base = g.pos.length / 3;
+    g.pos.push(c.x, c.y, c.z);
+    ring.forEach((p) => g.pos.push(p.x, p.y, p.z));
+    for (let i = 0; i < n; i += 1) {
+      const a = base + 1 + i;
+      const b = base + 1 + ((i + 1) % n);
+      if (flip) g.idx.push(base, b, a);
+      else g.idx.push(base, a, b);
+    }
+  };
+  cap(0, capStart, false);
+  cap(rings.length - 1, capEnd, true);
+  const result = {};
+  for (const [key, g] of Object.entries(out)) {
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(g.pos, 3));
+    geo.setIndex(g.idx);
+    geo.computeVertexNormals();
+    (result[key.split('#')[0]] ??= []).push(geo);
+  }
+  return Object.fromEntries(Object.entries(result).map(([m, gs]) => [m, gs.length === 1 ? gs[0] : mergeGeometries(gs)]));
+}
+
+/** A cylinder of radius r (r1 at the far end) from a to b, both THREE.Vector3 or [x, y, z]. */
+export function rod(a, b, r, { r1 = r, radial = 8, caps = true } = {}) {
+  const p = Array.isArray(a) ? new THREE.Vector3(...a) : a.clone();
+  const q = Array.isArray(b) ? new THREE.Vector3(...b) : b.clone();
+  const dir = q.clone().sub(p);
+  const len = dir.length();
+  const g = new THREE.CylinderGeometry(r1, r, len, radial, 1, !caps);
+  g.deleteAttribute('uv');
+  g.translate(0, len / 2, 0);
+  g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize()));
+  g.translate(p.x, p.y, p.z);
+  return g;
+}
+
+/** A tube of radius r along a smooth curve through the given points ([x, y, z] or THREE.Vector3). */
+export function tube(points, r, { segments = 32, radial = 8, closed = false, tension = 0.5 } = {}) {
+  const pts = points.map((p) => (Array.isArray(p) ? new THREE.Vector3(...p) : p));
+  const path = new THREE.CatmullRomCurve3(pts, closed, 'catmullrom', tension);
+  const g = new THREE.TubeGeometry(path, segments, r, radial, closed);
+  g.deleteAttribute('uv');
+  return g;
+}
+
+/** The geometry with an index, so mirrorZ can turn its faces back out (box and ExtrudeGeometry have none). */
+export const indexed = (geo) => (geo.index ? geo : mergeVertices(geo));
+
+/**
+ * A bus or lorry wheel on an axle along z, outer face at +z: a tyre on a pressed-steel wheel with ten
+ * wheel nuts and a hub (a domed cap at the front, set in at the rear), with a brake drum behind.
+ * twin > 0 makes twin rear tyres, each twin from the hub. Returns parts by material.
+ */
+export function heavyWheel(radius, width, rimRadius, { twin = 0, grooves = 5, segments = 48 } = {}) {
+  const depth = width * 0.85;
+  const w = steelWheel(rimRadius, depth, { holes: 8, segments });
+  const plain = (g) => {
+    if (g.getAttribute('uv')) g.deleteAttribute('uv');
+    return g.index ? g.toNonIndexed() : g;
+  };
+  const studs = [];
+  for (let k = 0; k < 10; k += 1) {
+    const a = (k / 10) * Math.PI * 2;
+    studs.push(place(new THREE.CylinderGeometry(0.014, 0.014, 0.03, 6), Math.cos(a) * 0.115, Math.sin(a) * 0.115, depth / 2 - 0.02, Math.PI / 2, 0, 0));
+  }
+  const hub = twin
+    ? place(new THREE.CylinderGeometry(0.075, 0.09, 0.06, 20), 0, 0, depth / 2 - 0.01, Math.PI / 2, 0, 0)
+    : place(new THREE.CylinderGeometry(0.045, 0.085, 0.11, 20), 0, 0, depth / 2 + 0.01, Math.PI / 2, 0, 0);
+  const drum = place(new THREE.CylinderGeometry(rimRadius * 0.74, rimRadius * 0.74, 0.16, 24), 0, 0, -0.04, Math.PI / 2, 0, 0);
+  const t = tyre(radius, width, rimRadius + 0.006, { grooves, segments });
+  const chrome = mergeGeometries([w.chrome, hub, ...studs].map(plain));
+  if (!twin) return { tyre: t, rim: w.rim, rim_inner: w.rimInner, chrome, brake: drum };
+  // Twin tyres: the outer wheel's face shows, the inner one sits behind it.
+  const shift = (g, dz) => g.clone().translate(0, 0, dz);
+  return {
+    tyre: mergeGeometries([shift(t, twin), shift(t, -twin)]),
+    rim: shift(w.rim, twin),
+    rim_inner: mergeGeometries([shift(w.rimInner, twin), shift(w.rimInner, -twin)]),
+    chrome: shift(chrome, twin),
+    brake: drum
+  };
+}
+
+/** A two-wheeler's round-shouldered tyre on an axle along z: radius to the crown, section width, on a rim of rimRadius. */
+export function roundTyre(radius, section, rimRadius, { segments = 48 } = {}) {
+  const h = radius - rimRadius;
+  const rc = rimRadius + h * 0.42;
+  const pts = [new THREE.Vector2(rimRadius + 0.003, -section * 0.34)];
+  const n = 18;
+  for (let k = 0; k <= n; k += 1) {
+    const a = -0.42 + ((Math.PI + 0.84) * k) / n;
+    pts.push(new THREE.Vector2(rc + Math.sin(a) * (radius - rc), -Math.cos(a) * section * 0.5));
+  }
+  pts.push(new THREE.Vector2(rimRadius + 0.003, section * 0.34));
+  const geo = new THREE.LatheGeometry(pts, segments);
+  geo.rotateX(Math.PI / 2);
+  geo.deleteAttribute('uv');
+  return geo;
+}
+
+/**
+ * A wire-spoked wheel on an axle along z: a box-section rim, a hub with two flanges, and spokes laced
+ * tangentially from alternate flanges. Returns { rim, spokes, hub }.
+ */
+export function spokedWheel(rimRadius, rimWidth, { spokes = 36, hubRadius = 0.05, hubWidth = 0.1, flange = 0.06, spokeRadius = 0.0018, cross = 0.55, segments = 48 } = {}) {
+  const w = rimWidth / 2;
+  const profile = [
+    [rimRadius - 0.016, w - 0.004], [rimRadius - 0.016, -w + 0.004], [rimRadius - 0.004, -w], [rimRadius + 0.008, -w],
+    [rimRadius + 0.008, w], [rimRadius - 0.004, w], [rimRadius - 0.016, w - 0.004]
+  ].map(([r, y]) => new THREE.Vector2(r, y));
+  const rim = new THREE.LatheGeometry(profile, segments);
+  rim.rotateX(Math.PI / 2);
+  rim.deleteAttribute('uv');
+
+  const zf = hubWidth / 2 - 0.006;
+  const parts = [];
+  const half = spokes / 2;
+  for (const s of [1, -1]) {
+    for (let j = 0; j < half; j += 1) {
+      const a = (j / half) * Math.PI * 2 + (s > 0 ? 0 : Math.PI / half);
+      const dir = j % 2 ? 1 : -1;
+      const hubPt = new THREE.Vector3(Math.cos(a) * flange, Math.sin(a) * flange, s * zf);
+      const b = a + dir * cross;
+      const rimPt = new THREE.Vector3(Math.cos(b) * (rimRadius - 0.015), Math.sin(b) * (rimRadius - 0.015), s * 0.004);
+      parts.push(rod(hubPt, rimPt, spokeRadius, { radial: 4, caps: false }));
+    }
+  }
+  const spokesGeo = mergeGeometries(parts);
+  const barrel = new THREE.CylinderGeometry(hubRadius, hubRadius, hubWidth - 0.02, 24);
+  const flanges = [1, -1].map((s) => new THREE.CylinderGeometry(flange + 0.008, flange + 0.008, 0.006, 24).translate(0, s * zf, 0));
+  const hub = mergeGeometries([barrel, ...flanges].map((g) => {
+    g.deleteAttribute('uv');
+    return g;
+  }));
+  hub.rotateX(Math.PI / 2);
+  return { rim, spokes: spokesGeo, hub };
+}
+
+/** A coil spring of wire radius r from a to b, coil radius rc and the given number of turns. */
+export function helix(a, b, rc, turns, r, { segments = 0, radial = 6 } = {}) {
+  const p = Array.isArray(a) ? new THREE.Vector3(...a) : a.clone();
+  const q = Array.isArray(b) ? new THREE.Vector3(...b) : b.clone();
+  const axis = q.clone().sub(p);
+  const len = axis.length();
+  axis.normalize();
+  const u = new THREE.Vector3(0, 0, 1).cross(axis);
+  if (u.lengthSq() < 1e-6) u.set(1, 0, 0);
+  u.normalize();
+  const v = axis.clone().cross(u);
+  const pts = [];
+  const n = Math.max(turns * 12, 8);
+  for (let k = 0; k <= n; k += 1) {
+    const t = k / n;
+    const ang = t * turns * Math.PI * 2;
+    pts.push(p.clone().addScaledVector(axis, t * len).addScaledVector(u, Math.cos(ang) * rc).addScaledVector(v, Math.sin(ang) * rc));
+  }
+  return tube(pts, r, { segments: segments || n * 2, radial });
+}
+
+/** A thin shell visible from both sides with a single-sided material: the geometry plus a copy with its faces reversed. */
+export function doubleSided(geo) {
+  const front = indexed(geo.clone());
+  const back = front.clone();
+  const a = back.getIndex().array;
+  for (let i = 0; i < a.length; i += 3) [a[i + 1], a[i + 2]] = [a[i + 2], a[i + 1]];
+  back.getIndex().needsUpdate = true;
+  const n = back.getAttribute('normal');
+  if (n) for (let i = 0; i < n.array.length; i += 1) n.array[i] = -n.array[i];
+  for (const g of [front, back]) for (const key of Object.keys(g.attributes)) if (key !== 'position' && key !== 'normal') g.deleteAttribute(key);
+  return mergeGeometries([front, back]);
 }

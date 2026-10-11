@@ -971,6 +971,7 @@ export const buildRoutes = () => {
     const rec = db.reconstructions.find((x) => x.id === id) ?? notFound('Reconstruction');
     return {
       ...rec,
+      scene: null,
       stages: db.stages
         .filter((s) => s.reconstruction_id === id)
         .sort((a, b) => a.stage_order - b.stage_order)
@@ -994,11 +995,20 @@ export const buildRoutes = () => {
       scenario: body.scenario,
       version: 1,
       assumptions: body.assumptions ?? '',
-      scene_file: body.scene_file ?? null
+      scene_file: body.scene_file ?? null,
+      origin: 'investigator' as const
     };
     db.reconstructions.push(rec);
     addAudit(db, req.actorId, 'modified', 'reconstruction', rec.id, { created: true });
     return created(rec);
+  });
+
+  // Generating needs the backend's planners (Gemini or the rules), which the mock doesn't have.
+  r.on('POST', '/cases/:id/reconstructions/generate', (req) => {
+    findCase(req.db, idParam(req));
+    throw new MockHttpError(503, {
+      detail: 'Generating a reconstruction from the evidence needs the backend. Run it with `npm run dev` and the API on port 8000.'
+    });
   });
 
   r.on('GET', '/reconstructions/:id', (req) => ok(reconstructionDetail(req.db, idParam(req))));

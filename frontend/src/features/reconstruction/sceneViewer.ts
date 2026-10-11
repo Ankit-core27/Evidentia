@@ -2,8 +2,10 @@
 //
 // The Reconstruction module renders a scene viewer with these props: the 3D viewer
 // (features/crime-scene/case-scene/CaseSceneViewer) or the top-down 2D plan
-// (SchematicSceneView). Viewers save annotations with useCreateAnnotation and placements
-// with useSaveSceneObjects (hooks/useReconstruction.ts).
+// (SchematicSceneView). A reconstruction's layout is its generated `scene` (made from the
+// case's evidence by POST /api/cases/{id}/reconstructions/generate) or its authored
+// `scene_file`. Viewers save annotations with useCreateAnnotation and placements with
+// useSaveSceneObjects (hooks/useReconstruction.ts).
 import { Id, ReconstructionDetail } from '@/types/api';
 
 export interface SceneViewerProps {

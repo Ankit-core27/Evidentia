@@ -1,7 +1,9 @@
 import React, { useLayoutEffect, useMemo, useRef } from 'react';
+import { Html } from '@react-three/drei';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { SceneFile, StaticItem } from './sceneFile';
+import { CatalogueModel } from './Props';
+import { EvidenceRef, SceneFile, StaticItem, modelSpec } from './sceneFile';
 import { plasterTexture, shutterTexture, signTexture } from './textures';
 
 type Item<K extends StaticItem['kind']> = Extract<StaticItem, { kind: K }>;
@@ -378,8 +380,85 @@ const ShopSign: React.FC<{ face: Face; base: number; text: string }> = ({ face, 
   );
 };
 
-/** Everything static in the scene except the road surface. */
-export const StreetFurniture: React.FC<{ scene: SceneFile; night: boolean; focus: [number, number] }> = ({ scene, night, focus }) => {
+// ---------------------------------------------------------------------------
+// A bus shelter: steel frame, sloped roof, back panel, bench and the stop's name.
+
+const shelterGeometry = (() => {
+  const posts = merge([-1.7, 1.7].flatMap((x) => [cyl(0.04, 0.04, 2.5, x, 1.25, -0.55), cyl(0.04, 0.04, 2.3, x, 1.15, 0.6)]));
+  const roof = (() => {
+    const g = new THREE.BoxGeometry(3.8, 0.06, 1.75);
+    g.rotateX(0.07);
+    g.translate(0, 2.47, 0);
+    return g;
+  })();
+  const bench = merge([box(3.0, 0.05, 0.38, 0, 0.46, -0.3), cyl(0.03, 0.03, 0.44, -1.2, 0.22, -0.3), cyl(0.03, 0.03, 0.44, 1.2, 0.22, -0.3)]);
+  return { posts, roof, bench, back: box(3.4, 1.7, 0.02, 0, 1.25, -0.62), sign: box(1.6, 0.36, 0.05, 0, 2.75, 0.55) };
+})();
+
+const BusStop: React.FC<{ item: Item<'bus-stop'> }> = ({ item }) => {
+  const signMat = useMemo(
+    () => new THREE.MeshStandardMaterial({ map: signTexture((item.label ?? 'BUS STOP').toUpperCase(), '#1f5aa6'), roughness: 0.5 }),
+    [item.label]
+  );
+  // The shelter's open side (+z in its own frame) faces the road along its heading.
+  return (
+    <group position={item.position} rotation-y={item.heading + Math.PI / 2} name={item.label ?? 'bus stop'}>
+      <mesh geometry={shelterGeometry.posts} material={MATERIALS.galvanised} castShadow />
+      <mesh geometry={shelterGeometry.roof} material={MATERIALS.galvanised} castShadow receiveShadow />
+      <mesh geometry={shelterGeometry.bench} material={MATERIALS.galvanised} castShadow />
+      <mesh geometry={shelterGeometry.back} material={MATERIALS.glass} />
+      <mesh geometry={shelterGeometry.sign} material={signMat} castShadow />
+    </group>
+  );
+};
+
+const Wall: React.FC<{ item: Item<'wall'> }> = ({ item }) => {
+  const [x0, , z0] = item.from;
+  const [x1, , z1] = item.to;
+  const len = Math.hypot(x1 - x0, z1 - z0);
+  const material = useMemo(() => new THREE.MeshStandardMaterial({ color: '#d9d2c4', map: plasterTexture(), roughness: 0.95 }), []);
+  return (
+    <mesh position={[(x0 + x1) / 2, item.from[1] + item.height / 2, (z0 + z1) / 2]} rotation-y={Math.atan2(-(z1 - z0), x1 - x0)} material={material} castShadow receiveShadow>
+      <boxGeometry args={[len, item.height, 0.23]} />
+    </mesh>
+  );
+};
+
+const PlacedModel: React.FC<{
+  item: Item<'model'>;
+  scene: SceneFile;
+  index: number;
+  showLabels: boolean;
+  renderEvidence: (refs: EvidenceRef[], label: string) => React.ReactNode;
+}> = ({ item, scene, index, showLabels, renderEvidence }) => {
+  const spec = modelSpec(scene, item.model);
+  if (!spec) return null;
+  const height = (item.size ?? spec.size)[2] + (spec.elevation ?? 0);
+  // Label what the evidence names; illustrative furnishing stays quiet.
+  const labelled = showLabels && !item.illustrative && !!item.label;
+  return (
+    <group position={item.position} rotation={item.rotation ?? [0, 0, 0]} name={item.label ?? item.model}>
+      <CatalogueModel spec={spec} size={item.size} seed={index + 1} />
+      {labelled && (
+        <Html position={[0, height + 0.5, 0]} center zIndexRange={[16, 0]} style={{ pointerEvents: 'none' }}>
+          <div className="flex items-center gap-1.5 whitespace-nowrap rounded bg-canvas/85 px-1.5 py-0.5 text-2xs text-ink shadow ring-1 ring-line-strong backdrop-blur-sm">
+            <span>{item.label}</span>
+            {item.evidence && item.evidence.length > 0 && renderEvidence(item.evidence, item.label!)}
+          </div>
+        </Html>
+      )}
+    </group>
+  );
+};
+
+/** Everything static in the scene except the road surface, rooms and traces. */
+export const StreetFurniture: React.FC<{
+  scene: SceneFile;
+  night: boolean;
+  focus: [number, number];
+  showLabels: boolean;
+  renderEvidence: (refs: EvidenceRef[], label: string) => React.ReactNode;
+}> = ({ scene, night, focus, showLabels, renderEvidence }) => {
   const trees = scene.static.filter((s): s is Item<'tree'> => s.kind === 'tree');
   // Only the lights nearest the action cast light, to keep the night scene fast.
   const lights = scene.static.filter((s): s is Item<'streetlight'> => s.kind === 'streetlight');
@@ -390,6 +469,10 @@ export const StreetFurniture: React.FC<{ scene: SceneFile; night: boolean; focus
         if (item.kind === 'signal') return <Signal key={i} item={item} />;
         if (item.kind === 'streetlight') return <StreetLight key={i} item={item} night={night} lit={litSet.has(item)} />;
         if (item.kind === 'building') return <Building key={i} item={item} scene={scene} index={i} night={night} />;
+        if (item.kind === 'bus-stop') return <BusStop key={i} item={item} />;
+        if (item.kind === 'wall') return <Wall key={i} item={item} />;
+        if (item.kind === 'model')
+          return <PlacedModel key={i} item={item} scene={scene} index={i} showLabels={showLabels} renderEvidence={renderEvidence} />;
         return null;
       })}
       <Trees items={trees} />
