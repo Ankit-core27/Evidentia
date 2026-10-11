@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Pause, Play, Plus, Sparkles } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Maximize2, Minimize2, Pause, Play, Plus, Sparkles } from 'lucide-react';
 import { PageHeader, SectionHeader } from '@/components/shared/PageHeader';
 import { EmptyState, ErrorState, LoadingState } from '@/components/shared/QueryState';
 import { Tabs } from '@/components/shared/Segmented';
@@ -8,6 +8,7 @@ import { linkClass, primaryButtonClass, secondaryButtonClass, smallButtonClass }
 import { useReconstruction, useReconstructions } from '@/hooks/useReconstruction';
 import { casePath } from '@/lib/caseModules';
 import { formatTimeRange } from '@/lib/format';
+import { useFullscreenElement } from '@/hooks/useFullscreen';
 import { useStageStore } from '@/stores/stage';
 import { CaseWorkspace } from '@/types/api';
 import { CompareScenarios } from './CompareScenarios';
@@ -15,14 +16,15 @@ import { GenerateDialog, ScenarioDialog, StageDialog } from './ReconstructionDia
 import { SceneScriptPanel } from './SceneScriptPanel';
 import { SceneObjectPanel } from './SceneObjectPanel';
 import { SchematicSceneView } from './SchematicSceneView';
+import { SceneFullscreenContext } from './fullscreen';
+import { usePlaybackStore } from './playback';
+import { StageTimeSlider } from './StageTimeSlider';
 
+/** How long playback takes to go from one stage to the next. */
 const PLAYBACK_MS = 2500;
-// The 3D viewers load only when the tab opens, so three.js stays out of the main bundle.
+// The 3D viewer loads only when the tab opens, so three.js stays out of the main bundle.
 const CaseSceneViewer = React.lazy(() =>
   import('@/features/crime-scene/case-scene/CaseSceneViewer').then((module) => ({ default: module.CaseSceneViewer }))
-);
-const CrimeSceneDemo = React.lazy(() =>
-  import('@/features/crime-scene/CrimeSceneDemo').then((module) => ({ default: module.CrimeSceneDemo }))
 );
 
 /** Falls back to the 2D plan when WebGL or a 3D asset fails. */
@@ -55,8 +57,17 @@ export const ReconstructionModule: React.FC<{ workspace: CaseWorkspace }> = ({ w
   const detailQuery = useReconstruction(reconstructionId);
   const [mode, setMode] = useState<'stages' | 'compare'>('stages');
   const [dialog, setDialog] = useState<'generate' | 'scenario' | 'stage' | null>(null);
-  const [playing, setPlaying] = useState(false);
-  const [viewerKind, setViewerKind] = useState<'3d' | 'plan' | 'demo'>('3d');
+  const [viewerKind, setViewerKind] = useState<'3d' | 'plan'>('3d');
+  const { playing, setPlaying, setPosition } = usePlaybackStore();
+  const roundedPosition = usePlaybackStore((s) => Math.round(s.position));
+  const workspaceRef = useRef<HTMLDivElement>(null);
+  const fullscreenElement = useFullscreenElement();
+  const isFullscreen = !!fullscreenElement && fullscreenElement === workspaceRef.current;
+  const toggleFullscreen = useCallback(() => {
+    if (document.fullscreenElement) void document.exitFullscreen();
+    else void workspaceRef.current?.requestFullscreen?.();
+  }, []);
+  const fullscreen = useMemo(() => ({ active: isFullscreen, toggle: toggleFullscreen }), [isFullscreen, toggleFullscreen]);
 
   const scenarios = listQuery.data ?? [];
   const detail = detailQuery.data?.case_id === caseId ? detailQuery.data : undefined;
@@ -74,16 +85,53 @@ export const ReconstructionModule: React.FC<{ workspace: CaseWorkspace }> = ({ w
     if (detail && !detail.stages.some((s) => s.id === stageId)) setStage(detail.stages[0]?.id ?? null);
   }, [detail, stageId, setStage]);
 
-  // Playback steps through the stages, then stops on the last one.
+  // The slider's playhead and the active stage follow each other: the stage is the one
+  // nearest the playhead, and a stage picked elsewhere (the timeline, a stage button)
+  // moves the playhead to it.
+  useEffect(() => {
+    if (stageIndex < 0) return;
+    const { position } = usePlaybackStore.getState();
+    if (Math.round(position) !== stageIndex) setPosition(stageIndex);
+  }, [stageIndex, setPosition]);
+  useEffect(() => {
+    const next = stages[Math.min(Math.max(roundedPosition, 0), stages.length - 1)];
+    if (next && next.id !== useStageStore.getState().stageId) setStage(next.id);
+    // Only the playhead drives this; stage changes are synced by the effect above.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roundedPosition]);
+
+  // Playback moves the playhead smoothly through the stages, then stops on the last one.
   useEffect(() => {
     if (!playing) return;
-    if (stageIndex < 0 || stageIndex >= stages.length - 1) {
+    if (stages.length < 2) {
       setPlaying(false);
       return;
     }
-    const timer = setTimeout(() => setStage(stages[stageIndex + 1].id), PLAYBACK_MS);
-    return () => clearTimeout(timer);
-  }, [playing, stageIndex, stages, setStage]);
+    let frame = 0;
+    let last = performance.now();
+    const step = (now: number) => {
+      const { position } = usePlaybackStore.getState();
+      const next = Math.min(position + (now - last) / PLAYBACK_MS, stages.length - 1);
+      last = now;
+      setPosition(next);
+      if (next >= stages.length - 1) setPlaying(false);
+      else frame = requestAnimationFrame(step);
+    };
+    frame = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(frame);
+  }, [playing, stages.length, setPlaying, setPosition]);
+  // Stop playing when the scenario changes or the panel closes.
+  useEffect(() => () => setPlaying(false), [reconstructionId, setPlaying]);
+
+  const togglePlay = () => {
+    if (!playing && usePlaybackStore.getState().position >= stages.length - 1) setPosition(0);
+    setPlaying(!playing);
+  };
+  const goToStage = (index: number) => {
+    setPlaying(false);
+    setPosition(index);
+    setStage(stages[index].id);
+  };
 
   if (listQuery.isPending) return <LoadingState label="Loading reconstructions…" />;
   if (listQuery.isError) return <ErrorState error={listQuery.error} onRetry={() => listQuery.refetch()} />;
@@ -173,137 +221,154 @@ export const ReconstructionModule: React.FC<{ workspace: CaseWorkspace }> = ({ w
                 </div>
               )}
 
-              <div className="flex flex-wrap items-center gap-1.5" aria-label="Stages">
-                <button
-                  onClick={() => stageIndex > 0 && setStage(stages[stageIndex - 1].id)}
-                  disabled={stageIndex <= 0}
-                  className={`${smallButtonClass} px-1.5`}
-                  aria-label="Previous stage"
+              {/* The stage workspace. Full screen takes all of it, so the stage bar, time
+                  slider, selected object, events and evidence stay in reach. */}
+              <SceneFullscreenContext.Provider value={fullscreen}>
+                <div
+                  ref={workspaceRef}
+                  className={isFullscreen ? 'flex h-full flex-col gap-3 overflow-hidden bg-canvas p-3' : 'space-y-4'}
+                  data-testid="stage-workspace"
                 >
-                  <ChevronLeft className="size-3.5" />
-                </button>
-                {stages.map((s) => {
-                  const active = s.id === stageId;
-                  return (
+                  <div className="flex flex-wrap items-center gap-1.5" aria-label="Stages">
+                    {isFullscreen && (
+                      <span className="mr-2 min-w-0 max-w-xs truncate text-body font-medium text-ink" title={detail.scenario}>
+                        {detail.scenario}
+                      </span>
+                    )}
                     <button
-                      key={s.id}
-                      onClick={() => {
-                        setPlaying(false);
-                        setStage(s.id);
-                      }}
-                      aria-pressed={active}
-                      className={`h-7 px-2.5 rounded border text-xs whitespace-nowrap transition-colors ${
-                        active ? 'border-accent bg-accent/15 text-ink font-medium' : 'border-line-strong text-ink-muted hover:text-ink'
-                      }`}
+                      onClick={() => stageIndex > 0 && goToStage(stageIndex - 1)}
+                      disabled={stageIndex <= 0}
+                      className={`${smallButtonClass} px-1.5`}
+                      aria-label="Previous stage"
                     >
-                      <span className="font-mono text-2xs mr-1.5 opacity-70">{s.stage_order}</span>
-                      {s.label}
+                      <ChevronLeft className="size-3.5" />
                     </button>
-                  );
-                })}
-                <button
-                  onClick={() => stageIndex < stages.length - 1 && setStage(stages[stageIndex + 1].id)}
-                  disabled={stageIndex < 0 || stageIndex >= stages.length - 1}
-                  className={`${smallButtonClass} px-1.5`}
-                  aria-label="Next stage"
-                >
-                  <ChevronRight className="size-3.5" />
-                </button>
-                <button
-                  onClick={() => {
-                    if (!playing && stageIndex === stages.length - 1 && stages.length) setStage(stages[0].id);
-                    setPlaying(!playing);
-                  }}
-                  disabled={stages.length < 2}
-                  className={smallButtonClass}
-                >
-                  {playing ? <Pause className="size-3.5" /> : <Play className="size-3.5" />} {playing ? 'Pause' : 'Play stages'}
-                </button>
-                <button onClick={() => setDialog('stage')} className={`${smallButtonClass} ml-auto`}>
-                  <Plus className="size-3" aria-hidden /> Add stage
-                </button>
-              </div>
-
-              {stages.length === 0 && <EmptyState title="This scenario has no stages yet" message="Add a stage and choose its events." />}
-              {stage && <StageNote reconstruction={detail} stageOrder={stage.stage_order} />}
-
-              {stage && (
-                <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 items-start">
-                  {/* Scene host: the 3D track's viewer mounts here (see sceneViewer.ts). */}
-                  <div className="xl:col-span-2 space-y-2">
-                    <Tabs
-                      label="Scene viewer"
-                      value={viewerKind}
-                      onChange={setViewerKind}
-                      options={[
-                        { value: '3d', label: '3D scene' },
-                        { value: 'plan', label: 'Plan' },
-                        { value: 'demo', label: 'Engine demo' }
-                      ]}
-                    />
-                    <div className="h-[420px] sm:h-[560px] rounded-md overflow-hidden border border-line">
-                      {viewerKind === '3d' && (
-                        <SceneErrorBoundary fallback={plan}>
-                          <React.Suspense fallback={<LoadingState label="Loading 3D scene…" />}>
-                            <CaseSceneViewer
-                              reconstruction={detail}
-                              stageId={stage.id}
-                              selectedSceneObjectId={sceneObjectId}
-                              onSelectSceneObject={selectSceneObject}
-                            />
-                          </React.Suspense>
-                        </SceneErrorBoundary>
-                      )}
-                      {viewerKind === 'plan' && plan}
-                      {viewerKind === 'demo' && (
-                        <React.Suspense fallback={<LoadingState label="Loading 3D scene…" />}>
-                          <CrimeSceneDemo />
-                        </React.Suspense>
+                    {stages.map((s, i) => {
+                      const active = s.id === stageId;
+                      return (
+                        <button
+                          key={s.id}
+                          onClick={() => goToStage(i)}
+                          aria-pressed={active}
+                          className={`h-7 px-2.5 rounded border text-xs whitespace-nowrap transition-colors ${
+                            active ? 'border-accent bg-accent/15 text-ink font-medium' : 'border-line-strong text-ink-muted hover:text-ink'
+                          }`}
+                        >
+                          <span className="font-mono text-2xs mr-1.5 opacity-70">{s.stage_order}</span>
+                          {s.label}
+                        </button>
+                      );
+                    })}
+                    <button
+                      onClick={() => stageIndex < stages.length - 1 && goToStage(stageIndex + 1)}
+                      disabled={stageIndex < 0 || stageIndex >= stages.length - 1}
+                      className={`${smallButtonClass} px-1.5`}
+                      aria-label="Next stage"
+                    >
+                      <ChevronRight className="size-3.5" />
+                    </button>
+                    <button onClick={togglePlay} disabled={stages.length < 2} className={smallButtonClass}>
+                      {playing ? <Pause className="size-3.5" /> : <Play className="size-3.5" />} {playing ? 'Pause' : 'Play stages'}
+                    </button>
+                    <div className="ml-auto flex items-center gap-1.5">
+                      <button onClick={() => setDialog('stage')} className={smallButtonClass}>
+                        <Plus className="size-3" aria-hidden /> Add stage
+                      </button>
+                      {stage && (
+                        <button onClick={toggleFullscreen} className={smallButtonClass} aria-pressed={isFullscreen}>
+                          {isFullscreen ? <Minimize2 className="size-3.5" aria-hidden /> : <Maximize2 className="size-3.5" aria-hidden />}
+                          {isFullscreen ? 'Exit full screen' : 'Full screen'}
+                        </button>
                       )}
                     </div>
                   </div>
-                  <div className="space-y-5">
-                    {sceneObject && <SceneObjectPanel workspace={workspace} sceneObject={sceneObject} onClose={() => selectSceneObject(null)} />}
-                    <section className="space-y-2" aria-label="Stage events">
-                      <SectionHeader
-                        title={`${stage.label}: events`}
-                        count={stage.event_ids.length}
-                        action={
-                          <Link to={casePath(caseId, 'timeline')} className={`text-xs ${linkClass}`}>
-                            Show in timeline
-                          </Link>
-                        }
-                      />
-                      <ul className="rounded-md border border-line divide-y divide-line">
-                        {eventsOf(stage.event_ids).map((e) => (
-                          <li key={e.id} className="px-3 py-2 text-body">
-                            <span className="block font-mono text-2xs text-ink-muted">{formatTimeRange(e.time_start, e.time_end, e.time_precision)}</span>
-                            <span className="text-ink">{e.description}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </section>
-                    <section className="space-y-2" aria-label="Scene objects">
-                      <SectionHeader title="Scene objects" count={stage.scene_objects.length} />
-                      <ul className="rounded-md border border-line divide-y divide-line">
-                        {stage.scene_objects.map((o) => (
-                          <li key={o.id}>
-                            <button
-                              onClick={() => selectSceneObject(o.id)}
-                              aria-pressed={o.id === sceneObjectId}
-                              className={`w-full text-left px-3 py-2 text-body transition-colors ${
-                                o.id === sceneObjectId ? 'bg-accent/10 text-ink' : 'text-ink-soft hover:bg-surface'
-                              }`}
-                            >
-                              {o.label}
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    </section>
-                  </div>
+
+                  {stages.length === 0 && <EmptyState title="This scenario has no stages yet" message="Add a stage and choose its events." />}
+                  {stage && !isFullscreen && <StageNote reconstruction={detail} stageOrder={stage.stage_order} />}
+
+                  {stage && (
+                    <div
+                      className={
+                        isFullscreen
+                          ? 'grid min-h-0 flex-1 grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_22rem]'
+                          : 'grid grid-cols-1 xl:grid-cols-3 gap-4 items-start'
+                      }
+                    >
+                      <div className={isFullscreen ? 'flex min-h-0 flex-col gap-2' : 'xl:col-span-2 space-y-2'}>
+                        <Tabs
+                          label="Scene viewer"
+                          value={viewerKind}
+                          onChange={setViewerKind}
+                          options={[
+                            { value: '3d', label: '3D scene' },
+                            { value: 'plan', label: 'Plan' }
+                          ]}
+                        />
+                        <div className={`rounded-md overflow-hidden border border-line ${isFullscreen ? 'min-h-0 flex-1' : 'h-[420px] sm:h-[560px]'}`}>
+                          {viewerKind === '3d' && (
+                            <SceneErrorBoundary fallback={plan}>
+                              <React.Suspense fallback={<LoadingState label="Loading 3D scene…" />}>
+                                <CaseSceneViewer
+                                  reconstruction={detail}
+                                  stageId={stage.id}
+                                  selectedSceneObjectId={sceneObjectId}
+                                  onSelectSceneObject={selectSceneObject}
+                                />
+                              </React.Suspense>
+                            </SceneErrorBoundary>
+                          )}
+                          {viewerKind === 'plan' && plan}
+                        </div>
+                        <StageTimeSlider stages={stages} events={workspace.events} notes={stageNotes(detail)} onTogglePlay={togglePlay} />
+                      </div>
+                      <div className={isFullscreen ? 'min-h-0 space-y-5 overflow-y-auto pr-1' : 'space-y-5'}>
+                        {isFullscreen && <StageNote reconstruction={detail} stageOrder={stage.stage_order} />}
+                        {sceneObject && <SceneObjectPanel workspace={workspace} sceneObject={sceneObject} onClose={() => selectSceneObject(null)} />}
+                        <section className="space-y-2" aria-label="Stage events">
+                          <SectionHeader
+                            title={`${stage.label}: events`}
+                            count={stage.event_ids.length}
+                            action={
+                              !isFullscreen && (
+                                <Link to={casePath(caseId, 'timeline')} className={`text-xs ${linkClass}`}>
+                                  Show in timeline
+                                </Link>
+                              )
+                            }
+                          />
+                          <ul className="rounded-md border border-line divide-y divide-line">
+                            {eventsOf(stage.event_ids).map((e) => (
+                              <li key={e.id} className="px-3 py-2 text-body">
+                                <span className="block font-mono text-2xs text-ink-muted">{formatTimeRange(e.time_start, e.time_end, e.time_precision)}</span>
+                                <span className="text-ink">{e.description}</span>
+                              </li>
+                            ))}
+                            {stage.event_ids.length === 0 && <li className="px-3 py-2 text-body text-ink-muted">No events linked to this stage.</li>}
+                          </ul>
+                        </section>
+                        <section className="space-y-2" aria-label="Scene objects">
+                          <SectionHeader title="Scene objects" count={stage.scene_objects.length} />
+                          <ul className="rounded-md border border-line divide-y divide-line">
+                            {stage.scene_objects.map((o) => (
+                              <li key={o.id}>
+                                <button
+                                  onClick={() => selectSceneObject(o.id)}
+                                  aria-pressed={o.id === sceneObjectId}
+                                  className={`w-full text-left px-3 py-2 text-body transition-colors ${
+                                    o.id === sceneObjectId ? 'bg-accent/10 text-ink' : 'text-ink-soft hover:bg-surface'
+                                  }`}
+                                >
+                                  {o.label}
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        </section>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              )}
+              </SceneFullscreenContext.Provider>
             </div>
           )}
         </>
@@ -336,10 +401,13 @@ export const ReconstructionModule: React.FC<{ workspace: CaseWorkspace }> = ({ w
   );
 };
 
+type StageNotes = { stage_order: number; time: string; description: string }[] | undefined;
+const stageNotes = (reconstruction: { scene?: unknown }): StageNotes =>
+  (reconstruction.scene as { stages?: StageNotes } | null)?.stages;
+
 /** What happens at a generated stage, and when, from its scene script. */
 const StageNote: React.FC<{ reconstruction: { scene?: unknown }; stageOrder: number }> = ({ reconstruction, stageOrder }) => {
-  const stages = (reconstruction.scene as { stages?: { stage_order: number; time: string; description: string }[] } | null)?.stages;
-  const note = stages?.find((s) => s.stage_order === stageOrder);
+  const note = stageNotes(reconstruction)?.find((s) => s.stage_order === stageOrder);
   if (!note?.description) return null;
   return (
     <p className="max-w-4xl text-body text-ink-soft">
