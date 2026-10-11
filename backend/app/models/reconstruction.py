@@ -16,6 +16,11 @@ class Reconstruction(Base):
     assumptions: Mapped[str] = mapped_column(Text, default="")
     # Authored layout under assets/3d/crime-scenes/scenes/.
     scene_file: Mapped[str | None] = mapped_column(String(300))
+    # A layout generated from the case's evidence, in the same format; used instead
+    # of scene_file when set.
+    scene: Mapped[dict | None] = mapped_column(JSON)
+    # "ai" for scenarios generated from the evidence, "investigator" otherwise.
+    origin: Mapped[str] = mapped_column(String(16), default="investigator", server_default="investigator")
 
 
 class ReconstructionStage(Base):

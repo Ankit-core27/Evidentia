@@ -55,6 +55,7 @@ def reconstruction_detail(db: Session, reconstruction: Reconstruction) -> Recons
     ).all()
     return ReconstructionDetail(
         **ReconstructionOut.model_validate(reconstruction).model_dump(),
+        scene=reconstruction.scene,
         stages=[
             StageDetail(
                 **StageOut.model_validate(stage).model_dump(),

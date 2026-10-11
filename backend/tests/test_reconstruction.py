@@ -65,6 +65,7 @@ def test_list_reconstructions_returns_only_this_case_in_id_order(client, db):
             "version": 1,
             "assumptions": "Signal timing from the controller log.",
             "scene_file": None,
+            "origin": "investigator",
         },
         {
             "id": second.id,
@@ -73,6 +74,7 @@ def test_list_reconstructions_returns_only_this_case_in_id_order(client, db):
             "version": 2,
             "assumptions": "Signal timing from the controller log.",
             "scene_file": "junction.json",
+            "origin": "investigator",
         },
     ]
 
@@ -102,6 +104,7 @@ def test_create_reconstruction_starts_at_version_1_and_is_audited(client, db):
         "version": 1,
         "assumptions": "",
         "scene_file": "ring-road-junction.json",
+        "origin": "investigator",
     }
     [entry] = audit_rows(db, "reconstruction")
     assert (entry.action, entry.record_id, entry.case_id, entry.actor_id) == (

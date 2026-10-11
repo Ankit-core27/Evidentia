@@ -1,8 +1,9 @@
-from typing import Any
+from typing import Any, Literal
 
-from pydantic import Field
+from pydantic import BaseModel, Field
 
-from app.schemas.common import AnnotationKind, ApiModel, OrmModel
+from app.schemas.common import AnnotationKind, ApiModel, Origin, OrmModel
+from app.services.reconstruction.script import SceneScript
 
 Vec3 = tuple[float, float, float]
 
@@ -14,6 +15,7 @@ class Reconstruction(OrmModel):
     version: int
     assumptions: str
     scene_file: str | None
+    origin: Origin
 
 
 class ReconstructionCreate(ApiModel):
@@ -82,5 +84,25 @@ class SceneAnnotationCreate(ApiModel):
 class ReconstructionDetail(Reconstruction):
     """GET /api/reconstructions/{id}."""
 
+    # The generated scene layout, in the format of an authored scene file.
+    scene: dict[str, Any] | None
     stages: list[StageDetail]
     annotations: list[SceneAnnotation]
+
+
+class SceneGenerateRequest(ApiModel):
+    """POST /api/cases/{id}/reconstructions/generate."""
+
+    # Optional guidance for Gemini, such as "Show the van driver's account".
+    instructions: str = Field("", max_length=2000)
+
+
+class SceneGeneration(BaseModel):
+    # "gemini" when Gemini wrote the script, "rules" for the draft made without it.
+    generator: Literal["gemini", "rules"]
+    model: str
+    script: SceneScript
+    # What the checks dropped or changed, and why Gemini wasn't used if it wasn't.
+    warnings: list[str]
+    # One per scenario in the script.
+    reconstructions: list[Reconstruction]
