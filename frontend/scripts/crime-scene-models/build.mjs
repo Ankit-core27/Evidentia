@@ -12,8 +12,12 @@ import * as THREE from 'three';
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js';
 import { mergeGeometries, mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { buildAce } from './ace.mjs';
+import { buildAutoRickshaw } from './autorickshaw.mjs';
+import { buildBus } from './bus.mjs';
 import { mirrorZ } from './geometry.mjs';
 import { buildHatchback } from './hatchback.mjs';
+import { buildSedan } from './sedan.mjs';
+import { buildTruck } from './truck.mjs';
 
 // GLTFExporter reads its binary output through FileReader, which Node lacks.
 globalThis.FileReader ??= class {
@@ -27,12 +31,15 @@ globalThis.FileReader ??= class {
 
 const OUT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../assets/3d/crime-scenes/library');
 
-function materials(paint, plate) {
+function materials(paint, plate, { secondary = 0xe2b417, stripe = 0xf2f2ee, glass = 0x0d1114 } = {}) {
   const physical = (name, opts) => new THREE.MeshPhysicalMaterial({ name, ...opts });
   const standard = (name, opts) => new THREE.MeshStandardMaterial({ name, ...opts });
   return {
     paint: physical('paint', { color: paint, metalness: 0.05, roughness: 0.38, clearcoat: 1, clearcoatRoughness: 0.05 }),
-    glass: physical('glass', { color: 0x0d1114, metalness: 0.1, roughness: 0.05, clearcoat: 1, clearcoatRoughness: 0.02 }),
+    // Second body colours: a livery stripe, or an auto-rickshaw's yellow upper body.
+    paint_stripe: physical('paint_stripe', { color: stripe, metalness: 0.05, roughness: 0.38, clearcoat: 1, clearcoatRoughness: 0.05 }),
+    paint_secondary: physical('paint_secondary', { color: secondary, metalness: 0.05, roughness: 0.38, clearcoat: 1, clearcoatRoughness: 0.05 }),
+    glass: physical('glass', { color: glass, metalness: 0.1, roughness: 0.05, clearcoat: 1, clearcoatRoughness: 0.02 }),
     trim: standard('trim', { color: 0x16171a, roughness: 0.62, side: THREE.DoubleSide }),
     trim_gloss: physical('trim_gloss', { color: 0x0b0c0e, roughness: 0.25, clearcoat: 0.6 }),
     chrome: standard('chrome', { color: 0xe6e8ea, metalness: 1, roughness: 0.12 }),
@@ -47,7 +54,18 @@ function materials(paint, plate) {
     taillight: physical('taillight', { color: 0x8a0f12, roughness: 0.12, clearcoat: 1, emissive: 0xff2018, emissiveIntensity: 0 }),
     indicator: physical('indicator', { color: 0xc9790e, roughness: 0.12, clearcoat: 1, emissive: 0xff9a1a, emissiveIntensity: 0 }),
     plate_front: standard('plate_front', { color: plate, roughness: 0.45 }),
-    plate_rear: standard('plate_rear', { color: plate, roughness: 0.45 })
+    plate_rear: standard('plate_rear', { color: plate, roughness: 0.45 }),
+    // Materials of the bus, truck, two-wheelers and auto-rickshaw.
+    steel: standard('steel', { color: 0x2c3033, metalness: 0.45, roughness: 0.55 }),
+    cast: standard('cast', { color: 0x8e9296, metalness: 0.6, roughness: 0.5 }),
+    chain: standard('chain', { color: 0x2b2c2e, metalness: 0.85, roughness: 0.42 }),
+    rubber: standard('rubber', { color: 0x161616, roughness: 0.82 }),
+    seat: physical('seat', { color: 0x1a1a1b, roughness: 0.52, clearcoat: 0.25, clearcoatRoughness: 0.4 }),
+    wood: standard('wood', { color: 0x8a5631, roughness: 0.78 }),
+    canvas: standard('canvas', { color: 0x1c1d1e, roughness: 0.95, side: THREE.DoubleSide }),
+    dest_board: physical('dest_board', { color: 0x050506, roughness: 0.2, clearcoat: 1 }),
+    dest_led: standard('dest_led', { color: 0x6b4300, roughness: 0.4, emissive: 0xffa31a, emissiveIntensity: 0.9 }),
+    reflector: physical('reflector', { color: 0xa0140f, roughness: 0.15, clearcoat: 1 })
   };
 }
 
@@ -73,11 +91,12 @@ class Assembly {
     this.add(material, mirrorZ(geometry));
   }
 
-  /** A 500 x 120 mm registration plate facing forward (sign 1) or back (-1). */
-  plate(material, x, y, sign) {
-    const g = new THREE.PlaneGeometry(0.5, 0.12);
+  /** A registration plate (500 x 120 mm unless given) facing forward (sign 1) or back (-1), tipped back by tilt. */
+  plate(material, x, y, sign, { width = 0.5, height = 0.12, z = 0, tilt = 0 } = {}) {
+    const g = new THREE.PlaneGeometry(width, height);
+    if (tilt) g.rotateX(-tilt);
     g.rotateY(sign > 0 ? Math.PI / 2 : -Math.PI / 2);
-    g.translate(x, y, 0);
+    g.translate(x, y, z);
     this.nodes.push({ name: material, material, geometry: g });
   }
 
@@ -124,7 +143,9 @@ async function write(root, file) {
   root.traverse((o) => {
     if (o.isMesh) triangles += (o.geometry.index ? o.geometry.index.count : o.geometry.getAttribute('position').count) / 3;
   });
-  console.log(`${file}: ${(glb.byteLength / 1024).toFixed(0)} KB, ${Math.round(triangles)} triangles`);
+  const size = new THREE.Box3().setFromObject(root).getSize(new THREE.Vector3());
+  const dims = size.toArray().map((v) => v.toFixed(2)).join(' x ');
+  console.log(`${file}: ${(glb.byteLength / 1024).toFixed(0)} KB, ${Math.round(triangles)} triangles, ${dims} m (x, y, z)`);
 }
 
 const hatchback = new Assembly('hatchback');
@@ -134,3 +155,19 @@ await write(hatchback.build(materials(0xf1f2ef, 0xf4f4f0)), 'hatchback.glb');
 const van = new Assembly('delivery-van');
 buildAce(van);
 await write(van.build(materials(0x1f4f9a, 0xf2c200)), 'delivery-van.glb');
+
+const sedan = new Assembly('sedan');
+buildSedan(sedan);
+await write(sedan.build(materials(0xb8bcc0, 0xf4f4f0)), 'sedan.glb');
+
+const bus = new Assembly('bus');
+buildBus(bus);
+await write(bus.build(materials(0xc0392b, 0xf2c200)), 'bus.glb');
+
+const truck = new Assembly('truck');
+buildTruck(truck);
+await write(truck.build(materials(0xd0631a, 0xf2c200)), 'truck.glb');
+
+const auto = new Assembly('auto-rickshaw');
+buildAutoRickshaw(auto);
+await write(auto.build(materials(0x1f5c38, 0xf2c200)), 'auto-rickshaw.glb');
