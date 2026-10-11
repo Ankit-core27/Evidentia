@@ -14,6 +14,21 @@ from app.models import Case, Injury, Person
 from app.schemas.injuries import Injury as InjuryOut, InjuryCreate, InjuryUpdate
 from app.services.reconstruction.scenes import invalid, missing_from_case
 
+
+def _check_marker(details, structure_id):
+    if not details or not details.get("marker"):
+        return
+    import json
+    from pathlib import Path
+    marker = details["marker"]
+    manifest = Path(__file__).resolve().parents[3] / "assets/3d/anatomy/manifest.json"
+    structures = json.loads(manifest.read_text())["structures"]
+    structure = next((s for s in structures if s["id"] == structure_id), None)
+    if structure is None or marker["structure_id"] != structure_id:
+        raise invalid(["medical_details", "marker"], "Marker must reference this injury's supported anatomical structure")
+    if any(abs(v) > size / 2 + 0.02 for v, size in zip(marker["local_position"], structure["size"])):
+        raise invalid(["medical_details", "marker"], "Marker lies outside the anatomical structure's bounds")
+
 router = APIRouter(tags=["injuries"])
 
 
@@ -32,6 +47,7 @@ def list_injuries(case_id: int, db: DbSession):
 def create_injury(case_id: int, body: InjuryCreate, db: DbSession, actor_id: ActorId):
     case = get_or_404(db, Case, case_id)
     _check_person(db, body.person_id, case.id)
+    _check_marker(body.medical_details.model_dump(), body.structure_id)
     injury = Injury(case_id=case.id, **body.model_dump())
     db.add(injury)
     db.flush()
@@ -47,6 +63,7 @@ def update_injury(injury_id: int, body: InjuryUpdate, db: DbSession, actor_id: A
     injury = get_or_404(db, Injury, injury_id)
     changes = body.model_dump(exclude_unset=True)
     _check_person(db, changes.get("person_id"), injury.case_id)
+    _check_marker(changes.get("medical_details", injury.medical_details), changes.get("structure_id", injury.structure_id))
     apply_update(db, injury, changes, record_type="injury", actor_id=actor_id)
     db.commit()
     db.refresh(injury)

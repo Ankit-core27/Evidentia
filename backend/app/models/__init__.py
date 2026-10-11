@@ -1,5 +1,6 @@
 """Every table, imported here so Alembic and create_all see the full schema."""
 
+from app.models.anatomy import AnatomyFinding
 from app.models.audit import AuditLog, Report
 from app.models.base import Base
 from app.models.case import Case, Investigator
@@ -9,6 +10,7 @@ from app.models.records import CaseObject, Conflict, Event, Injury, Location, Ob
 
 __all__ = [
     "AiRun",
+    "AnatomyFinding",
     "AuditLog",
     "Base",
     "Building",

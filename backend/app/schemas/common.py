@@ -28,7 +28,7 @@ RelationshipKind = Literal[
 ConflictStatus = Literal["open", "resolved"]
 AuditAction = Literal["uploaded", "viewed", "modified", "reviewed", "exported"]
 AnnotationKind = Literal["note", "measurement", "viewpoint"]
-InjurySeverity = Literal["minor", "moderate", "severe", "fatal"]
+InjurySeverity = Literal["minor", "moderate", "severe", "fatal", "unknown"]
 ReportTemplate = Literal["court", "summary", "custody", "medical"]
 AlertSeverity = Literal["info", "warning", "critical"]
 AlertKind = Literal["conflict", "processing", "review"]
@@ -45,6 +45,7 @@ RecordType = Literal[
     "observation",
     "conflict",
     "injury",
+    "anatomy_finding",
     "reconstruction",
     "stage",
     "scene_object",

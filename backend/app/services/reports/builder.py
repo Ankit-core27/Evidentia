@@ -26,6 +26,7 @@ from sqlalchemy.orm import Session
 
 from app.core.records import case_counts
 from app.models import (
+    AnatomyFinding,
     AuditLog,
     Case,
     Conflict,
@@ -102,6 +103,18 @@ def build_report_content(db: Session, case: Case, template: str, options: Report
             _custody(db, [e.id for e in evidence]) if options.include_custody or template == "custody" else None
         ),
     }
+    if template == "court" or medical_only:
+        for finding in db.scalars(select(AnatomyFinding).where(
+            AnatomyFinding.case_id == case.id, AnatomyFinding.review_status == "confirmed"
+        ).order_by(AnatomyFinding.id)):
+            person = db.get(Person, finding.person_id) if finding.person_id else None
+            details = finding.medical_details or {}
+            statement = f"{person.name if person else 'Unassigned person'} — {finding.body_region}: {finding.description}"
+            if details.get("uncertainty"):
+                statement += f" Uncertainty: {details['uncertainty']}"
+            content["confirmed_findings"].append({
+                "statement": statement, "evidence_ids": _linked_evidence_ids(db, "anatomy_finding", finding.id)
+            })
     return ReportContent.model_validate(content).model_dump(mode="json")
 
 

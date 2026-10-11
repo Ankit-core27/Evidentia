@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import get_settings
 from app.routers import (
+    anatomy,
     buildings,
     cases,
     dashboard,
@@ -41,6 +42,7 @@ for module in (
     timeline,
     reconstruction,
     injuries,
+    anatomy,
     buildings,
     reports,
 ):

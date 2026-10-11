@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 
 from app.models import (
     AuditLog,
+    AnatomyFinding,
     Base,
     Case,
     CaseObject,
@@ -49,6 +50,7 @@ RECORD_MODELS: dict[str, type[Base]] = {
     "observation": Observation,
     "conflict": Conflict,
     "injury": Injury,
+    "anatomy_finding": AnatomyFinding,
     "reconstruction": Reconstruction,
     "stage": ReconstructionStage,
     "scene_object": SceneObject,
@@ -65,6 +67,7 @@ REVIEWABLE_MODELS: dict[str, type[Base]] = {
     "relationship": Relationship,
     "observation": Observation,
     "injury": Injury,
+    "anatomy_finding": AnatomyFinding,
 }
 
 ModelT = TypeVar("ModelT", bound=Base)
@@ -80,6 +83,7 @@ RECORD_NAMES = {
     "observation": "Observation",
     "conflict": "Conflict",
     "injury": "Injury",
+    "anatomy_finding": "Anatomical finding",
     "reconstruction": "Reconstruction",
     "stage": "Stage",
     "scene_object": "Scene object",
