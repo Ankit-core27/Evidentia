@@ -30,7 +30,7 @@ Every view reads the same case records, so the graph, the timeline, the 3D scene
 
 ## Demo data
 
-`python -m app.seed` loads five cases. The most complete is **FX-2026-0005, the red-light collision at Sahyadri Chowk**. It is built from the 13 evidence files in [docs/demo-case](docs/demo-case/README.md), with its records, conflicts, injuries, two competing reconstructions and a report already in place. All names, numbers and registrations in the demo data are invented.
+`python -m app.seed` loads five cases. The most complete is **FX-2026-0005, the red-light collision at Sahyadri Chowk**. It is built from the 13 evidence files in [docs/demo-case](docs/demo-case/README.md), with its records, conflicts, injuries, two competing reconstructions and a report already in place. Mock mode (`npm run dev:mock`) shows the same five cases without the backend; after changing `backend/app/seed_sahyadri.py`, regenerate its copy with `python scripts/export_mock_case.py` in `backend/`. All names, numbers and registrations in the demo data are invented.
 
 ## Run it
 

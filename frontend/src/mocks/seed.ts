@@ -1,9 +1,11 @@
-// Seed data for mock mode: the MVP road-accident case and three smaller cases.
+// Seed data for mock mode: the MVP road-accident case, three smaller cases and the
+// Sahyadri Chowk demo case (sahyadri.ts).
 // The backend's seed.py should load the same case, so screens look the same
 // when mocks are switched off.
 import { EvidenceType, Id, RecordType } from '@/types/api';
 import { addAudit, chunkFor, chunkText, MockDb, StoredEvidence } from './db';
 import { makePdf, makeScenePhoto, makeText, makeWav, sha256Hex } from './files';
+import { addSahyadriCase } from './sahyadri';
 
 /** Local time on a given day in IST, as an ISO string. */
 const at = (day: string, time: string) => `2026-${day}T${time}+05:30`;
@@ -745,7 +747,11 @@ export const buildSeed = async (): Promise<MockDb> => {
   addAudit(db, 1, 'reviewed', 'event', 2, { review_status: { before: 'pending', after: 'confirmed' } }, at('10-05', '10:15:00'));
   addAudit(db, 1, 'reviewed', 'event', 3, { review_status: { before: 'pending', after: 'confirmed' } }, at('10-05', '10:16:00'));
   addAudit(db, 1, 'modified', 'case', 1, { status: { before: 'open', after: 'in_progress' } }, at('10-05', '11:20:00'));
-  db.audit.sort((a, b) => a.at.localeCompare(b.at));
+
+  // The complete demo case, exported from the backend seed.
+  await addSahyadriCase(db);
+
+  db.audit.sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
   db.audit.forEach((entry, index) => (entry.id = index + 1));
 
   return db;
