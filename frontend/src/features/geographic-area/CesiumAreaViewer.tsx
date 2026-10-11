@@ -420,5 +420,5 @@ export const CesiumAreaViewer = forwardRef<AreaViewerHandle, Props>(function Ces
     }
   }, [props.paused]);
 
-  return <div ref={container} className="absolute inset-0 forensix-cesium" data-testid="cesium-area" />;
+  return <div ref={container} className="absolute inset-0 evidentia-cesium" data-testid="cesium-area" />;
 });
