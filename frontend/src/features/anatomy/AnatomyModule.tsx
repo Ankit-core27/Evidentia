@@ -11,7 +11,8 @@ import { casePath } from '@/lib/caseModules';
 import { humanize } from '@/lib/format';
 import type { AnatomyFinding, CaseWorkspace, Injury, ReviewStatus, Vec3 } from '@/types/api';
 import { AnatomicalViewer, useAnatomyManifest } from './AnatomicalViewer';
-import { Finding, findingKey, findingState, findingsForPerson, mapFinding } from './anatomyEngine';
+import { Finding, findingKey, findingState, findingsForPerson, mapFinding, structureStatus } from './anatomyEngine';
+import { OrganStatus } from './OrganStatus';
 
 export const AnatomyModule: React.FC<{ workspace: CaseWorkspace }> = ({ workspace }) => {
   const injuries = useInjuries(workspace.case.id);
@@ -67,7 +68,8 @@ function Examination({ workspace, personId, injuries, findings }: { workspace: C
   const selectedStructure = structures.find(s => s.id === selected);
   const unresolved = markers.filter(m => !m.structureId);
   const cards = selectedRecord ? [selectedRecord] : selected ? markers.filter(m => m.structureId === selected).map(m => m.finding) : visible;
-  const states = Object.fromEntries(structures.map(s => [s.id, findingState(reported.filter(f => mapFinding(f, structures).structureId === s.id), workspace.links)]));
+  const onStructure = (id: string) => reported.filter(f => mapFinding(f, structures).structureId === id);
+  const states = Object.fromEntries(structures.map(s => [s.id, findingState(onStructure(s.id), workspace.links)]));
   const reports = workspace.evidence.filter(e => e.type === 'medical' || e.type === 'document');
   const selectedReport = reports.find(e => e.id === Number(report));
   const error = placementError ?? (updateInjury.error as Error | null)?.message ?? (updateFinding.error as Error | null)?.message;
@@ -151,7 +153,8 @@ function Examination({ workspace, personId, injuries, findings }: { workspace: C
       {inspector && <aside className="w-full shrink-0 space-y-3 rounded border border-line bg-surface p-4 xl:w-72" aria-label="Medical findings inspector">
         <div className="border-b border-line pb-3"><p className="font-mono text-xs uppercase text-ink-muted">Findings inspector</p>
           <h3 className="mt-1 text-lg font-medium text-ink">{selectedStructure?.label ?? (personId ? 'Person’s medical findings' : 'Unassigned findings')}</h3>
-          {selectedStructure && <p className="text-xs text-ink-muted">{humanize(selectedStructure.system)} · {humanize(states[selectedStructure.id])}</p>}
+          {selectedStructure && <p className="text-xs text-ink-muted">{humanize(selectedStructure.system)}</p>}
+          {selectedStructure && <OrganStatus status={structureStatus(onStructure(selectedStructure.id), workspace.links)} />}
           {activeFinding && <button className={`${smallButtonClass} mt-2`} onClick={() => setActiveFinding(null)}>All findings on this structure</button>}
         </div>
         {!cards.length && <p className="text-body text-ink-muted">Not documented in the selected records. Absence of a finding does not establish a normal or healthy organ.</p>}
