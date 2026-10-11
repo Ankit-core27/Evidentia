@@ -62,11 +62,21 @@ def upload_evidence(
     actor_id: ActorId,
 ):
     case = get_or_404(db, Case, case_id)
-    created = [
-        ingest_file(db, case.id, upload.filename or "Untitled", upload.content_type, upload.file, actor_id)
-        for upload in files
-    ]
-    db.commit()
+    created: list[Evidence] = []
+    stored: list[str] = []
+    try:
+        for upload in files:
+            evidence = ingest_file(db, case.id, upload.filename or "Untitled", upload.content_type, upload.file, actor_id)
+            created.append(evidence)
+            stored.append(evidence.file_path)
+        # One commit for every file's evidence row, audit entry and custody event.
+        db.commit()
+    except Exception:
+        # Nothing was registered, so remove the files already stored for this request.
+        db.rollback()
+        for file_path in stored:
+            absolute_path(file_path).unlink(missing_ok=True)
+        raise
     for evidence in created:
         background_tasks.add_task(process_evidence, evidence.id)
     return created

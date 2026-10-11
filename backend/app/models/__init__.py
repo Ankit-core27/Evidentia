@@ -4,6 +4,7 @@ from app.models.anatomy import AnatomyFinding
 from app.models.audit import AuditLog, Report
 from app.models.base import Base
 from app.models.case import Case, Investigator
+from app.models.custody import CustodyEvent, CustodyTransfer
 from app.models.evidence import AiRun, Evidence, EvidenceChunk, EvidenceLink
 from app.models.reconstruction import Building, Reconstruction, ReconstructionStage, SceneAnnotation, SceneObject
 from app.models.records import CaseObject, Conflict, Event, Injury, Location, Observation, Person, Relationship
@@ -17,6 +18,8 @@ __all__ = [
     "Case",
     "CaseObject",
     "Conflict",
+    "CustodyEvent",
+    "CustodyTransfer",
     "Event",
     "Evidence",
     "EvidenceChunk",

@@ -288,3 +288,22 @@ def test_sahyadri_chowk_scenarios_are_compiled_from_the_survey(db, client):
     assert client.get(f"/api/reconstructions/{scenarios[0]['id']}").json()["case_changes_since"] == 1
     reports = client.get(f"/api/cases/{SAHYADRI}/reports").json()
     assert len(reports) == 1
+
+
+def test_every_evidence_item_has_a_custody_history(db, client):
+    seed(db)
+    for evidence in db.scalars(select(Evidence)):
+        events = client.get(f"/api/evidence/{evidence.id}/custody").json()["events"]
+        assert events[0]["action"] == "REGISTERED"
+        assert events[0]["sha256"] == evidence.sha256
+    # Sahyadri Chowk: the event data recorder was handed to SI Arjun Mehta, analysed and
+    # checked; the CCTV report has a transfer pending.
+    edr = db.scalar(select(Evidence).where(Evidence.title.startswith("Event data recorder")))
+    body = client.get(f"/api/evidence/{edr.id}/custody").json()
+    assert body["custodian"]["name"] == "SI Arjun Mehta"
+    assert [e["action"] for e in body["events"]] == [
+        "REGISTERED", "TRANSFERRED", "RECEIVED", "ANALYSED", "INTEGRITY_CHECKED"
+    ]  # fmt: skip
+    assert body["events"][-1]["integrity_result"] == "MATCH"
+    cctv = db.scalar(select(Evidence).where(Evidence.title.startswith("CCTV analysis")))
+    assert client.get(f"/api/evidence/{cctv.id}/custody").json()["pending_transfer"]["status"] == "PENDING"

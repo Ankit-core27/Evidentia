@@ -21,6 +21,8 @@ class Evidence(OrmModel):
     processing_status: ProcessingStatus
     summary: str | None
     created_at: datetime
+    # The investigator who holds it now; see GET /api/evidence/{id}/custody.
+    custodian_id: int | None = None
 
 
 class EvidenceListItem(Evidence):

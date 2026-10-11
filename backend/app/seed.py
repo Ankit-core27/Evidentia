@@ -46,13 +46,15 @@ from sqlalchemy.orm import Session
 from app.core.config import BACKEND_DIR, get_settings
 from app.core.db import SessionLocal, engine
 from app.core.records import record_audit
-from app.core.storage import absolute_path, save_bytes, storage_root
+from app.core.storage import absolute_path, save_bytes, sha256_of, storage_root
 from app.models import (
     AuditLog,
     Base,
     Case,
     CaseObject,
     Conflict,
+    CustodyEvent,
+    CustodyTransfer,
     Event,
     Evidence,
     EvidenceChunk,
@@ -76,6 +78,7 @@ from app.services.reconstruction.dossier import build_dossier
 from app.services.reconstruction.script import SceneScript
 from app.services.ai.scene_script import TASK as SCENE_TASK
 from app.services.reports.builder import build_report_content, content_sha256
+from app.services.evidence.custody import record_registration
 from app.services.search.indexing import index_evidence
 
 SEED_DATA = BACKEND_DIR / "seed_data"
@@ -1088,6 +1091,7 @@ def _load(db: Session, stored: list[str]) -> None:
         db.add(evidence)
         db.flush()
         rows["evidence"][spec.id] = evidence
+        record_registration(db, evidence, ref("investigator", 4), note="Registered on upload.", at=spec.collected_at)
         if spec.text:
             index_evidence(db, evidence.id, spec.pages or [spec.text], paged=spec.pages is not None)
         detail = {"title": spec.title, "file_name": spec.file_name, "sha256": file.sha256}
@@ -1150,6 +1154,7 @@ def _load(db: Session, stored: list[str]) -> None:
     db.flush()
 
     _reconstruct_and_report(db, rows, ref)
+    _sahyadri_custody(db, rows, ref)
     _order_audit(db)
 
 
@@ -1208,6 +1213,57 @@ def _reconstruct_and_report(db: Session, rows: Rows, ref) -> None:
     db.flush()
 
 
+def _sahyadri_custody(db: Session, rows: Rows, ref) -> None:
+    """Handovers, analyses and an integrity check for the Sahyadri Chowk case, written
+    as the custody service would have at the time (seed_sahyadri.CUSTODY_*)."""
+
+    def name(key: int | None) -> str:
+        return rows["investigator"][key].name if key is not None else ""
+
+    def event(evidence: Evidence, action: str, actor: int, at: datetime, **fields) -> None:
+        db.add(CustodyEvent(evidence_id=evidence.id, case_id=evidence.case_id, action=action,
+                            actor_id=ref("investigator", actor), actor_name=name(actor), at=at, **fields))  # fmt: skip
+
+    for key, src, dst, reason, started, outcome, resolved, note in sahyadri.CUSTODY_TRANSFERS:
+        evidence = rows["evidence"][key]
+        transfer = CustodyTransfer(
+            evidence_id=evidence.id,
+            from_investigator_id=ref("investigator", src),
+            from_name=name(src),
+            to_investigator_id=ref("investigator", dst),
+            to_name=name(dst),
+            initiated_by_id=ref("investigator", src),
+            initiated_by_name=name(src),
+            reason=reason,
+            status=outcome,
+            created_at=started,
+            resolved_at=resolved,
+            resolved_by_id=ref("investigator", dst) if resolved else None,
+        )
+        db.add(transfer)
+        db.flush()
+        parties = dict(
+            from_custodian_id=ref("investigator", src),
+            from_custodian_name=name(src),
+            to_custodian_id=ref("investigator", dst),
+            to_custodian_name=name(dst),
+            transfer_id=transfer.id,
+        )
+        event(evidence, "TRANSFERRED", src, started, note=reason, **parties)
+        if outcome == "ACCEPTED":
+            event(evidence, "RECEIVED", dst, resolved, note=note, **parties)
+            evidence.custodian_id = ref("investigator", dst)
+    for key, actor, action, note, at in sahyadri.CUSTODY_STEPS:
+        evidence = rows["evidence"][key]
+        if action == "INTEGRITY_CHECKED":
+            actual = sha256_of(evidence.file_path)
+            result = "MATCH" if actual == evidence.sha256 else "MISMATCH"
+            event(evidence, action, actor, at, sha256=actual, expected_sha256=evidence.sha256, integrity_result=result)
+        else:
+            event(evidence, action, actor, at, note=note)
+    db.flush()
+
+
 def _order_audit(db: Session) -> None:
     """Rewrites the audit log in time order. The compiler and report builder log as
     they go, so their entries would otherwise sit after later-dated ones."""
@@ -1256,6 +1312,7 @@ def table_counts(db: Session) -> dict[str, int]:
         "stages": ReconstructionStage,
         "scene objects": SceneObject,
         "annotations": SceneAnnotation,
+        "custody events": CustodyEvent,
         "audit entries": AuditLog,
     }
     return {name: db.scalar(select(func.count()).select_from(model)) or 0 for name, model in tables.items()}

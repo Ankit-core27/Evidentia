@@ -687,3 +687,26 @@ def scene_script(ref) -> dict:
         "open_questions": [c["description"] for c in CONFLICTS if c["status"] == "open"]
         + ["Who was the woman in the blue kurta, and is she Priya Nair? Her statement has not been recorded."],
     }
+
+
+# ---------------------------------------------------------------------------
+# Chain of custody after registration (every file starts with Const. Rahul Verma,
+# investigator 4, who registered it). Times are when each step happened.
+# ---------------------------------------------------------------------------
+
+# (evidence, from, to, reason, started, outcome, resolved, resolution note)
+CUSTODY_TRANSFERS = [
+    (108, 4, 2, "Pre-crash speed and brake analysis for the reconstruction.", aug(18, "15:30:00"),
+     "ACCEPTED", aug(18, "15:45:00"), "Received sealed; seal intact."),
+    (110, 4, 3, "Medical review for the anatomy findings.", aug(15, "11:00:00"),
+     "ACCEPTED", aug(15, "11:20:00"), ""),
+    (107, 4, 2, "Frame timing review against the signal log.", aug(20, "09:00:00"), "PENDING", None, ""),
+]  # fmt: skip
+
+# (evidence, actor, action, note, at); integrity checks compare the stored file.
+CUSTODY_STEPS = [
+    (108, 2, "ANALYSED", "Speed and brake timeline checked against the CCTV key frames: consistent to 0.2 s.",
+     aug(19, "11:00:00")),
+    (108, 2, "INTEGRITY_CHECKED", "", aug(19, "11:05:00")),
+    (110, 3, "ANALYSED", "Injuries mapped to the anatomy model.", aug(15, "16:00:00")),
+]  # fmt: skip
