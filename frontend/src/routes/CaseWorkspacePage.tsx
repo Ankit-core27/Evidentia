@@ -38,6 +38,7 @@ const CaseNotFound: React.FC<{ caseId: string | undefined }> = ({ caseId }) => (
   </main>
 );
 
+const AreaModule = lazy(() => import('@/features/geographic-area/AreaModule').then(m => ({ default: m.AreaModule })));
 const AnatomyModule = lazy(() => import('@/features/anatomy/AnatomyModule').then(m => ({ default: m.AnatomyModule })));
 
 const kept = <T extends { review_status: string }>(rows: T[]) => rows.filter((r) => r.review_status !== 'rejected');
@@ -89,6 +90,7 @@ const CaseWorkspace: React.FC<{ caseId: number; activeModule: CaseModule }> = ({
         {activeModule === 'copilot' && <CopilotModule caseId={c.id} />}
         {activeModule === 'reports' && <CaseReportsModule caseId={c.id} />}
         {activeModule === 'settings' && <SettingsModule workspace={workspace} />}
+        {activeModule === 'area' && <Suspense fallback={<LoadingState label="Loading area model…" />}><AreaModule workspace={workspace} /></Suspense>}
         {activeModule === 'autopsy' && <Suspense fallback={<LoadingState label="Loading anatomy…" />}><AnatomyModule workspace={workspace} /></Suspense>}
       </main>
     </div>
