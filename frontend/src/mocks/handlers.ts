@@ -971,7 +971,7 @@ export const buildRoutes = () => {
     const rec = db.reconstructions.find((x) => x.id === id) ?? notFound('Reconstruction');
     return {
       ...rec,
-      scene: null,
+      scene: rec.scene ?? null,
       stages: db.stages
         .filter((s) => s.reconstruction_id === id)
         .sort((a, b) => a.stage_order - b.stage_order)

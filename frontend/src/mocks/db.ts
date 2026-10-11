@@ -51,7 +51,8 @@ export interface MockDb {
   conflicts: Conflict[];
   injuries: Injury[];
   anatomyFindings: AnatomyFinding[];
-  reconstructions: Reconstruction[];
+  /** `scene` is a layout generated from the evidence, as the backend stores it. */
+  reconstructions: (Reconstruction & { scene?: Record<string, unknown> | null })[];
   stages: ReconstructionStage[];
   sceneObjects: SceneObject[];
   annotations: SceneAnnotation[];
