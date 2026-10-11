@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { Vector3 } from 'three';
-import { AnatomyManifest, Finding, buildExplosion, clampProgress, findingState, findingsForPerson, mapFinding, positionAt, skinOpacity, structureBounds } from './anatomyEngine';
+import { AnatomyManifest, Finding, buildExplosion, clampProgress, findingState, findingsForPerson, mapFinding, positionAt, skinOpacity, structureBounds, structureStatus } from './anatomyEngine';
 import type { AnatomyFinding, EvidenceLink, Injury } from '../../types/api';
 import { buildRoutes } from '../../mocks/handlers';
 import { MockDb } from '../../mocks/db';
@@ -95,6 +95,20 @@ test('normal requires a source; missing, rejected, uncertain and contradictory s
   assert.equal(findingState([{ kind: 'anatomy_finding', record: finding({ review_status: 'rejected' }) }], linked), 'not_documented');
   assert.equal(findingState([normal, { kind: 'injury', record: injury() }], linked), 'uncertain');
   assert.equal(findingState([{ kind: 'anatomy_finding', record: finding({ medical_details: { uncertainty: 'Report is contradictory' } }) }], linked), 'uncertain');
+});
+
+test('organ status reports the worst recorded severity and counts only non-rejected findings', () => {
+  assert.deepEqual(structureStatus([], linked), { state: 'not_documented', worstSeverity: null, injuries: 0, abnormalities: 0, normal: 0, uncertain: 0, pending: 0 });
+  const status = structureStatus([
+    { kind: 'injury', record: injury() },
+    { kind: 'injury', record: injury({ id: 2, severity: 'severe', review_status: 'pending' }) },
+    { kind: 'injury', record: injury({ id: 3, severity: 'fatal', review_status: 'rejected' }) },
+    { kind: 'anatomy_finding', record: finding({ id: 2, finding_type: 'abnormality', review_status: 'confirmed' }) }
+  ], linked);
+  assert.deepEqual(status, { state: 'injury_documented', worstSeverity: 'severe', injuries: 2, abnormalities: 1, normal: 0, uncertain: 0, pending: 1 });
+  assert.equal(structureStatus([{ kind: 'injury', record: injury({ severity: 'unknown' }) }], linked).worstSeverity, 'unknown');
+  const normal = structureStatus([{ kind: 'anatomy_finding', record: finding() }], linked);
+  assert.deepEqual([normal.state, normal.worstSeverity, normal.normal, normal.pending], ['explicitly_normal', null, 1, 1]);
 });
 
 test('mock anatomy routes preserve case isolation, review audit and explicit no-AI behavior', async () => {

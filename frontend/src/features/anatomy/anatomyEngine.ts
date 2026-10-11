@@ -121,4 +121,34 @@ export function findingState(findings: Finding[], links: EvidenceLink[]): Findin
   return 'uncertain';
 }
 
+export const SEVERITY_SCALE = ['minor', 'moderate', 'severe', 'fatal'] as const;
+export type GradedSeverity = typeof SEVERITY_SCALE[number];
+export interface StructureStatus {
+  state: FindingState;
+  /** Worst recorded injury severity; 'unknown' when injuries exist but none is graded, null without injuries. */
+  worstSeverity: GradedSeverity | 'unknown' | null;
+  injuries: number;
+  abnormalities: number;
+  normal: number;
+  uncertain: number;
+  pending: number;
+}
+
+/** Summarizes one structure's non-rejected findings. Severity is only ever the recorded value. */
+export function structureStatus(findings: Finding[], links: EvidenceLink[]): StructureStatus {
+  const kept = findings.filter(f => f.record.review_status !== 'rejected');
+  const injuries = kept.flatMap(f => f.kind === 'injury' ? [f.record] : []);
+  const graded = injuries.map(i => SEVERITY_SCALE.indexOf(i.severity as GradedSeverity)).filter(rank => rank >= 0);
+  const count = (type: AnatomyFinding['finding_type']) => kept.filter(f => f.kind === 'anatomy_finding' && f.record.finding_type === type).length;
+  return {
+    state: findingState(findings, links),
+    worstSeverity: graded.length ? SEVERITY_SCALE[Math.max(...graded)] : injuries.length ? 'unknown' : null,
+    injuries: injuries.length,
+    abnormalities: count('abnormality'),
+    normal: count('explicitly_normal'),
+    uncertain: count('uncertain'),
+    pending: kept.filter(f => f.record.review_status === 'pending').length
+  };
+}
+
 export const findingKey = (finding: Finding) => `${finding.kind}:${finding.record.id}`;
