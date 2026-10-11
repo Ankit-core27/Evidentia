@@ -12,9 +12,8 @@ import { formatDateTime, humanize } from '@/lib/format';
 import { CasePriority, Id, IncidentPoint, IncidentType } from '@/types/api';
 import { RISK_AREAS, RISK_REGION, RiskArea, RiskBand, riskBand } from './riskAreas';
 
-// Darkened satellite imagery under CARTO's light-on-dark place names. Neither needs a key.
-const IMAGERY_URL = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
-const LABELS_URL = 'https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png';
+// CARTO's dark street map of OpenStreetMap data, with place and road names. Needs no key.
+const BASE_MAP_URL = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
 
 // Leaflet draws the circles as SVG paths; these classes override its stroke and fill attributes.
 const RISK_PATH: Record<RiskBand, string> = {
@@ -136,8 +135,7 @@ export const IncidentMap: React.FC<{ points: IncidentPoint[] }> = ({ points }) =
     const m = L.map(el, { zoomControl: false, attributionControl: false, scrollWheelZoom: false, zoomSnap: 0.5, minZoom: 3, maxZoom: 18 });
     L.control.attribution({ prefix: false, position: 'bottomright' }).addTo(m);
     L.control.scale({ imperial: false, position: 'topleft' }).addTo(m);
-    L.tileLayer(IMAGERY_URL, { maxZoom: 18, className: 'risk-map-imagery', attribution: 'Imagery © Esri, Maxar, Earthstar Geographics' }).addTo(m);
-    L.tileLayer(LABELS_URL, { maxZoom: 18, subdomains: 'abcd', attribution: '© OpenStreetMap contributors © CARTO' }).addTo(m);
+    L.tileLayer(BASE_MAP_URL, { maxZoom: 18, subdomains: 'abcd', attribution: '© OpenStreetMap contributors © CARTO' }).addTo(m);
 
     RISK_AREAS.forEach((a) => {
       const radius = radiusFor(a.crimes);

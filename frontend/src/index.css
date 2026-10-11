@@ -143,10 +143,6 @@
   font-family: var(--font-sans);
 }
 
-.risk-map .risk-map-imagery {
-  filter: brightness(0.62) saturate(0.8) contrast(1.05);
-}
-
 .risk-map .leaflet-tooltip.risk-map-tooltip {
   padding: 6px 10px;
   border: 1px solid var(--color-line-strong);
