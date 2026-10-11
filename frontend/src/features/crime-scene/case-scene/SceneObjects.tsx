@@ -2,7 +2,7 @@ import React, { Suspense, useEffect, useMemo, useRef } from 'react';
 import { Html, Line, useGLTF } from '@react-three/drei';
 import { ThreeEvent, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
-import { between, usePlaybackStore } from '@/features/reconstruction/playback';
+import { between, objectKey, usePlaybackStore } from '@/features/reconstruction/playback';
 import { CaseObject, ReconstructionDetail, SceneObject, Vec3 } from '@/types/api';
 import { Person, RIDER } from './Person';
 import { CatalogueModel, ModelBoundary } from './Props';
@@ -65,8 +65,8 @@ function paintColour(name: string | undefined) {
   return word ? PAINT[word] : undefined;
 }
 
-/** A key that follows the same object from stage to stage. */
-export const objectKey = (o: SceneObject) => (o.object_id != null ? `object:${o.object_id}` : `label:${o.label}`);
+// Shared with the area map, which places the same objects (features/reconstruction/playback).
+export { objectKey };
 
 interface Pose {
   x: number;
