@@ -9,9 +9,9 @@ import {
   MessageSquareText,
   FileText,
   ShieldCheck,
-  ClipboardCheck
+  ClipboardCheck,
+  type LucideIcon
 } from 'lucide-react';
-import type { ElementType } from 'react';
 
 /** The workspace modules, one per tab: /cases/:caseId/:module. */
 export type CaseModule =
@@ -39,7 +39,7 @@ export const CASE_MODULE_GROUPS: { id: CaseModuleGroup; label: string }[] = [
 export interface CaseModuleInfo {
   id: CaseModule;
   label: string;
-  icon: ElementType;
+  icon: LucideIcon;
   group: CaseModuleGroup;
   /** Reachable by URL but left out of the sidebar. */
   hidden?: boolean;
