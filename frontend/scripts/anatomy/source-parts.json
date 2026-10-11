@@ -1,0 +1,644 @@
+[
+  {
+    "id": "skin",
+    "label": "Skin",
+    "system": "integumentary",
+    "fma": "FMA7163",
+    "color": "#bfa992",
+    "sources": [
+      {
+        "name": "FMA7163",
+        "sha256": "c7762a9b5044a7329ac99403b42551571a28325472103cf1900c379cd8dfcfb7"
+      }
+    ]
+  },
+  {
+    "id": "brain",
+    "label": "Brain",
+    "system": "nervous",
+    "fma": "FMA50801",
+    "color": "#c3a6a2",
+    "sources": [
+      {
+        "name": "BP49",
+        "sha256": "a8e62da081dcb54e84d49f481d56ac243b97c8f62aa93455b2ce7281f137037f"
+      },
+      {
+        "name": "BP50",
+        "sha256": "f8335ade3ebc35876ae50a39201232f7fff023f25fc57f9e24e3c4953ce62a63"
+      },
+      {
+        "name": "FMA258714",
+        "sha256": "3cc9822dcd85957d59e1f7693261e5439a82cb18fe1eb73d212149d6f20b5125"
+      },
+      {
+        "name": "FMA258716",
+        "sha256": "0d8e8d8ee7ead40b24827006db87c84fa5f63797339f551db9ebebd3c41dfee0"
+      },
+      {
+        "name": "FMA61844",
+        "sha256": "fad509b6f3202fd4ef548ff72562c35f235815e4f9e37600b3e3d56da188ba7d"
+      },
+      {
+        "name": "FMA61993nsn",
+        "sha256": "bc4a8dada1834e72bfda67b43d427325e289791fd3e52eb9572d829702e2f335"
+      },
+      {
+        "name": "FMA62004",
+        "sha256": "9c3b3ed2c81667526e14ba3cd5f427c4611f596eb38df6939d2154324dd6bb07"
+      },
+      {
+        "name": "FMA62008nsn",
+        "sha256": "5598ae52eb0580509835f0ff3c9882aa8308b396209d6b4a51498297955c5788"
+      },
+      {
+        "name": "FMA62032",
+        "sha256": "86ffce4bfcb67cc457f00a1ac5771f0c093f1a4f35054d551f2418d32e489723"
+      },
+      {
+        "name": "FMA62033",
+        "sha256": "0197845b598e4f51525bc339bbe06263a4a1fe2567be9b5ce2fd1c15721e5a11"
+      },
+      {
+        "name": "FMA62327",
+        "sha256": "ddd934e94001468c70b96b8b32ab771110ebe44d2705f8e6febf621dea598fdc"
+      },
+      {
+        "name": "FMA62394",
+        "sha256": "8378143d06714d5222981f31b982eb0d4dbf6fde04ddd740b7f510d68335334b"
+      },
+      {
+        "name": "FMA67943",
+        "sha256": "464721a0893b05d7e830b327725cbd71c92d5fba6016c218bdbc4057f519e867"
+      },
+      {
+        "name": "FMA67944",
+        "sha256": "a023ac8cad7440cbb16814782f0d78643c9e81cdf04272971afa11a0100bd6fe"
+      },
+      {
+        "name": "FMA72653",
+        "sha256": "bfdfb291520f28f3243e5b6969449e9d0ce70fcbe7f2e1862629cea21110eb94"
+      },
+      {
+        "name": "FMA72654",
+        "sha256": "54aa6966cf6dee412cd16f2fc9ba4222a47910c59cc7a147dbac87d62689a13d"
+      },
+      {
+        "name": "FMA72655",
+        "sha256": "3996b19ea6ddce123eb1c41798cfff26f8af125fa63492a98454c6ea994bf26e"
+      },
+      {
+        "name": "FMA72656",
+        "sha256": "e97ef0b0a99f9d5b76d96363555cc27dca101c0f39ec340f38517e106a68d05b"
+      },
+      {
+        "name": "FMA72661",
+        "sha256": "136dc5cab4297753d7d26af60990c9e94b78997d6bf6a61d2beea08c726fd497"
+      },
+      {
+        "name": "FMA72662",
+        "sha256": "533692c92294c4f5ad4158a51ab681cfefb4bd0f729a70df2e983693a1b51b2b"
+      },
+      {
+        "name": "FMA72665",
+        "sha256": "26aa859a22bed7bb4165f41b456f532ace9de8e7583754f894ec239615558829"
+      },
+      {
+        "name": "FMA72666",
+        "sha256": "30fd9c050762f100770d42a71c64976cce10c49440f03e991702fe8514ebceb3"
+      },
+      {
+        "name": "FMA72667",
+        "sha256": "babd989df0c238866ab1ae6c9e94d1fb3ec5b7d457ee25576a31a120831e9f97"
+      },
+      {
+        "name": "FMA72668",
+        "sha256": "ac0d7b383407477f53f13304de628ec848e8273f41b9ca5895a34697834e6f1b"
+      },
+      {
+        "name": "FMA72669",
+        "sha256": "8d269ad9da1d34453e23ac41ce4cf1e94734f48023373b7f2502beaed17cfeb1"
+      },
+      {
+        "name": "FMA72670",
+        "sha256": "206507829901707be007389c3ebdbae07ebb942ec983d4582c3c2b76fef6ae34"
+      },
+      {
+        "name": "FMA72685",
+        "sha256": "a39ee61dc99086d7d1be44c42157de54e04f9defa85074c63dc43b0bd1ef028f"
+      },
+      {
+        "name": "FMA72686",
+        "sha256": "b7e58d0f86e4dd335eabf01b5459526f6a7fe66821b03ccb43d879ba70d56332"
+      },
+      {
+        "name": "FMA72687",
+        "sha256": "ec04eabe123163d811f4eb4cbca8baf6cfc018ee5994bfe48b04a6b1991ad479"
+      },
+      {
+        "name": "FMA72688",
+        "sha256": "fe75592f16a8c604c07f17e788e22f34801467f14f4a1e9d1066da3759a7616f"
+      },
+      {
+        "name": "FMA72689",
+        "sha256": "5f7263b7768b54a4ef8b8e31a1d0ef7a7d8f72ccce5011fcbfce66b36a27ad58"
+      },
+      {
+        "name": "FMA72690",
+        "sha256": "f7573954276f752193fe5b80b2ebab8e717d0e6c2b11f8ccea12c632c8abea3a"
+      },
+      {
+        "name": "FMA72701",
+        "sha256": "dae4a0cd8dbeeb27170af29c1f03a7626fa5fbb3c21748c71f07ab67177dafc3"
+      },
+      {
+        "name": "FMA72702",
+        "sha256": "68aec4cd4cb4a7c28c9f28e2056b64fd202237281012faba38736b03ab951d7a"
+      },
+      {
+        "name": "FMA72705",
+        "sha256": "fd317edc429ea14f0cc4398198bfb5a6f3a06d1ab9b2b24e5d41a63756899e0a"
+      },
+      {
+        "name": "FMA72706",
+        "sha256": "fa2679accd8a5134422e3d06012d30ac7db37cac3dcccba5526b9c9c3c55438b"
+      },
+      {
+        "name": "FMA72713",
+        "sha256": "bd5eac2f2fe55edc2b0f68524171ee38a775fd770dfeb7257c71fedc8b45e259"
+      },
+      {
+        "name": "FMA72714",
+        "sha256": "8cdbbe55c32006656574f414c8a56265d5f5c73bf206699c67a4feea94a17a21"
+      },
+      {
+        "name": "FMA72717",
+        "sha256": "052c22b760864144c50cc50077a3bdb111d7ed57e5f025ed9c061829b353b5dc"
+      },
+      {
+        "name": "FMA72718",
+        "sha256": "e83fc7ef26bafad285d81a236a5651132bd7eb1232f488ebb01f14202bffd927"
+      },
+      {
+        "name": "FMA72800",
+        "sha256": "19cde3a87977e5e3ba6c4a7f5570686108354193ce1e57c4b2607461ef6444cf"
+      },
+      {
+        "name": "FMA72801",
+        "sha256": "72022c802774b46f1ed6b3ae4afc705649d0a0a55a4eb50eef01ba40cb1278cb"
+      },
+      {
+        "name": "FMA72804",
+        "sha256": "812a311901ebf3947d8bf37341b91e9ce25560c14cb65834ea4a1e707310af51"
+      },
+      {
+        "name": "FMA72805",
+        "sha256": "8ee112c9d3387d6dcceacca5c13b27792466a55ecad95766c0cdee541a7e8210"
+      },
+      {
+        "name": "FMA72826",
+        "sha256": "d8d364a08d7e98a5a57752b09be2540fbd75f6bd2ec5a20994490f6263991e8d"
+      },
+      {
+        "name": "FMA72827",
+        "sha256": "8a307894f4f4a2cd557fdd9f41c14c581289082f80b35be1af19a34a48412d28"
+      },
+      {
+        "name": "FMA72828",
+        "sha256": "ee203a0755d3ccbcb6bb535a6109dae9584549aef263e1a46899ce176566e483"
+      },
+      {
+        "name": "FMA72829",
+        "sha256": "8b85165d23e1b12ea53e10f6b48939853058628cb32a4b1cf362ed58d6cbaef0"
+      },
+      {
+        "name": "FMA72830",
+        "sha256": "53088c84419a96800e728e7f0eab42333f09b1b610a0d8acaa485c0cd7787d1e"
+      },
+      {
+        "name": "FMA72831",
+        "sha256": "15bff551aaeaa83ba9411ce8d724e353a88a497491346c6450a9f40a0732b915"
+      },
+      {
+        "name": "FMA72832",
+        "sha256": "f3ca51d983d4b02ebe81c9ea4efcf808e602466d1544cbd15d2007cff04802e4"
+      },
+      {
+        "name": "FMA72833",
+        "sha256": "afc68bd353755bafcf95aa4cf19094df08c30de2e89bfec127314e9b0bf64835"
+      },
+      {
+        "name": "FMA72975",
+        "sha256": "1ce0984b5f92adef2278d7adb2d6eada578f20da6d00ce642eb085af60711138"
+      },
+      {
+        "name": "FMA72976",
+        "sha256": "8f718a0c60a316c7e6b60fa440909865927de819d2229c2c513f9dee97644a0a"
+      },
+      {
+        "name": "FMA72977",
+        "sha256": "2586b9df7a37d40d5082b0fa212856e285c6cbebb0bac3c7cbf1af06678f949a"
+      },
+      {
+        "name": "FMA72978",
+        "sha256": "8ab8b6fdee006cf8776db3b3c9857dd10aa9d60cd1851c2e7975eb7978c8d57b"
+      },
+      {
+        "name": "FMA73303",
+        "sha256": "3419dc93e9a5f33d2907ca774c192fb359006c71cbd44475f9e7f1f7ba922929"
+      },
+      {
+        "name": "FMA73304",
+        "sha256": "5bf59a6eaa4f900093dd6d5189c21186f6ec6e0a1a267025024d93d55de88bb9"
+      },
+      {
+        "name": "FMA73309",
+        "sha256": "85e7666c652cf06988ca9fee2514890db1ecc37408c5562ba9c57b27aa44de16"
+      },
+      {
+        "name": "FMA73310",
+        "sha256": "c69c45f8ad20285e3f438b52a4ca7ebb4bc0e5c21e6272d589e505bc482a00ce"
+      },
+      {
+        "name": "FMA73422",
+        "sha256": "0cbb1b8bf6038a3e7a6dc79599cec2eddd7e345abb64f863782c31ab28f79d1c"
+      },
+      {
+        "name": "FMA73423",
+        "sha256": "fef46963f7fefc70763b36291f1eef25aa061c946cc30fce7c3ef4c727dec75b"
+      },
+      {
+        "name": "FMA73434",
+        "sha256": "08b813f96fc4350186cc011e0fa0883554321cfa87e1dd15c51263bdd20a8f40"
+      },
+      {
+        "name": "FMA73435",
+        "sha256": "0362deeae6c28d231604ac6a3d63ddc13f72d1faa799f9594bdff37ed736c197"
+      },
+      {
+        "name": "FMA73461",
+        "sha256": "5101796b65462e3d3b1573802a2682cd08ae628ea3520762ec20c31e8be31fbb"
+      },
+      {
+        "name": "FMA73462",
+        "sha256": "c7c9c2b0e9d126460910b8b34ae6698f13610dabdbd7b4efda43a092862704d6"
+      },
+      {
+        "name": "FMA73463",
+        "sha256": "07d1af9fb36f5bf4d4faf8b89fca9dc269483c742098f5150ee71816e93f8ca0"
+      },
+      {
+        "name": "FMA73464",
+        "sha256": "d6bf68648f2a8b096bfab81c0868faac583f60940fd38e4e103bae248a1b86fa"
+      },
+      {
+        "name": "FMA78449",
+        "sha256": "3f433927af3ddab9cf4fe0abc7ea0a4a6bf50313ea1697421aedf7bb7a8003eb"
+      },
+      {
+        "name": "FMA78450",
+        "sha256": "be9d1bb10ca6ff7636ca1e7ba5d2c93ca488b7e47724872d6b572f1ac60b80eb"
+      },
+      {
+        "name": "FMA78454",
+        "sha256": "6bbf2d2d4552a08c20217326a1e978745d6425e75f9b92cf6f59826b4d30e53f"
+      },
+      {
+        "name": "FMA78467",
+        "sha256": "b650c942910747d2720ad70fe3865442b52913e6db98f4f58a20dd885e52a762"
+      },
+      {
+        "name": "FMA78469",
+        "sha256": "1fc1da3d6e360dcf88d93dbcdfe11507efa46a64a7d10a82a869d927178706e0"
+      }
+    ]
+  },
+  {
+    "id": "heart",
+    "label": "Heart",
+    "system": "cardiovascular",
+    "fma": "FMA7088",
+    "color": "#9e4a4b",
+    "sources": [
+      {
+        "name": "FMA3802",
+        "sha256": "a0327d37afecd97067bd8b95396622175e028a863debd418c6ab47e42dd89d03"
+      },
+      {
+        "name": "FMA3818",
+        "sha256": "8051eabb657122c11672c033e97e27a42c9e05213654dcdba5fada5c36fe9591"
+      },
+      {
+        "name": "FMA3840nsn",
+        "sha256": "4ed012404d7796f4245991dbeafcef7704c051b969e8cee8c6f32d352063eb0b"
+      },
+      {
+        "name": "FMA3862nsn",
+        "sha256": "831c5417e07392b91a6eba2f9584ae96912cfb21b75db192dd543500a8cfbc6a"
+      },
+      {
+        "name": "FMA3895",
+        "sha256": "bdccf8e75e76ef53555f2a667e135b7670f9f97d87dd10972b651b793a536763"
+      },
+      {
+        "name": "FMA4685",
+        "sha256": "1f255ab043b03785f60b080af66ec385c660797ff8796491880d4eed4ca54aad"
+      },
+      {
+        "name": "FMA4706",
+        "sha256": "03542a2590c4fa570efccc5e81c9b7936b0968cbad5b4c6d435e1e788481acf3"
+      },
+      {
+        "name": "FMA4707",
+        "sha256": "52b0738f4c0f57ea75314c2b548af1853dc7cd818e7c5e8972a0d8516202ea2b"
+      },
+      {
+        "name": "FMA4713",
+        "sha256": "fdbc7add270558e42f20604c651e5f8aa17d3c9024bebb8d85aabce5e4cd3509"
+      },
+      {
+        "name": "FMA71567",
+        "sha256": "514806aee1f1ccb70037913eae0d54d3d00b17b97bda5fbc88690f6bb0942e6c"
+      },
+      {
+        "name": "FMA71669",
+        "sha256": "19e35b9fb9a3ead9f7cd895a17bb09a21a558f921c0cd60361971aad12eae617"
+      },
+      {
+        "name": "FMA71670",
+        "sha256": "6122beeab521d053887797e909caa3d3b062b3fd6b5cb36992df6f15877e9544"
+      },
+      {
+        "name": "FMA7234",
+        "sha256": "96e2470c9ddd5fa0970014235abe2686d4c6084b1ed514edfec37677a7ae377e"
+      },
+      {
+        "name": "FMA7235",
+        "sha256": "e434d63f98d789acff6943ae244713d524d2abf6aa6020445a46bd24bc03d70c"
+      },
+      {
+        "name": "FMA7246",
+        "sha256": "b1436a72cf5727be01c02fe08bda7eaefd667af6cfbbcd6261f915a61e7f48dc"
+      },
+      {
+        "name": "FMA7260",
+        "sha256": "e6fe30295f9d229c227411f001c1616bb763520ca28d0006e51db89137561fa4"
+      },
+      {
+        "name": "FMA7261",
+        "sha256": "4ebf10dbcb09df59008bc24ea456c1cdc29e1a41bf567e12f03eca0440450853"
+      },
+      {
+        "name": "FMA7262",
+        "sha256": "1026d3e20fc4b58313f8dffb8f874e871916446091b0adcf4649e32409d0ae0a"
+      },
+      {
+        "name": "FMA7266",
+        "sha256": "def197ade00b5fca69d916f1329377e51cc589856f96fc6358ede93bbfbe60aa"
+      },
+      {
+        "name": "FMA7274",
+        "sha256": "ed570773264c7abf73db5f5da20e5e4f69943315e8c5995da850a2821988b0a2"
+      },
+      {
+        "name": "FMA76751",
+        "sha256": "1c29635b820858b0a792f3c74d140b0a900fadd0dc47470c2c074ee974a71a1e"
+      },
+      {
+        "name": "FMA76994",
+        "sha256": "aaa23cf3637eda7d08bd5102cf1324050806c658a7c1862de299294f533403d4"
+      },
+      {
+        "name": "FMA9352nsn",
+        "sha256": "9c881e0cc650b690288d7d5814c324bd1f888c61d0c48ebb7ac767e08d665618"
+      }
+    ]
+  },
+  {
+    "id": "lung_right",
+    "label": "Right lung",
+    "system": "respiratory",
+    "fma": "FMA7309",
+    "color": "#b88e97",
+    "sources": [
+      {
+        "name": "FMA7333",
+        "sha256": "cd168d6c22d10dcb5e8be3ec88e9a97b33a261fc3e8195001daaac32d964a177"
+      },
+      {
+        "name": "FMA7337",
+        "sha256": "cfb1641ad8443abd6da3919d3f7565f7d119dc740b7cf91d51d17ae9f2f67eda"
+      },
+      {
+        "name": "FMA7383",
+        "sha256": "a12839911dd06f97d21f716d717a207ad0237dc602ce2ad2ad53fbcd402d4673"
+      }
+    ]
+  },
+  {
+    "id": "lung_left",
+    "label": "Left lung",
+    "system": "respiratory",
+    "fma": "FMA7310",
+    "color": "#b88e97",
+    "sources": [
+      {
+        "name": "FMA7370",
+        "sha256": "d5e0401182d8af9e9b05f4cac7eb4f728598650645370a15eec83ea1598b7e24"
+      },
+      {
+        "name": "FMA7371",
+        "sha256": "17419dd2f9d837e162286b8545308893a9377e1f410c6e3c6385b45f1a6e90a3"
+      }
+    ]
+  },
+  {
+    "id": "liver",
+    "label": "Liver",
+    "system": "digestive",
+    "fma": "FMA7197",
+    "color": "#885049",
+    "sources": [
+      {
+        "name": "FMA7197",
+        "sha256": "cbd634ccfbb532b33c01b6a1361dd706e95955de67aa729169d7d68752b6a98d"
+      }
+    ]
+  },
+  {
+    "id": "stomach",
+    "label": "Stomach",
+    "system": "digestive",
+    "fma": "FMA7148",
+    "color": "#c79088",
+    "sources": [
+      {
+        "name": "FMA7148",
+        "sha256": "a6764d20879cf7ba1acd8284c1b0255b20111d8bd3b92838cf97600e6f3d9065"
+      }
+    ]
+  },
+  {
+    "id": "spleen",
+    "label": "Spleen",
+    "system": "lymphatic",
+    "fma": "FMA7196",
+    "color": "#885870",
+    "sources": [
+      {
+        "name": "FMA7196",
+        "sha256": "72c0248b1e35490c66a0d0bde0ecdde6a362f3940a5bb6d3e770718ff5eeb94a"
+      }
+    ]
+  },
+  {
+    "id": "pancreas",
+    "label": "Pancreas",
+    "system": "digestive",
+    "fma": "FMA7198",
+    "color": "#cdb28d",
+    "sources": [
+      {
+        "name": "FMA7198nsn",
+        "sha256": "884948a0b7f2b274dd67ede43fd1d0aaacc6657451ff0de7eeb0063d261fa4ca"
+      }
+    ]
+  },
+  {
+    "id": "kidney_right",
+    "label": "Right kidney",
+    "system": "urinary",
+    "fma": "FMA7204",
+    "color": "#aa635b",
+    "sources": [
+      {
+        "name": "FMA7204",
+        "sha256": "c69330266787669e89ef343ea294ca3fdcf0205382079c4b38e1b7252863d6f3"
+      }
+    ]
+  },
+  {
+    "id": "kidney_left",
+    "label": "Left kidney",
+    "system": "urinary",
+    "fma": "FMA7205",
+    "color": "#aa635b",
+    "sources": [
+      {
+        "name": "FMA7205",
+        "sha256": "b93be6a9ef9fa237bb1231b5c895cd938b25920266bb1400537b4319f4a35cdb"
+      }
+    ]
+  },
+  {
+    "id": "intestine_small",
+    "label": "Small intestine",
+    "system": "digestive",
+    "fma": "FMA7200",
+    "color": "#c39c8e",
+    "sources": [
+      {
+        "name": "FMA7206",
+        "sha256": "d0917ad9499253cbc836ab418d63c12e6b785b24dd55127ce4d98fe0469e6732"
+      },
+      {
+        "name": "FMA7207",
+        "sha256": "e75d35ad175976104bc7757605930c0e7715c72830dd86a482950dd9e516e2c8"
+      },
+      {
+        "name": "FMA7208",
+        "sha256": "47d26fb1bbc906d1b0743255cc049ef8bec28f17b6e00f47976e059c46f2f457"
+      }
+    ]
+  },
+  {
+    "id": "intestine_large",
+    "label": "Large intestine",
+    "system": "digestive",
+    "fma": "FMA7201",
+    "color": "#b08883",
+    "sources": [
+      {
+        "name": "FMA14543nsn",
+        "sha256": "ab970c4d688cf48b30d1c4f88634a0fca9233fc8e0cf3e7570edf0403448377f"
+      },
+      {
+        "name": "FMA76891",
+        "sha256": "c718790156be3014d186dc939d455746d446b797f743f2cc06a89e848c820d8c"
+      },
+      {
+        "name": "FMA76892",
+        "sha256": "00b134060366eb0d918814d8e0d886aab2576967d078f60ffaf4a635554acdb6"
+      },
+      {
+        "name": "FMA76893",
+        "sha256": "002ea21ed3d983e3f074791c21be4dfabfa405a787451fc0c9075db981729f84"
+      }
+    ]
+  },
+  {
+    "id": "clavicle_right",
+    "label": "Right clavicle",
+    "system": "skeletal",
+    "fma": "FMA13322",
+    "color": "#dfd6bc",
+    "sources": [
+      {
+        "name": "FMA13322",
+        "sha256": "f340050375ea4397a85082fb7bd68ea553d52f4718656599804ecf8f4c7768be"
+      }
+    ]
+  },
+  {
+    "id": "clavicle_left",
+    "label": "Left clavicle",
+    "system": "skeletal",
+    "fma": "FMA13323",
+    "color": "#dfd6bc",
+    "sources": [
+      {
+        "name": "FMA13323",
+        "sha256": "ec68d362926061c62c2b7493fb6554941d78250f27ecdf744375659050bdc7ee"
+      }
+    ]
+  },
+  {
+    "id": "humerus_right",
+    "label": "Right humerus",
+    "system": "skeletal",
+    "fma": "FMA23130",
+    "color": "#dfd6bc",
+    "sources": [
+      {
+        "name": "FMA23130",
+        "sha256": "6e26ad2b9794b136000abe2cc0b54cade989b943214e2149732cc2db2e337dce"
+      }
+    ]
+  },
+  {
+    "id": "humerus_left",
+    "label": "Left humerus",
+    "system": "skeletal",
+    "fma": "FMA23131",
+    "color": "#dfd6bc",
+    "sources": [
+      {
+        "name": "FMA23131",
+        "sha256": "a0650a72c481093ee8c3b1fe7cf8ad97b2d63875685e1acf608dec7a5e031748"
+      }
+    ]
+  },
+  {
+    "id": "frontal_bone",
+    "label": "Frontal bone",
+    "system": "skeletal",
+    "fma": "FMA52734",
+    "color": "#dfd6bc",
+    "sources": [
+      {
+        "name": "FMA52734",
+        "sha256": "0791c2e2dde886005d3d5997b75a05353d3ae20d908fc74ab820a58520d26f46"
+      }
+    ]
+  }
+]

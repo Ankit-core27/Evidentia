@@ -1,0 +1,489 @@
+{
+  "modelId": "bodyparts3d-3.0-forensix-v1",
+  "url": "/3d/anatomy/bodyparts3d.glb",
+  "sourceCommit": "f0eeb6e843380cfe6b83797cf8c3e1af74de5e61",
+  "sha256": "f8eeca2795ec8175414f6b0154a54733dbd30c3998f8a148a16957ea6b8154bf",
+  "license": "CC BY-SA 2.1 Japan",
+  "structures": [
+    {
+      "id": "skin",
+      "label": "Skin",
+      "system": "integumentary",
+      "fma": "FMA7163",
+      "color": "#bfa992",
+      "meshNames": [
+        "FMA7163"
+      ],
+      "originalPosition": [
+        0.0,
+        -5.551115123125783e-17,
+        0.0
+      ],
+      "size": [
+        0.6585690002441407,
+        1.6551975536346437,
+        0.28563259506225586
+      ],
+      "triangles": 40000
+    },
+    {
+      "id": "brain",
+      "label": "Brain",
+      "system": "nervous",
+      "fma": "FMA50801",
+      "color": "#c3a6a2",
+      "meshNames": [
+        "BP49",
+        "BP50",
+        "FMA258714",
+        "FMA258716",
+        "FMA61844",
+        "FMA61993nsn",
+        "FMA62004",
+        "FMA62008nsn",
+        "FMA62032",
+        "FMA62033",
+        "FMA62327",
+        "FMA62394",
+        "FMA67943",
+        "FMA67944",
+        "FMA72653",
+        "FMA72654",
+        "FMA72655",
+        "FMA72656",
+        "FMA72661",
+        "FMA72662",
+        "FMA72665",
+        "FMA72666",
+        "FMA72667",
+        "FMA72668",
+        "FMA72669",
+        "FMA72670",
+        "FMA72685",
+        "FMA72686",
+        "FMA72687",
+        "FMA72688",
+        "FMA72689",
+        "FMA72690",
+        "FMA72701",
+        "FMA72702",
+        "FMA72705",
+        "FMA72706",
+        "FMA72713",
+        "FMA72714",
+        "FMA72717",
+        "FMA72718",
+        "FMA72800",
+        "FMA72801",
+        "FMA72804",
+        "FMA72805",
+        "FMA72826",
+        "FMA72827",
+        "FMA72828",
+        "FMA72829",
+        "FMA72830",
+        "FMA72831",
+        "FMA72832",
+        "FMA72833",
+        "FMA72975",
+        "FMA72976",
+        "FMA72977",
+        "FMA72978",
+        "FMA73303",
+        "FMA73304",
+        "FMA73309",
+        "FMA73310",
+        "FMA73422",
+        "FMA73423",
+        "FMA73434",
+        "FMA73435",
+        "FMA73461",
+        "FMA73462",
+        "FMA73463",
+        "FMA73464",
+        "FMA78449",
+        "FMA78450",
+        "FMA78454",
+        "FMA78467",
+        "FMA78469"
+      ],
+      "originalPosition": [
+        -3.1864166259769344e-05,
+        0.7406286840438843,
+        -0.0069442498683929335
+      ],
+      "size": [
+        0.13357970428466798,
+        0.15673999023437513,
+        0.170231116771698
+      ],
+      "triangles": 27520
+    },
+    {
+      "id": "heart",
+      "label": "Heart",
+      "system": "cardiovascular",
+      "fma": "FMA7088",
+      "color": "#9e4a4b",
+      "meshNames": [
+        "FMA3802",
+        "FMA3818",
+        "FMA3840nsn",
+        "FMA3862nsn",
+        "FMA3895",
+        "FMA4685",
+        "FMA4706",
+        "FMA4707",
+        "FMA4713",
+        "FMA71567",
+        "FMA71669",
+        "FMA71670",
+        "FMA7234",
+        "FMA7235",
+        "FMA7246",
+        "FMA7260",
+        "FMA7261",
+        "FMA7262",
+        "FMA7266",
+        "FMA7274",
+        "FMA76751",
+        "FMA76994",
+        "FMA9352nsn"
+      ],
+      "originalPosition": [
+        0.022182588577270502,
+        0.42292873287200927,
+        0.025337099075317393
+      ],
+      "size": [
+        0.11578120040893555,
+        0.10534008789062521,
+        0.10956240081787111
+      ],
+      "triangles": 16326
+    },
+    {
+      "id": "lung_right",
+      "label": "Right lung",
+      "system": "respiratory",
+      "fma": "FMA7309",
+      "color": "#b88e97",
+      "meshNames": [
+        "FMA7333",
+        "FMA7337",
+        "FMA7383"
+      ],
+      "originalPosition": [
+        -0.06419596511125565,
+        0.4310937108993531,
+        0.010445200920104994
+      ],
+      "size": [
+        0.12647510468959808,
+        0.2544500732421875,
+        0.18103619956970216
+      ],
+      "triangles": 9998
+    },
+    {
+      "id": "lung_left",
+      "label": "Left lung",
+      "system": "respiratory",
+      "fma": "FMA7310",
+      "color": "#b88e97",
+      "meshNames": [
+        "FMA7370",
+        "FMA7371"
+      ],
+      "originalPosition": [
+        0.06595456886291504,
+        0.429978720664978,
+        0.010539954185485846
+      ],
+      "size": [
+        0.12005584335327148,
+        0.2588199462890626,
+        0.1795207042694092
+      ],
+      "triangles": 10000
+    },
+    {
+      "id": "liver",
+      "label": "Liver",
+      "system": "digestive",
+      "fma": "FMA7197",
+      "color": "#885049",
+      "meshNames": [
+        "FMA7197"
+      ],
+      "originalPosition": [
+        -0.01783836364746095,
+        0.30325374507904057,
+        0.02091354942321778
+      ],
+      "size": [
+        0.19900030517578127,
+        0.17395007324218748,
+        0.14999949645996094
+      ],
+      "triangles": 6000
+    },
+    {
+      "id": "stomach",
+      "label": "Stomach",
+      "system": "digestive",
+      "fma": "FMA7148",
+      "color": "#c79088",
+      "meshNames": [
+        "FMA7148"
+      ],
+      "originalPosition": [
+        0.043961137771606436,
+        0.30768874263763435,
+        0.041414903640747076
+      ],
+      "size": [
+        0.14174270248413084,
+        0.12019995117187499,
+        0.11523079681396485
+      ],
+      "triangles": 6000
+    },
+    {
+      "id": "spleen",
+      "label": "Spleen",
+      "system": "lymphatic",
+      "fma": "FMA7196",
+      "color": "#885870",
+      "meshNames": [
+        "FMA7196"
+      ],
+      "originalPosition": [
+        0.08009238815307618,
+        0.298893759727478,
+        0.0013312511444091915
+      ],
+      "size": [
+        0.07392020416259766,
+        0.08367004394531241,
+        0.09926809692382814
+      ],
+      "triangles": 6000
+    },
+    {
+      "id": "pancreas",
+      "label": "Pancreas",
+      "system": "digestive",
+      "fma": "FMA7198",
+      "color": "#cdb28d",
+      "meshNames": [
+        "FMA7198nsn"
+      ],
+      "originalPosition": [
+        0.004687187194824215,
+        0.24382869625091552,
+        0.032985303878784185
+      ],
+      "size": [
+        0.11302259826660156,
+        0.07233996582031232,
+        0.03913800048828124
+      ],
+      "triangles": 6000
+    },
+    {
+      "id": "kidney_right",
+      "label": "Right kidney",
+      "system": "urinary",
+      "fma": "FMA7204",
+      "color": "#aa635b",
+      "meshNames": [
+        "FMA7204"
+      ],
+      "originalPosition": [
+        -0.06484116363525391,
+        0.23662670040130618,
+        -0.025166646957397457
+      ],
+      "size": [
+        0.06006610107421875,
+        0.10222393798828122,
+        0.05307590484619141
+      ],
+      "triangles": 6000
+    },
+    {
+      "id": "kidney_left",
+      "label": "Left kidney",
+      "system": "urinary",
+      "fma": "FMA7205",
+      "color": "#aa635b",
+      "meshNames": [
+        "FMA7205"
+      ],
+      "originalPosition": [
+        0.05548928546905517,
+        0.2520287084579468,
+        -0.022013399124145502
+      ],
+      "size": [
+        0.06056999778747559,
+        0.10295996093750004,
+        0.0440968017578125
+      ],
+      "triangles": 6000
+    },
+    {
+      "id": "intestine_small",
+      "label": "Small intestine",
+      "system": "digestive",
+      "fma": "FMA7200",
+      "color": "#c39c8e",
+      "meshNames": [
+        "FMA7206",
+        "FMA7207",
+        "FMA7208"
+      ],
+      "originalPosition": [
+        0.003708538055419916,
+        0.14920125484466545,
+        0.04622279930114746
+      ],
+      "size": [
+        0.20163390350341798,
+        0.2755150146484374,
+        0.08166899108886719
+      ],
+      "triangles": 5998
+    },
+    {
+      "id": "intestine_large",
+      "label": "Large intestine",
+      "system": "digestive",
+      "fma": "FMA7201",
+      "color": "#b08883",
+      "meshNames": [
+        "FMA14543nsn",
+        "FMA76891",
+        "FMA76892",
+        "FMA76893"
+      ],
+      "originalPosition": [
+        0.0025274887084960895,
+        0.1526202001571655,
+        0.028664253234863286
+      ],
+      "size": [
+        0.21836000061035157,
+        0.24103698730468737,
+        0.1269441032409668
+      ],
+      "triangles": 6000
+    },
+    {
+      "id": "clavicle_right",
+      "label": "Right clavicle",
+      "system": "skeletal",
+      "fma": "FMA13322",
+      "color": "#dfd6bc",
+      "meshNames": [
+        "FMA13322"
+      ],
+      "originalPosition": [
+        -0.08011096525192261,
+        0.5352287206649781,
+        0.00048425483703613825
+      ],
+      "size": [
+        0.1385891046524048,
+        0.03509997558593758,
+        0.09954210662841798
+      ],
+      "triangles": 5112
+    },
+    {
+      "id": "clavicle_left",
+      "label": "Left clavicle",
+      "system": "skeletal",
+      "fma": "FMA13323",
+      "color": "#dfd6bc",
+      "meshNames": [
+        "FMA13323"
+      ],
+      "originalPosition": [
+        0.08004478693008422,
+        0.5352337255477905,
+        0.0004817523956298815
+      ],
+      "size": [
+        0.13855739879608156,
+        0.0350499267578126,
+        0.09951509857177734
+      ],
+      "triangles": 5140
+    },
+    {
+      "id": "humerus_right",
+      "label": "Right humerus",
+      "system": "skeletal",
+      "fma": "FMA23130",
+      "color": "#dfd6bc",
+      "meshNames": [
+        "FMA23130"
+      ],
+      "originalPosition": [
+        -0.19049600982666015,
+        0.3791136693954468,
+        -0.024565496444702142
+      ],
+      "size": [
+        0.10091099548339846,
+        0.30748999023437484,
+        0.04954000091552735
+      ],
+      "triangles": 6000
+    },
+    {
+      "id": "humerus_left",
+      "label": "Left humerus",
+      "system": "skeletal",
+      "fma": "FMA23131",
+      "color": "#dfd6bc",
+      "meshNames": [
+        "FMA23131"
+      ],
+      "originalPosition": [
+        0.19043498229980468,
+        0.3791186742782592,
+        -0.02456664848327636
+      ],
+      "size": [
+        0.10090499877929687,
+        0.30747998046875,
+        0.04953369903564453
+      ],
+      "triangles": 6000
+    },
+    {
+      "id": "frontal_bone",
+      "label": "Frontal bone",
+      "system": "skeletal",
+      "fma": "FMA52734",
+      "color": "#dfd6bc",
+      "meshNames": [
+        "FMA52734"
+      ],
+      "originalPosition": [
+        -3.9562225341800705e-05,
+        0.7666037206649781,
+        0.05226430320739747
+      ],
+      "size": [
+        0.118418701171875,
+        0.10321008300781265,
+        0.06698200988769532
+      ],
+      "triangles": 6000
+    }
+  ]
+}
