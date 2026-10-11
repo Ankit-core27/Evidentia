@@ -51,7 +51,7 @@ If the upload form asks for a case title and description, use:
 
 ## Run-through
 
-Set up and start both apps as in the root `Readme.md`, with `GEMINI_API_KEY` in `.env`. Start from an empty database (delete `storage/`, then `alembic upgrade head`) so that only this case is on screen, or keep the seed data if you want a populated dashboard.
+Set up and start both apps as in the root `README.md`, with `GEMINI_API_KEY` in `.env`. Start from an empty database (delete `storage/`, then `alembic upgrade head`) so that only this case is on screen, or keep the seed data if you want a populated dashboard.
 
 1. **Create the case** and open its workspace.
 2. **Upload the 13 files** together. Each shows `queued`, then `processing`, then `done`. Files are processed one at a time, so allow a few minutes on a free Gemini key (see "Rate limits" below).
