@@ -36,7 +36,7 @@ Gemini is optional for viewing, source inspection and review. To request new pro
 
 ## Backend and extraction
 
-Migration `0002` follows `0001`. It adds default-empty `injuries.medical_details` JSON and a reviewable `anatomy_findings` table for non-traumatic pathology, explicit normal statements and uncertainty. Existing trauma stays in `Injury`; missing severity uses the additive `unknown` value. The record registry, evidence links, case counts, AI review module and mock transport recognize the new type. Confirmed anatomy findings and their source IDs appear in the existing confirmed-findings section of newly generated medical/court report snapshots. Pending/rejected anatomy proposals are excluded there; old snapshots are unchanged.
+Migration `0003` follows the reconstruction-scene migration `0002`. It adds default-empty `injuries.medical_details` JSON and a reviewable `anatomy_findings` table for non-traumatic pathology, explicit normal statements and uncertainty. Existing trauma stays in `Injury`; missing severity uses the additive `unknown` value. The record registry, evidence links, case counts, AI review module and mock transport recognize the new type. Confirmed anatomy findings and their source IDs appear in the existing confirmed-findings section of newly generated medical/court report snapshots. Pending/rejected anatomy proposals are excluded there; old snapshots are unchanged.
 
 New routes:
 
@@ -100,11 +100,11 @@ Pass `--chromium /path/to/chromium` when needed. Screenshots go to `/tmp/anatomy
 
 The model is a simplified adult male reference subset, not patient-specific anatomy; soft-tissue regions and many anatomical systems are absent. Investigator marker placement is illustrative, not a clinical measurement. Touch users can rotate/pan with the installed camera controls and use the explicit separation slider; touch pinch is ordinary camera zoom. Live Gemini needs credentials and was not called during the deterministic tests. No new dependency or unrelated crime-scene/security redesign is part of this change.
 
-## Executed checks (11 October 2026)
+## Executed checks (11 October 2026, after merging main at `335ea48`)
 
-- Backend: 280 passing tests, including 31 anatomy tests and migration preservation.
-- Frontend: OpenAPI regeneration, TypeScript validation, production build, and all 8 anatomy tests passed.
+- Backend: 291 passing tests, including 31 anatomy tests and migration preservation; Alembic has a single head (`0003`).
+- Frontend: `npm ci` on the merged lockfile, OpenAPI regeneration (no diff), TypeScript validation, production build, and all 8 anatomy tests passed.
 - Existing scene packages: 28 scene-engine and 12 scene-planner tests passed.
-- Real Chromium: existing seed/camera/source flow in mock mode passed; synthetic API-backed postmortem/review/persistent-marker flow passed; the evidence-inspector close/person-switch regression passed in development mode; missing-GLB fallback retained findings and usable source navigation. Browser errors were checked, not just screenshots.
+- Real Chromium: the complete smoke script passed uninterrupted in mock mode and against a production preview with a fresh synthetic database (existing seed/camera/source flow, postmortem normal/uncertain findings, review, persisted marker, rejected badges, person isolation, no AI), with no browser runtime or console errors. Before the merge, the evidence-inspector close/person-switch regression passed in development mode, and the missing-GLB fallback retained findings and usable source navigation.
 - Live Gemini was not exercised. Backend tests substitute deterministic model output and test both successful explicit analysis and failures.
 - Existing non-fatal warnings remain: large Vite chunks, Python deprecations and the scene packages' CommonJS Three.js deprecation.
