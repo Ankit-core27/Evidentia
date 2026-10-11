@@ -1,0 +1,171 @@
+{
+  "version": 1,
+  "area": {
+    "name": "Ring Road and 5th Avenue junction, Sector 12",
+    "frame": "Model metres: origin at ground centre of footprint, +x east, -z north, +y up; heading_deg rotates the model clockwise from north."
+  },
+  "buildings": [
+    {
+      "id": "corner-store",
+      "name": "Corner store",
+      "use": "Shop with residence above",
+      "geo_building_id": "fx-junction-sw-01",
+      "anchor": {
+        "lat": 12.97125,
+        "lng": 77.59425,
+        "heading_deg": 0
+      },
+      "footprint": {
+        "width_m": 10,
+        "depth_m": 8
+      },
+      "height_m": 7.5,
+      "floors": [
+        {
+          "level": 0,
+          "label": "Ground floor · shop",
+          "elevation_m": 0
+        },
+        {
+          "level": 1,
+          "label": "First floor · residence",
+          "elevation_m": 3.2
+        }
+      ],
+      "model": {
+        "url": "/3d/buildings/corner-store.glb",
+        "source": "authored",
+        "components": {
+          "floors": 2,
+          "rooms": 9,
+          "walls": 15,
+          "doors": 8,
+          "furniture": 18,
+          "stairs": 1
+        }
+      },
+      "note": "Authored illustrative model. The case records hold no survey or floor plan of this building."
+    },
+    {
+      "id": "office-block",
+      "name": "Office block",
+      "use": "Commercial offices",
+      "geo_building_id": "fx-junction-ne-01",
+      "anchor": {
+        "lat": 12.97203,
+        "lng": 77.59478,
+        "heading_deg": 0
+      },
+      "footprint": {
+        "width_m": 14,
+        "depth_m": 10
+      },
+      "height_m": 11.7,
+      "floors": [
+        {
+          "level": 0,
+          "label": "Ground floor · lobby",
+          "elevation_m": 0
+        },
+        {
+          "level": 1,
+          "label": "First floor · open office",
+          "elevation_m": 3.5
+        },
+        {
+          "level": 2,
+          "label": "Second floor · offices",
+          "elevation_m": 7
+        }
+      ],
+      "model": {
+        "url": "/3d/buildings/office-block.glb",
+        "source": "authored",
+        "components": {
+          "floors": 3,
+          "rooms": 12,
+          "walls": 22,
+          "doors": 9,
+          "furniture": 56,
+          "stairs": 2
+        }
+      },
+      "note": "Authored illustrative model. The case records hold no survey or floor plan of this building."
+    },
+    {
+      "id": "nw-block",
+      "name": "Commercial block (footprint only)",
+      "use": "Unknown",
+      "geo_building_id": "fx-junction-nw-01",
+      "anchor": {
+        "lat": 12.97205,
+        "lng": 77.5941,
+        "heading_deg": 0
+      },
+      "footprint": {
+        "width_m": 18,
+        "depth_m": 12
+      },
+      "height_m": 9,
+      "floors": [
+        {
+          "level": 0,
+          "label": "Ground floor",
+          "elevation_m": 0
+        },
+        {
+          "level": 1,
+          "label": "First floor",
+          "elevation_m": 3
+        },
+        {
+          "level": 2,
+          "label": "Second floor",
+          "elevation_m": 6
+        }
+      ],
+      "model": null,
+      "note": "Footprint and height are illustrative. No detailed model exists for this building."
+    },
+    {
+      "id": "se-block",
+      "name": "Residential block (footprint only)",
+      "use": "Unknown",
+      "geo_building_id": "fx-junction-se-01",
+      "anchor": {
+        "lat": 12.97112,
+        "lng": 77.595,
+        "heading_deg": 0
+      },
+      "footprint": {
+        "width_m": 14,
+        "depth_m": 14
+      },
+      "height_m": 12,
+      "floors": [
+        {
+          "level": 0,
+          "label": "Ground floor",
+          "elevation_m": 0
+        },
+        {
+          "level": 1,
+          "label": "First floor",
+          "elevation_m": 3
+        },
+        {
+          "level": 2,
+          "label": "Second floor",
+          "elevation_m": 6
+        },
+        {
+          "level": 3,
+          "label": "Third floor",
+          "elevation_m": 9
+        }
+      ],
+      "model": null,
+      "note": "Footprint and height are illustrative. No detailed model exists for this building."
+    }
+  ]
+}
