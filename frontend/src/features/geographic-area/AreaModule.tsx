@@ -1,13 +1,21 @@
 import React, { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Building2, ChevronLeft, ChevronRight, Crosshair, Maximize2, ScanSearch, X } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { Box, Building2, ChevronLeft, ChevronRight, Crosshair, Maximize2, ScanSearch, X } from 'lucide-react';
 import { ErrorState, LoadingState } from '@/components/shared/QueryState';
-import { iconButtonClass, primaryButtonClass, smallButtonClass } from '@/components/shared/formStyles';
+import { iconButtonClass, inlineSelectClass, linkClass, primaryButtonClass, smallButtonClass } from '@/components/shared/formStyles';
+import { SCENE_ROOT, SceneFile, modelSpec, modelVariant } from '@/features/crime-scene/case-scene/sceneFile';
+import { placedAt, usePlaybackStore } from '@/features/reconstruction/playback';
+import { StageTimeSlider } from '@/features/reconstruction/StageTimeSlider';
+import { useCaseScenario } from '@/features/reconstruction/useCaseScenario';
+import { casePath } from '@/lib/caseModules';
+import { useStageStore } from '@/stores/stage';
 import { humanize } from '@/lib/format';
 import { useAreaStore } from '@/stores/area';
-import type { CaseWorkspace } from '@/types/api';
+import type { CaseWorkspace, ReconstructionDetail, Vec3 } from '@/types/api';
 import { buildingMarkers, linkedEvidence } from '@/features/building-viewer/buildingMarkers';
-import { BuildingEntry, distanceMetres, useBuildingManifest } from './buildingRegistry';
-import { AreaStatus, AreaViewerHandle, CesiumAreaViewer } from './CesiumAreaViewer';
+import { BuildingEntry, distanceMetres, offsetLatLng, useBuildingManifest } from './buildingRegistry';
+import { AreaStatus, AreaViewerHandle, CesiumAreaViewer, MapActor, MapLine } from './CesiumAreaViewer';
 
 const BuildingInspector = lazy(() => import('@/features/building-viewer/BuildingInspector').then((m) => ({ default: m.BuildingInspector })));
 
@@ -28,6 +36,22 @@ const STATUS_TEXT: Record<string, string> = {
   'buildings:failed': 'OSM buildings unavailable'
 };
 
+/** A reconstruction's layout: its generated scene, or its authored scene file. */
+function useScene(detail: ReconstructionDetail | undefined) {
+  const generated = (detail?.scene ?? null) as unknown as SceneFile | null;
+  const file = useQuery({
+    queryKey: ['scene-file', detail?.scene_file],
+    enabled: !!detail && !generated && !!detail.scene_file,
+    staleTime: Infinity,
+    queryFn: async ({ signal }) => {
+      const res = await fetch(`${SCENE_ROOT}/scenes/${detail!.scene_file}`, { signal });
+      if (!res.ok) throw new Error(`Scene file ${detail!.scene_file} could not be loaded (${res.status}).`);
+      return (await res.json()) as SceneFile;
+    }
+  });
+  return generated ?? file.data;
+}
+
 /**
  * Area overview → building selection → focus → detailed model → dissection → back.
  * The Cesium viewer stays mounted (paused) under the building inspector, so returning
@@ -41,6 +65,11 @@ export const AreaModule: React.FC<{ workspace: CaseWorkspace }> = ({ workspace }
   const [status, setStatus] = useState<AreaStatus | null>(null);
   const [pickedLocation, setPickedLocation] = useState<number | null>(null);
   const [initialCamera] = useState(() => cameras[caseId] ?? null);
+  // The reconstruction, synced with the reconstruction panel: same scenario, stage and playhead.
+  const scenario = useCaseScenario(caseId);
+  const position = usePlaybackStore((s) => s.position);
+  const { stageId, sceneObjectId, selectSceneObject } = useStageStore();
+  const scene = useScene(scenario.detail);
 
   useEffect(() => bindCase(caseId), [bindCase, caseId]);
   // Keep the camera for this case when the tab is left.
@@ -55,6 +84,48 @@ export const AreaModule: React.FC<{ workspace: CaseWorkspace }> = ({ workspace }
     () => (incidentRecord ? { lat: incidentRecord.lat as number, lng: incidentRecord.lng as number, label: 'Incident site' } : null),
     [incidentRecord]
   );
+
+  // Scene metres (x east, z south) are measured from the incident site, the origin of
+  // every reconstruction scene, so they map onto the area around it.
+  const toMap = useCallback(
+    (x: number, z: number) => (incident ? offsetLatLng(incident.lat, incident.lng, x, -z) : null),
+    [incident]
+  );
+  const actors = useMemo<MapActor[]>(() => {
+    if (!scenario.detail || !incident) return [];
+    return placedAt(scenario.detail.stages, stageId, position).flatMap((p) => {
+      const at = toMap(p.x, p.z);
+      if (!at) return [];
+      const spec = modelSpec(scene, p.object.model_id);
+      const kind = spec?.kind === 'person' ? 'person' : spec?.kind === 'item' ? 'item' : 'vehicle';
+      const upright = !['lying', 'fallen'].includes(modelVariant(p.object.model_id));
+      return [{
+        key: p.key,
+        sceneObjectId: p.object.id,
+        label: p.object.label,
+        ...at,
+        // Scene headings turn anticlockwise from east; bearings clockwise from north.
+        bearing: Math.PI / 2 - p.heading,
+        kind,
+        modelUrl: kind === 'vehicle' && upright ? spec?.url ?? `${SCENE_ROOT}/library/${p.object.model_id.split(':')[0]}.glb` : undefined,
+        selected: p.object.id === sceneObjectId
+      }];
+    });
+  }, [scenario.detail, incident, stageId, position, toMap, scene, sceneObjectId]);
+  const lines = useMemo<MapLine[]>(() => {
+    if (!scenario.detail) return [];
+    return scenario.detail.annotations.flatMap((a) => {
+      if (a.kind !== 'measurement' || (a.stage_id !== null && a.stage_id !== stageId)) return [];
+      const from = a.data.from as Vec3 | undefined;
+      const to = a.data.to as Vec3 | undefined;
+      const f = from && toMap(from[0], from[2]);
+      const t = to && toMap(to[0], to[2]);
+      if (!f || !t) return [];
+      const length = typeof a.data.length_m === 'number' ? ` ${a.data.length_m} m` : '';
+      return [{ key: String(a.id), label: `${String(a.data.label || 'Measurement')}${length}`, from: f, to: t }];
+    });
+  }, [scenario.detail, stageId, toMap]);
+  const selectedActor = actors.find((a) => a.selected);
 
   const buildings = manifest.data?.buildings;
   const allBuildings = useMemo(() => buildings ?? [], [buildings]);
@@ -95,12 +166,13 @@ export const AreaModule: React.FC<{ workspace: CaseWorkspace }> = ({ workspace }
           <p className="font-mono text-xs uppercase tracking-wider text-ink-muted">Geographic context · M6</p>
           <h2 className="mt-0.5 text-lg font-semibold text-ink">Area & buildings</h2>
         </div>
-        <p className="text-xs text-ink-muted">{manifest.data?.area.name}</p>
+        <p className="text-xs text-ink-muted">{incidentRecord?.address ?? manifest.data?.area.name}</p>
       </div>
 
       <div className="relative h-[calc(100dvh-19.5rem)] min-h-[520px] overflow-hidden rounded-md border border-line bg-well">
         {manifest.isPending ? <LoadingState label="Loading area…" /> : (
           <CesiumAreaViewer ref={viewer} incident={incident} locations={locations} buildings={allBuildings} radiusM={radiusM}
+            actors={actors} lines={lines} onPickActor={selectSceneObject}
             selection={selection} initialCamera={initialCamera} paused={Boolean(inspecting)}
             onPick={onPick} onPickLocation={setPickedLocation} onStatus={setStatus} />
         )}
@@ -125,7 +197,7 @@ export const AreaModule: React.FC<{ workspace: CaseWorkspace }> = ({ workspace }
         )}
 
         {!inspecting && status && (
-          <div className="pointer-events-none absolute bottom-7 left-2 z-10 flex gap-1 font-mono text-2xs">
+          <div className="pointer-events-none absolute left-2 top-14 z-10 flex flex-wrap gap-1 font-mono text-2xs">
             {(['terrain', 'buildings'] as const).map((k) => (
               <span key={k} className={`rounded bg-surface/90 px-1.5 py-0.5 ${/failed$/.test(status[k]) ? 'text-warn' : 'text-ink-muted'}`}>{STATUS_TEXT[`${k}:${status[k]}`]}</span>
             ))}
@@ -178,9 +250,30 @@ export const AreaModule: React.FC<{ workspace: CaseWorkspace }> = ({ workspace }
           </aside>
         )}
 
+        {/* The reconstruction on the map: same scenario, stage and time slider as the 3D view. */}
+        {!inspecting && incident && scenario.detail && scenario.stages.length > 0 && (
+          <div className="absolute bottom-7 left-1/2 z-10 w-[min(44rem,calc(100%-1rem))] -translate-x-1/2 space-y-1.5 rounded border border-line bg-surface/95 p-2 shadow-overlay" aria-label="Reconstruction on the map">
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <Box className="size-3.5 text-accent-text" aria-hidden />
+              <label className="sr-only" htmlFor="area-scenario">Scenario</label>
+              <select id="area-scenario" className={`${inlineSelectClass} !h-7 !py-0 text-xs`} value={scenario.detail.id} onChange={(e) => scenario.chooseScenario(Number(e.target.value))}>
+                {scenario.scenarios.map((r) => <option key={r.id} value={r.id}>{r.scenario}</option>)}
+              </select>
+              {selectedActor && <span className="text-ink-soft">Selected: <span className="font-medium text-accent-text">{selectedActor.label}</span></span>}
+              <Link to={casePath(caseId, 'reconstruction')} className={`ml-auto ${linkClass}`}>Open in 3D reconstruction</Link>
+            </div>
+            <StageTimeSlider
+              stages={scenario.stages}
+              events={workspace.events}
+              notes={(scenario.detail.scene as { stages?: { stage_order: number; time: string }[] } | null)?.stages}
+              onTogglePlay={scenario.togglePlay}
+            />
+          </div>
+        )}
+
         {/* Selected case location (incident-side records only; nothing is invented here). */}
         {!inspecting && location && (
-          <aside className="absolute bottom-7 right-2 z-10 w-72 rounded border border-line bg-surface/95 p-3 shadow-overlay" aria-label="Selected location">
+          <aside className="absolute bottom-44 right-2 z-10 w-72 rounded border border-line bg-surface/95 p-3 shadow-overlay" aria-label="Selected location">
             <div className="flex items-start justify-between gap-2">
               <div>
                 <div className="font-mono text-2xs uppercase tracking-wider text-ink-muted">{humanize(location.kind)} · {humanize(location.review_status)}</div>

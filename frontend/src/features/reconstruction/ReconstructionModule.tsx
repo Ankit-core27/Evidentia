@@ -1,11 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Maximize2, Minimize2, Plus, RefreshCw, Sparkles } from 'lucide-react';
 import { PageHeader, SectionHeader } from '@/components/shared/PageHeader';
 import { EmptyState, ErrorState, LoadingState } from '@/components/shared/QueryState';
 import { Tabs } from '@/components/shared/Segmented';
 import { linkClass, primaryButtonClass, secondaryButtonClass, smallButtonClass } from '@/components/shared/formStyles';
-import { useReconstruction, useReconstructions } from '@/hooks/useReconstruction';
 import { casePath } from '@/lib/caseModules';
 import { formatDateTime, formatTimeRange } from '@/lib/format';
 import { useFullscreenElement } from '@/hooks/useFullscreen';
@@ -19,9 +18,8 @@ import { SchematicSceneView } from './SchematicSceneView';
 import { SceneFullscreenContext } from './fullscreen';
 import { usePlaybackStore } from './playback';
 import { StageTimeSlider } from './StageTimeSlider';
+import { useCaseScenario } from './useCaseScenario';
 
-/** How long playback takes to go from one stage to the next. */
-const PLAYBACK_MS = 2500;
 // The 3D viewer loads only when the tab opens, so three.js stays out of the main bundle.
 const CaseSceneViewer = React.lazy(() =>
   import('@/features/crime-scene/case-scene/CaseSceneViewer').then((module) => ({ default: module.CaseSceneViewer }))
@@ -52,14 +50,14 @@ class SceneErrorBoundary extends React.Component<{ fallback: React.ReactNode; ch
  */
 export const ReconstructionModule: React.FC<{ workspace: CaseWorkspace }> = ({ workspace }) => {
   const caseId = workspace.case.id;
-  const listQuery = useReconstructions(caseId);
-  const { reconstructionId, stageId, sceneObjectId, setReconstruction, setStage, selectSceneObject } = useStageStore();
-  const detailQuery = useReconstruction(reconstructionId);
+  const { sceneObjectId, setReconstruction, setStage, selectSceneObject } = useStageStore();
+  const stageId = useStageStore((s) => s.stageId);
+  const reconstructionId = useStageStore((s) => s.reconstructionId);
+  const { listQuery, detailQuery, scenarios, detail, stages, stageIndex, stage, playing, togglePlay, goToStage } = useCaseScenario(caseId);
   const [mode, setMode] = useState<'stages' | 'compare'>('stages');
   const [dialog, setDialog] = useState<'generate' | 'scenario' | 'stage' | null>(null);
   const [viewerKind, setViewerKind] = useState<'3d' | 'plan'>('3d');
-  const { playing, setPlaying, setPosition } = usePlaybackStore();
-  const roundedPosition = usePlaybackStore((s) => Math.round(s.position));
+  const { setPlaying } = usePlaybackStore();
   const workspaceRef = useRef<HTMLDivElement>(null);
   const fullscreenElement = useFullscreenElement();
   const isFullscreen = !!fullscreenElement && fullscreenElement === workspaceRef.current;
@@ -68,70 +66,6 @@ export const ReconstructionModule: React.FC<{ workspace: CaseWorkspace }> = ({ w
     else void workspaceRef.current?.requestFullscreen?.();
   }, []);
   const fullscreen = useMemo(() => ({ active: isFullscreen, toggle: toggleFullscreen }), [isFullscreen, toggleFullscreen]);
-
-  const scenarios = listQuery.data ?? [];
-  const detail = detailQuery.data?.case_id === caseId ? detailQuery.data : undefined;
-  const stages = detail?.stages ?? [];
-  const stageIndex = stages.findIndex((s) => s.id === stageId);
-  const stage = stageIndex >= 0 ? stages[stageIndex] : undefined;
-
-  // Keep the store pointing at a scenario and stage of this case.
-  useEffect(() => {
-    if (listQuery.data && !listQuery.data.some((r) => r.id === reconstructionId)) {
-      setReconstruction(listQuery.data[0]?.id ?? null);
-    }
-  }, [listQuery.data, reconstructionId, setReconstruction]);
-  useEffect(() => {
-    if (detail && !detail.stages.some((s) => s.id === stageId)) setStage(detail.stages[0]?.id ?? null);
-  }, [detail, stageId, setStage]);
-
-  // The slider's playhead and the active stage follow each other: the stage is the one
-  // nearest the playhead, and a stage picked elsewhere (the timeline, a stage button)
-  // moves the playhead to it.
-  useEffect(() => {
-    if (stageIndex < 0) return;
-    const { position } = usePlaybackStore.getState();
-    if (Math.round(position) !== stageIndex) setPosition(stageIndex);
-  }, [stageIndex, setPosition]);
-  useEffect(() => {
-    const next = stages[Math.min(Math.max(roundedPosition, 0), stages.length - 1)];
-    if (next && next.id !== useStageStore.getState().stageId) setStage(next.id);
-    // Only the playhead drives this; stage changes are synced by the effect above.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [roundedPosition]);
-
-  // Playback moves the playhead smoothly through the stages, then stops on the last one.
-  useEffect(() => {
-    if (!playing) return;
-    if (stages.length < 2) {
-      setPlaying(false);
-      return;
-    }
-    let frame = 0;
-    let last = performance.now();
-    const step = (now: number) => {
-      const { position } = usePlaybackStore.getState();
-      const next = Math.min(position + (now - last) / PLAYBACK_MS, stages.length - 1);
-      last = now;
-      setPosition(next);
-      if (next >= stages.length - 1) setPlaying(false);
-      else frame = requestAnimationFrame(step);
-    };
-    frame = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(frame);
-  }, [playing, stages.length, setPlaying, setPosition]);
-  // Stop playing when the scenario changes or the panel closes.
-  useEffect(() => () => setPlaying(false), [reconstructionId, setPlaying]);
-
-  const togglePlay = () => {
-    if (!playing && usePlaybackStore.getState().position >= stages.length - 1) setPosition(0);
-    setPlaying(!playing);
-  };
-  const goToStage = (index: number) => {
-    setPlaying(false);
-    setPosition(index);
-    setStage(stages[index].id);
-  };
 
   if (listQuery.isPending) return <LoadingState label="Loading reconstructions…" />;
   if (listQuery.isError) return <ErrorState error={listQuery.error} onRetry={() => listQuery.refetch()} />;

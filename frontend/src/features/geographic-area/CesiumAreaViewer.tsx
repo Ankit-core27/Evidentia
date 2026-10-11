@@ -1,4 +1,4 @@
-import React, { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
+import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import * as Cesium from 'cesium';
 import { SATELLITE } from '@/lib/basemaps';
 import 'cesium/Build/Cesium/Widgets/widgets.css';
@@ -52,8 +52,35 @@ export interface AreaViewerHandle {
   cameraPose: () => CameraPose | null;
 }
 
+/** A reconstruction scene object on the map, where the time slider puts it. */
+export interface MapActor {
+  key: string;
+  sceneObjectId: number;
+  label: string;
+  lat: number;
+  lng: number;
+  /** Compass bearing it faces, in radians clockwise from north. */
+  bearing: number;
+  kind: 'vehicle' | 'person' | 'item';
+  /** GLB to draw it with; people and items without one are drawn as markers. */
+  modelUrl?: string;
+  selected: boolean;
+}
+
+/** A reconstruction measurement on the ground, such as skid marks. */
+export interface MapLine {
+  key: string;
+  label: string;
+  from: { lat: number; lng: number };
+  to: { lat: number; lng: number };
+}
+
 interface Props {
   incident: { lat: number; lng: number; label: string } | null;
+  /** The active reconstruction stage, synced with the reconstruction panel's time slider. */
+  actors: MapActor[];
+  lines: MapLine[];
+  onPickActor: (sceneObjectId: number | null) => void;
   locations: Location[];
   buildings: BuildingEntry[];
   radiusM: number;
@@ -67,6 +94,7 @@ interface Props {
 }
 
 const BUILDING_PREFIX = 'building:';
+const ACTOR_PREFIX = 'actor:';
 const LOCATION_PREFIX = 'location:';
 
 /** Inside the investigation radius if any part of the footprint is. */
@@ -90,6 +118,11 @@ export const CesiumAreaViewer = forwardRef<AreaViewerHandle, Props>(function Ces
   const container = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<Cesium.Viewer | null>(null);
   const groundRef = useRef(0);
+  // Ground height of the photorealistic mesh at each authored building, once sampled.
+  // The mesh hides the globe, so buildings are drawn at these heights instead of
+  // relative to a globe surface that is no longer the ground.
+  const [meshGround, setMeshGround] = useState<Map<string, number> | null>(null);
+  const actorEntities = useRef(new Map<string, Cesium.Entity>());
   const osmPick = useRef<{ feature: Cesium.Cesium3DTileFeature; colour: Cesium.Color; position: Cesium.Cartesian3 | undefined } | null>(null);
   const latest = useRef(props);
   latest.current = props;
@@ -252,15 +285,22 @@ export const CesiumAreaViewer = forwardRef<AreaViewerHandle, Props>(function Ces
           status.terrain = 'photorealistic';
           status.buildings = 'photorealistic';
           report();
-          // Find the real ground height at the incident, so the camera and markers sit on it.
+          // Find the real ground height at the incident and at each authored building, so
+          // the camera, markers and buildings sit on the mesh.
           const c = center();
-          if (!c) return;
+          const { buildings } = latest.current;
+          const points = [...(c ? [c] : []), ...buildings.map((b) => b.anchor)];
+          if (!points.length) return;
           try {
-            const [sample] = await scene.sampleHeightMostDetailed([Cesium.Cartographic.fromDegrees(c.lng, c.lat)], [tileset]);
-            if (!disposed && sample.height !== undefined) {
-              groundRef.current = sample.height;
+            const samples = await scene.sampleHeightMostDetailed(points.map((p) => Cesium.Cartographic.fromDegrees(p.lng, p.lat)), [tileset]);
+            if (disposed) return;
+            const heights = samples.map((s) => s.height);
+            if (c && heights[0] !== undefined) {
+              groundRef.current = heights[0];
               if (!latest.current.initialCamera) flyToOverview(0);
             }
+            const offset = c ? 1 : 0;
+            setMeshGround(new Map(buildings.map((b, i) => [b.id, heights[i + offset] ?? groundRef.current])));
           } catch {
             // Keep the ellipsoid height; markers are clamped to the mesh anyway.
           }
@@ -306,6 +346,10 @@ export const CesiumAreaViewer = forwardRef<AreaViewerHandle, Props>(function Ces
         return;
       }
       const id = picked?.id instanceof Cesium.Entity ? picked.id.id : null;
+      if (id?.startsWith(ACTOR_PREFIX)) {
+        latest.current.onPickActor(Number(picked.id.properties?.sceneObjectId?.getValue()));
+        return;
+      }
       if (id?.startsWith(BUILDING_PREFIX)) {
         onPick({ source: 'manifest', id: id.slice(BUILDING_PREFIX.length) });
         onPickLocation(null);
@@ -314,6 +358,7 @@ export const CesiumAreaViewer = forwardRef<AreaViewerHandle, Props>(function Ces
       } else {
         onPick(null);
         onPickLocation(null);
+        latest.current.onPickActor(null);
       }
     }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
@@ -323,7 +368,7 @@ export const CesiumAreaViewer = forwardRef<AreaViewerHandle, Props>(function Ces
       if (now - lastHover < 80) return;
       lastHover = now;
       const picked = scene.pick(e.endPosition);
-      const pickable = picked instanceof Cesium.Cesium3DTileFeature || (picked?.id instanceof Cesium.Entity && /^(building|location):/.test(picked.id.id));
+      const pickable = picked instanceof Cesium.Cesium3DTileFeature || (picked?.id instanceof Cesium.Entity && /^(building|location|actor):/.test(picked.id.id));
       scene.canvas.style.cursor = pickable ? 'pointer' : '';
     }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
 
@@ -333,6 +378,7 @@ export const CesiumAreaViewer = forwardRef<AreaViewerHandle, Props>(function Ces
       viewer.destroy();
       viewerRef.current = null;
       osmPick.current = null;
+      actorEntities.current.clear();
     };
     // The viewer is created once; later prop changes are applied by the effects below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -344,18 +390,23 @@ export const CesiumAreaViewer = forwardRef<AreaViewerHandle, Props>(function Ces
     if (!viewer) return;
     const entities = props.buildings.map((b) => {
       const corners = footprintCorners(b);
+      // On the photorealistic mesh: absolute heights from the sampled ground. Otherwise
+      // relative to the globe's terrain.
+      const ground = meshGround?.get(b.id);
+      const onMesh = ground !== undefined;
+      const relative = onMesh ? Cesium.HeightReference.NONE : Cesium.HeightReference.RELATIVE_TO_GROUND;
       return viewer.entities.add({
         id: `${BUILDING_PREFIX}${b.id}`,
         name: b.name,
         polygon: {
           hierarchy: new Cesium.PolygonHierarchy(corners.map((c) => Cesium.Cartesian3.fromDegrees(c.lng, c.lat))),
-          height: 0,
-          heightReference: Cesium.HeightReference.RELATIVE_TO_GROUND,
-          extrudedHeight: b.height_m,
-          extrudedHeightReference: Cesium.HeightReference.RELATIVE_TO_GROUND,
+          height: onMesh ? ground : 0,
+          heightReference: relative,
+          extrudedHeight: (onMesh ? ground : 0) + b.height_m,
+          extrudedHeightReference: relative,
           material: b.model ? COLOURS.modelled : COLOURS.footprint
         },
-        position: Cesium.Cartesian3.fromDegrees(b.anchor.lng, b.anchor.lat, b.height_m + 4),
+        position: Cesium.Cartesian3.fromDegrees(b.anchor.lng, b.anchor.lat, (onMesh ? ground : 0) + b.height_m + 4),
         label: {
           text: b.model ? b.name : b.name.replace(/ \(footprint only\)$/, ''),
           font: '500 12px "IBM Plex Sans", sans-serif',
@@ -363,7 +414,7 @@ export const CesiumAreaViewer = forwardRef<AreaViewerHandle, Props>(function Ces
           outlineColor: Cesium.Color.fromCssColorString('#0b0d0e'),
           outlineWidth: 3,
           style: Cesium.LabelStyle.FILL_AND_OUTLINE,
-          heightReference: Cesium.HeightReference.RELATIVE_TO_GROUND,
+          heightReference: relative,
           distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0, 650),
           disableDepthTestDistance: Number.POSITIVE_INFINITY
         }
@@ -374,7 +425,99 @@ export const CesiumAreaViewer = forwardRef<AreaViewerHandle, Props>(function Ces
       if (viewer.isDestroyed()) return;
       entities.forEach((e) => viewer.entities.remove(e));
     };
-  }, [props.buildings]);
+  }, [props.buildings, meshGround]);
+
+  // The reconstruction's scene objects at the time slider's position. Entities are kept
+  // and moved, not rebuilt, so playback stays smooth.
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    if (!viewer) return;
+    const seen = new Set<string>();
+    for (const a of props.actors) {
+      seen.add(a.key);
+      const position = Cesium.Cartesian3.fromDegrees(a.lng, a.lat);
+      const orientation = Cesium.Transforms.headingPitchRollQuaternion(position, new Cesium.HeadingPitchRoll(a.bearing, 0, 0));
+      let entity = actorEntities.current.get(a.key);
+      if (!entity) {
+        entity = viewer.entities.add({
+          id: `${ACTOR_PREFIX}${a.key}`,
+          name: a.label,
+          properties: { sceneObjectId: a.sceneObjectId },
+          ...(a.modelUrl
+            ? { model: { uri: a.modelUrl, heightReference: Cesium.HeightReference.CLAMP_TO_GROUND, minimumPixelSize: 28, maximumScale: 40 } }
+            : {
+                point: {
+                  pixelSize: a.kind === 'person' ? 10 : 8,
+                  color: COLOURS.accent,
+                  outlineColor: Cesium.Color.fromCssColorString('#0b0d0e'),
+                  outlineWidth: 2,
+                  heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+                  disableDepthTestDistance: Number.POSITIVE_INFINITY
+                }
+              }),
+          label: {
+            text: a.label,
+            font: '500 11px "IBM Plex Sans", sans-serif',
+            pixelOffset: new Cesium.Cartesian2(0, -26),
+            fillColor: Cesium.Color.fromCssColorString('#e7e9eb'),
+            outlineColor: Cesium.Color.fromCssColorString('#0b0d0e'),
+            outlineWidth: 3,
+            style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+            distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0, 400),
+            disableDepthTestDistance: Number.POSITIVE_INFINITY
+          }
+        });
+        actorEntities.current.set(a.key, entity);
+      }
+      entity.position = new Cesium.ConstantPositionProperty(position);
+      entity.orientation = new Cesium.ConstantProperty(orientation);
+      if (entity.model) entity.model.silhouetteSize = new Cesium.ConstantProperty(a.selected ? 2 : 0);
+      if (entity.model) entity.model.silhouetteColor = new Cesium.ConstantProperty(COLOURS.accent);
+      if (entity.label) entity.label.fillColor = new Cesium.ConstantProperty(Cesium.Color.fromCssColorString(a.selected ? '#5ec4cf' : '#e7e9eb'));
+    }
+    for (const [key, entity] of actorEntities.current) {
+      if (seen.has(key)) continue;
+      viewer.entities.remove(entity);
+      actorEntities.current.delete(key);
+    }
+    viewer.scene.requestRender();
+  }, [props.actors]);
+
+  // Measurements of the active stage, such as skid marks, on the ground.
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    if (!viewer) return;
+    const added = props.lines.map((l) =>
+      viewer.entities.add({
+        id: `line:${l.key}`,
+        polyline: {
+          positions: Cesium.Cartesian3.fromDegreesArray([l.from.lng, l.from.lat, l.to.lng, l.to.lat]),
+          width: 4,
+          clampToGround: true,
+          material: Cesium.Color.fromCssColorString('#e2b155')
+        },
+        position: Cesium.Cartesian3.fromDegrees((l.from.lng + l.to.lng) / 2, (l.from.lat + l.to.lat) / 2),
+        label: {
+          text: l.label,
+          font: '500 11px "IBM Plex Mono", monospace',
+          fillColor: Cesium.Color.fromCssColorString('#e2b155'),
+          outlineColor: Cesium.Color.fromCssColorString('#0b0d0e'),
+          outlineWidth: 3,
+          style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+          pixelOffset: new Cesium.Cartesian2(0, -14),
+          heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+          distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0, 300),
+          disableDepthTestDistance: Number.POSITIVE_INFINITY
+        }
+      })
+    );
+    viewer.scene.requestRender();
+    return () => {
+      if (viewer.isDestroyed()) return;
+      added.forEach((e) => viewer.entities.remove(e));
+    };
+  }, [props.lines]);
 
   // Incident marker, investigation radius and the case's recorded locations.
   useEffect(() => {

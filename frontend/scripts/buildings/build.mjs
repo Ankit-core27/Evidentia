@@ -14,7 +14,7 @@ import * as THREE from 'three';
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js';
 import { furniture } from './furniture.mjs';
 import { box, component, slab, stairs, wall } from './geometry.mjs';
-import { contextFootprints, cornerStore, officeBlock } from './specs.mjs';
+import { contextFootprints, cornerStore, officeBlock, pharmacy, teaStall } from './specs.mjs';
 
 // GLTFExporter reads its binary output through FileReader, which Node lacks.
 globalThis.FileReader ??= class {
@@ -170,7 +170,7 @@ async function buildModel(spec) {
 }
 
 fs.mkdirSync(OUT, { recursive: true });
-const buildings = [await buildModel(cornerStore), await buildModel(officeBlock)];
+const buildings = [await buildModel(cornerStore), await buildModel(officeBlock), await buildModel(teaStall), await buildModel(pharmacy)];
 for (const c of contextFootprints) {
   buildings.push({
     id: c.id,
@@ -187,7 +187,7 @@ for (const c of contextFootprints) {
 }
 const manifest = {
   version: 1,
-  area: { name: 'Ring Road and 5th Avenue junction, Sector 12', frame: 'Model metres: origin at ground centre of footprint, +x east, -z north, +y up; heading_deg rotates the model clockwise from north.' },
+  area: { name: 'Ring Road and 5th Avenue junction, Bengaluru; Sahyadri Chowk, Pune', frame: 'Model metres: origin at ground centre of footprint, +x east, -z north, +y up; heading_deg rotates the model clockwise from north.' },
   buildings
 };
 fs.writeFileSync(path.join(OUT, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);

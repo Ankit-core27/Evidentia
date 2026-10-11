@@ -1,4 +1,4 @@
-// Authored layouts of the two inspectable buildings at the Ring Road and 5th Avenue junction
+// Authored layouts of the inspectable buildings. The first two are at the Ring Road and 5th Avenue junction
 // (case FX-2026-0001). They are illustrative: no survey or floor plan of the real buildings
 // exists in the case records, so the area view labels them as authored models.
 //
@@ -286,6 +286,202 @@ export const officeBlock = {
       { id: 'water_tank_2', label: 'Water tank', type: 'tank', x: -3.4, z: 3.0 },
       { id: 'ac_unit_1', label: 'Air-conditioning unit', type: 'cabinet', x: 1.0, z: -3.5, w: 1.0, d: 0.8, h: 1.0 },
       { id: 'ac_unit_2', label: 'Air-conditioning unit', type: 'cabinet', x: 2.6, z: -3.5, w: 1.0, d: 0.8, h: 1.0 }
+    ]
+  }
+};
+
+// Two inspectable buildings at Sahyadri Chowk (case FX-2026-0005), at the corners the FIR's
+// scene survey names: Shinde Tea Stall at the north-west corner (the informant's stall) and
+// the pharmacy at the south-east corner. Like the junction buildings above they are
+// illustrative: the survey places them, but no floor plan of either exists in the records.
+// Anchors are the survey's metres from the junction centre (18.5058 N, 73.8083 E).
+
+export const teaStall = {
+  id: 'shinde-tea-stall',
+  name: 'Shinde Tea Stall',
+  use: 'Tea stall with residence above',
+  geo_building_id: 'sahyadri-nw-01',
+  anchor: { lat: 18.505894, lng: 73.808201, heading_deg: 0 },
+  width: 7,
+  depth: 6,
+  floorHeight: 3.1,
+  colours: { wall: 0xd6c6a4, wallInt: 0xe8e1d2 },
+  hole: [2.25, -2.75, 3.25, 0.5],
+  floors: [
+    {
+      label: 'Ground floor · tea stall',
+      rooms: [
+        { id: 'stall', label: 'Tea stall', type: 'cafe', box: [-3.25, -0.5, 2.2, 2.75] },
+        { id: 'store', label: 'Store and stove room', type: 'kitchen', box: [-3.25, -2.75, 2.2, -0.5] },
+        { id: 'passage', label: 'Stair passage', type: 'corridor', box: [2.2, -2.75, 3.25, 2.75] }
+      ],
+      ext: {
+        south: [
+          { c: -0.8, w: 3.2, bottom: 0, top: 2.6, kind: 'shutter', id: 'stall_front', label: 'Tea stall shutter, facing Karve Road' },
+          { c: 2.7, w: 0.9, bottom: 0, top: 2.2, kind: 'door', id: 'side_entrance', label: 'Side entrance to stairs' }
+        ],
+        east: [{ c: 0.0, w: 1.0, bottom: 1.2, top: 2.0, kind: 'window' }],
+        north: [{ c: -1.0, w: 0.8, bottom: 1.4, top: 2.0, kind: 'window' }]
+      },
+      int: [
+        { id: 'store', label: 'Store wall', axis: 'x', at: -0.5, from: -3.25, to: 2.2, dir: [0, 0, -1], openings: [
+          { c: -1.5, w: 0.9, bottom: 0, top: 2.1, kind: 'door', id: 'store', label: 'Store door' }
+        ] },
+        { id: 'passage', label: 'Stair passage wall', axis: 'z', at: 2.2, from: -2.75, to: 2.75, dir: [1, 0, 0], openings: [
+          { c: 1.8, w: 0.9, bottom: 0, top: 2.1, kind: 'door', id: 'passage', label: 'Stall to stair passage door' }
+        ] }
+      ],
+      furniture: [
+        { id: 'counter', label: 'Tea counter', type: 'counter', room: 'stall', x: -0.8, z: 2.0, w: 2.6, d: 0.6 },
+        { id: 'bench_table', label: 'Customer table', type: 'table', room: 'stall', x: -2.4, z: 0.6, w: 1.0, d: 0.6 },
+        { id: 'stove', label: 'Stove counter', type: 'kitchen', room: 'store', x: 0.6, z: -2.4, w: 2.0, d: 0.6 },
+        { id: 'milk_fridge', label: 'Milk refrigerator', type: 'fridge', room: 'store', x: 1.7, z: -1.0, w: 0.6, d: 0.6, rot: 3 },
+        { id: 'stock', label: 'Sacks and boxes', type: 'boxes', room: 'store', x: -2.4, z: -2.1, w: 1.2, d: 0.8 }
+      ],
+      stairs: { label: 'Stairs to first floor', box: [2.25, -2.75, 3.25, 0.5], run: 'z-' }
+    },
+    {
+      label: 'First floor · residence',
+      rooms: [
+        { id: 'living', label: 'Living room', type: 'living', box: [-3.25, 0.25, 2.2, 2.75] },
+        { id: 'bedroom', label: 'Bedroom', type: 'bedroom', box: [-3.25, -2.75, 0.0, 0.25] },
+        { id: 'kitchen', label: 'Kitchen', type: 'kitchen', box: [0.0, -2.75, 2.2, 0.25] },
+        { id: 'landing', label: 'Stair landing', type: 'corridor', box: [2.2, -2.75, 3.25, 2.75] }
+      ],
+      ext: {
+        south: [
+          { c: -1.2, w: 1.5, bottom: 0.9, top: 2.1, kind: 'window' },
+          { c: 1.2, w: 1.0, bottom: 0.9, top: 2.1, kind: 'window' }
+        ],
+        north: [
+          { c: -1.6, w: 1.2, bottom: 0.9, top: 2.1, kind: 'window' },
+          { c: 1.1, w: 0.8, bottom: 1.2, top: 2.0, kind: 'window' }
+        ],
+        east: [{ c: 1.5, w: 0.9, bottom: 1.0, top: 2.0, kind: 'window' }],
+        west: [{ c: -1.2, w: 1.2, bottom: 0.9, top: 2.1, kind: 'window' }]
+      },
+      int: [
+        { id: 'landing', label: 'Landing wall', axis: 'z', at: 2.2, from: -2.75, to: 2.75, dir: [1, 0, 0], openings: [
+          { c: 1.6, w: 0.9, bottom: 0, top: 2.1, kind: 'door', id: 'flat', label: 'Flat entrance door' }
+        ] },
+        { id: 'living', label: 'Living room rear wall', axis: 'x', at: 0.25, from: -3.25, to: 2.2, dir: [0, 0, 1], openings: [
+          { c: -1.6, w: 0.9, bottom: 0, top: 2.1, kind: 'door', id: 'bedroom', label: 'Bedroom door' },
+          { c: 1.1, w: 1.0, bottom: 0, top: 2.2, kind: 'opening' }
+        ] },
+        { id: 'kitchen', label: 'Kitchen partition', axis: 'z', at: 0.0, from: -2.75, to: 0.25, dir: [-1, 0, 0] }
+      ],
+      furniture: [
+        { id: 'sofa', label: 'Sofa', type: 'sofa', room: 'living', x: -1.5, z: 2.3, w: 1.8, d: 0.8, rot: 2 },
+        { id: 'bed', label: 'Bed', type: 'bed', room: 'bedroom', x: -1.6, z: -1.5, w: 1.4, d: 1.9 },
+        { id: 'wardrobe', label: 'Wardrobe', type: 'wardrobe', room: 'bedroom', x: -2.95, z: -0.2, w: 0.8, d: 0.5, rot: 1 },
+        { id: 'kitchen_counter', label: 'Kitchen counter', type: 'kitchen', room: 'kitchen', x: 1.1, z: -2.45, w: 1.8, d: 0.6 }
+      ]
+    }
+  ],
+  roof: { parapet: 0.9, fixtures: [{ id: 'water_tank', label: 'Water tank', type: 'tank', x: -2.5, z: -2.0 }] }
+};
+
+export const pharmacy = {
+  id: 'sahyadri-pharmacy',
+  name: 'Pharmacy',
+  use: 'Pharmacy with clinic above',
+  geo_building_id: 'sahyadri-se-01',
+  anchor: { lat: 18.505697, lng: 73.808409, heading_deg: 0 },
+  width: 9,
+  depth: 7,
+  floorHeight: 3.3,
+  colours: { wall: 0xb9c4c9, wallInt: 0xe2e6e6 },
+  hole: [3.15, -1.0, 4.25, 3.25],
+  floors: [
+    {
+      label: 'Ground floor · pharmacy',
+      rooms: [
+        { id: 'pharmacy', label: 'Pharmacy floor', type: 'shop', box: [-4.25, -3.25, 2.5, 1.0] },
+        { id: 'dispensary', label: 'Dispensary store', type: 'storage', box: [-4.25, 1.0, 0.5, 3.25] },
+        { id: 'wc', label: 'Toilet', type: 'bath', box: [0.5, 1.0, 2.5, 3.25] },
+        { id: 'passage', label: 'Stair passage', type: 'corridor', box: [2.5, -3.25, 4.25, 3.25] }
+      ],
+      ext: {
+        north: [
+          { c: -1.2, w: 3.6, bottom: 0, top: 2.6, kind: 'shutter', id: 'pharmacy_front', label: 'Pharmacy front, facing Karve Road' },
+          { c: 3.4, w: 0.9, bottom: 0, top: 2.2, kind: 'door', id: 'side_entrance', label: 'Side entrance to the clinic stairs' }
+        ],
+        west: [{ c: -1.5, w: 1.6, bottom: 0.9, top: 2.2, kind: 'window' }],
+        east: [{ c: 2.0, w: 0.8, bottom: 1.2, top: 2.0, kind: 'window' }],
+        south: [{ c: -1.8, w: 0.6, bottom: 1.6, top: 2.1, kind: 'window' }]
+      },
+      int: [
+        { id: 'rear', label: 'Pharmacy rear wall', axis: 'x', at: 1.0, from: -4.25, to: 2.5, dir: [0, 0, 1], openings: [
+          { c: -1.9, w: 0.9, bottom: 0, top: 2.1, kind: 'door', id: 'dispensary', label: 'Dispensary door' },
+          { c: 1.5, w: 0.8, bottom: 0, top: 2.1, kind: 'door', id: 'wc', label: 'Toilet door' }
+        ] },
+        { id: 'dispensary_wc', label: 'Dispensary and toilet partition', axis: 'z', at: 0.5, from: 1.0, to: 3.25, dir: [-1, 0, 0] },
+        { id: 'passage', label: 'Stair passage wall', axis: 'z', at: 2.5, from: -3.25, to: 3.25, dir: [1, 0, 0], openings: [
+          { c: -2.4, w: 0.9, bottom: 0, top: 2.1, kind: 'door', id: 'passage', label: 'Pharmacy to stair passage door' }
+        ] }
+      ],
+      furniture: [
+        { id: 'counter', label: 'Dispensing counter', type: 'counter', room: 'pharmacy', x: 0.5, z: -0.2, w: 3.0, d: 0.6 },
+        { id: 'shelf_w1', label: 'Medicine shelving, west (front)', type: 'shelf', room: 'pharmacy', x: -3.95, z: -2.0, w: 1.8, d: 0.45, rot: 1 },
+        { id: 'shelf_w2', label: 'Medicine shelving, west (rear)', type: 'shelf', room: 'pharmacy', x: -3.95, z: 0.0, w: 1.6, d: 0.45, rot: 1 },
+        { id: 'medicine_fridge', label: 'Medicine refrigerator', type: 'fridge', room: 'pharmacy', x: 2.0, z: 0.5, w: 0.6, d: 0.6, rot: 2 },
+        { id: 'stock', label: 'Stock cartons', type: 'boxes', room: 'dispensary', x: -3.0, z: 2.5, w: 1.4, d: 1.0 },
+        { id: 'dispensary_shelf', label: 'Dispensary shelving', type: 'shelf', room: 'dispensary', x: -1.0, z: 2.95, w: 1.8, d: 0.45, rot: 2 },
+        { id: 'toilet', label: 'Toilet', type: 'toilet', room: 'wc', x: 2.0, z: 2.85, rot: 2 },
+        { id: 'basin', label: 'Wash basin', type: 'basin', room: 'wc', x: 1.0, z: 3.0, rot: 2 }
+      ],
+      stairs: { label: 'Stairs to the clinic', box: [3.15, -1.0, 4.25, 3.25], run: 'z-' }
+    },
+    {
+      label: 'First floor · clinic',
+      rooms: [
+        { id: 'waiting', label: 'Waiting room', type: 'lobby', box: [-4.25, -3.25, 0.5, 0.5] },
+        { id: 'consult', label: 'Consulting room', type: 'office', box: [-4.25, 0.5, 0.5, 3.25] },
+        { id: 'records', label: 'Records room', type: 'storage', box: [0.5, -3.25, 2.5, 0.5] },
+        { id: 'bath', label: 'Bathroom', type: 'bath', box: [0.5, 0.5, 2.5, 3.25] },
+        { id: 'landing', label: 'Stair landing', type: 'corridor', box: [2.5, -3.25, 4.25, 3.25] }
+      ],
+      ext: {
+        north: [
+          { c: -2.8, w: 1.5, bottom: 0.9, top: 2.1, kind: 'window' },
+          { c: 1.5, w: 1.0, bottom: 0.9, top: 2.1, kind: 'window' }
+        ],
+        west: [
+          { c: -1.5, w: 1.5, bottom: 0.9, top: 2.1, kind: 'window' },
+          { c: 2.0, w: 1.2, bottom: 0.9, top: 2.1, kind: 'window' }
+        ],
+        south: [{ c: -2.0, w: 1.5, bottom: 0.9, top: 2.1, kind: 'window' }],
+        east: [{ c: -2.0, w: 0.9, bottom: 1.0, top: 2.0, kind: 'window' }]
+      },
+      int: [
+        { id: 'landing', label: 'Landing wall', axis: 'z', at: 2.5, from: -3.25, to: 3.25, dir: [1, 0, 0], openings: [
+          { c: -2.4, w: 0.9, bottom: 0, top: 2.1, kind: 'door', id: 'clinic', label: 'Clinic entrance door' }
+        ] },
+        { id: 'consult', label: 'Consulting room wall', axis: 'x', at: 0.5, from: -4.25, to: 2.5, dir: [0, 0, 1], openings: [
+          { c: -1.9, w: 0.9, bottom: 0, top: 2.1, kind: 'door', id: 'consult', label: 'Consulting room door' },
+          { c: 1.5, w: 0.8, bottom: 0, top: 2.1, kind: 'door', id: 'bath', label: 'Bathroom door' }
+        ] },
+        { id: 'records', label: 'Records room partition', axis: 'z', at: 0.5, from: -3.25, to: 3.25, dir: [-1, 0, 0], openings: [
+          { c: -1.0, w: 0.9, bottom: 0, top: 2.1, kind: 'door', id: 'records', label: 'Records room door' }
+        ] }
+      ],
+      furniture: [
+        { id: 'waiting_sofa', label: 'Waiting bench', type: 'sofa', room: 'waiting', x: -2.0, z: -2.8, w: 2.0, d: 0.8 },
+        { id: 'waiting_table', label: 'Low table', type: 'table', room: 'waiting', x: -2.0, z: -1.6, w: 0.9, d: 0.5, h: 0.45 },
+        { id: 'consult_desk', label: 'Doctor’s desk', type: 'desk', room: 'consult', x: -2.5, z: 2.2, w: 1.4, d: 0.7 },
+        { id: 'consult_chair', label: 'Chair', type: 'chair', room: 'consult', x: -2.5, z: 1.4 },
+        { id: 'couch', label: 'Examination couch', type: 'bed', room: 'consult', x: -3.7, z: 2.0, w: 0.7, d: 1.8 },
+        { id: 'records_cabinet', label: 'Records cabinet', type: 'cabinet', room: 'records', x: 1.5, z: -2.95, w: 1.6, d: 0.45, h: 1.3, rot: 2 },
+        { id: 'bath_toilet', label: 'Toilet', type: 'toilet', room: 'bath', x: 2.0, z: 2.85, rot: 2 },
+        { id: 'bath_basin', label: 'Wash basin', type: 'basin', room: 'bath', x: 1.0, z: 3.0, rot: 2 }
+      ]
+    }
+  ],
+  roof: {
+    parapet: 1.0,
+    fixtures: [
+      { id: 'water_tank', label: 'Water tank', type: 'tank', x: -3.0, z: 2.0 },
+      { id: 'ac_unit', label: 'Air-conditioning unit', type: 'cabinet', x: 1.0, z: -2.0, w: 1.0, d: 0.8, h: 1.0 }
     ]
   }
 };
