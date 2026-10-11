@@ -223,6 +223,7 @@ export const buildSeed = async (): Promise<MockDb> => {
     observations: [],
     conflicts: [],
     injuries: [],
+    anatomyFindings: [],
     reconstructions: [],
     stages: [],
     sceneObjects: [],

@@ -128,3 +128,4 @@ class Injury(ReviewableMixin, Base):
     depth: Mapped[str | None] = mapped_column(String(100))
     estimated_time: Mapped[datetime | None] = mapped_column(UTCDateTime)
     description: Mapped[str] = mapped_column(Text, default="")
+    medical_details: Mapped[dict] = mapped_column(JSON, default=dict, server_default="{}")

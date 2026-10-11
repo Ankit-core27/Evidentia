@@ -1,7 +1,6 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { Navigate, useParams } from 'react-router-dom';
 import { CaseWorkspaceSidebar } from '@/components/layout/CaseWorkspaceSidebar';
-import { NotWiredYet } from '@/components/shared/NotWiredYet';
 import { ErrorState, LoadingState } from '@/components/shared/QueryState';
 import { CaseSummary } from '@/features/case-management/CaseSummary';
 import { CaseWorkspaceBanner } from '@/features/case-management/CaseWorkspaceBanner';
@@ -16,7 +15,7 @@ import { ReviewModule } from '@/features/ai-investigation/ReviewModule';
 import { CaseReportsModule } from '@/features/reports/CaseReportsModule';
 import { useCaseWorkspace } from '@/hooks/useCases';
 import { ApiError } from '@/lib/api';
-import { CaseModule, caseModuleLabel, casePath, isCaseModule, parseCaseId } from '@/lib/caseModules';
+import { CaseModule, casePath, isCaseModule, parseCaseId } from '@/lib/caseModules';
 import { NotFoundPage } from './NotFoundPage';
 
 // /cases/:caseId/:module? — one tab per feature module.
@@ -39,10 +38,7 @@ const CaseNotFound: React.FC<{ caseId: string | undefined }> = ({ caseId }) => (
   </main>
 );
 
-/** Which task in docs/FRONTEND_TASKS.md wires each module to the API. */
-const PENDING_MODULES: Partial<Record<CaseModule, string>> = {
-  autopsy: 'T13'
-};
+const AnatomyModule = lazy(() => import('@/features/anatomy/AnatomyModule').then(m => ({ default: m.AnatomyModule })));
 
 const kept = <T extends { review_status: string }>(rows: T[]) => rows.filter((r) => r.review_status !== 'rejected');
 
@@ -66,7 +62,6 @@ const CaseWorkspace: React.FC<{ caseId: number; activeModule: CaseModule }> = ({
 
   const workspace = workspaceQuery.data;
   const c = workspace.case;
-  const pendingTask = PENDING_MODULES[activeModule];
 
   return (
     <div className="flex flex-col lg:flex-row flex-1">
@@ -94,7 +89,7 @@ const CaseWorkspace: React.FC<{ caseId: number; activeModule: CaseModule }> = ({
         {activeModule === 'copilot' && <CopilotModule caseId={c.id} />}
         {activeModule === 'reports' && <CaseReportsModule caseId={c.id} />}
         {activeModule === 'settings' && <SettingsModule workspace={workspace} />}
-        {pendingTask && <NotWiredYet module={caseModuleLabel(activeModule)} task={pendingTask} />}
+        {activeModule === 'autopsy' && <Suspense fallback={<LoadingState label="Loading anatomy…" />}><AnatomyModule workspace={workspace} /></Suspense>}
       </main>
     </div>
   );

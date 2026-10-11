@@ -2,6 +2,7 @@ from datetime import datetime
 
 from pydantic import Field
 
+from app.schemas.anatomy import MedicalDetails
 from app.schemas.common import ApiModel, InjurySeverity, Reviewable, ReviewStatus
 
 
@@ -16,6 +17,7 @@ class Injury(Reviewable):
     depth: str | None
     estimated_time: datetime | None
     description: str
+    medical_details: MedicalDetails = Field(default_factory=MedicalDetails)
 
 
 class InjuryCreate(ApiModel):
@@ -27,6 +29,7 @@ class InjuryCreate(ApiModel):
     depth: str | None = None
     estimated_time: datetime | None = None
     description: str = ""
+    medical_details: MedicalDetails = Field(default_factory=MedicalDetails)
 
 
 class InjuryUpdate(ApiModel):
@@ -41,3 +44,4 @@ class InjuryUpdate(ApiModel):
     estimated_time: datetime | None = None
     description: str | None = None
     review_status: ReviewStatus | None = None
+    medical_details: MedicalDetails | None = None

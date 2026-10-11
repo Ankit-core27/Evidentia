@@ -9,6 +9,7 @@ import { Tabs } from '@/components/shared/Segmented';
 import { iconButtonClass, inputClass, primaryButtonClass, secondaryButtonClass } from '@/components/shared/formStyles';
 import { useEvidenceInspector } from '@/hooks/useEvidenceInspector';
 import { useUpdateRelationship } from '@/hooks/useGraph';
+import { useAnatomyFindings, useReviewAnatomyFinding } from '@/hooks/useAnatomy';
 import { useUpdateInjury } from '@/hooks/useInjuries';
 import { useUpdateLocation, useUpdateObject, useUpdatePerson } from '@/hooks/usePeople';
 import { useConflicts, useObservations, useUpdateConflict, useUpdateObservation } from '@/hooks/useReview';
@@ -37,7 +38,8 @@ const SECTIONS: { type: RecordType; label: string }[] = [
   { type: 'location', label: 'Locations' },
   { type: 'event', label: 'Timeline events' },
   { type: 'relationship', label: 'Links' },
-  { type: 'injury', label: 'Injuries' }
+  { type: 'injury', label: 'Injuries' },
+  { type: 'anatomy_finding', label: 'Anatomical findings' }
 ];
 
 /**
@@ -46,6 +48,7 @@ const SECTIONS: { type: RecordType; label: string }[] = [
  */
 export const ReviewModule: React.FC<{ workspace: CaseWorkspace }> = ({ workspace }) => {
   const caseId = workspace.case.id;
+  const anatomyQuery = useAnatomyFindings(caseId);
   const observationsQuery = useObservations(caseId);
   const conflictsQuery = useConflicts(caseId);
   // ?view=conflicts opens a tab directly, as the case banner's conflict link does.
@@ -64,19 +67,27 @@ export const ReviewModule: React.FC<{ workspace: CaseWorkspace }> = ({ workspace
     location: useUpdateLocation(caseId),
     event: useUpdateEvent(caseId),
     relationship: useUpdateRelationship(caseId),
-    injury: useUpdateInjury(caseId)
+    injury: useUpdateInjury(caseId),
+    anatomy_finding: useReviewAnatomyFinding(caseId)
   };
   const updateConflict = useUpdateConflict(caseId);
 
-  if (observationsQuery.isPending || conflictsQuery.isPending) return <LoadingState label="Loading the review queue…" />;
+  if (observationsQuery.isPending || conflictsQuery.isPending || anatomyQuery.isPending) return <LoadingState label="Loading the review queue…" />;
   if (observationsQuery.isError) return <ErrorState error={observationsQuery.error} onRetry={() => observationsQuery.refetch()} />;
   if (conflictsQuery.isError) return <ErrorState error={conflictsQuery.error} onRetry={() => conflictsQuery.refetch()} />;
+
+  if (anatomyQuery.isError) return <ErrorState error={anatomyQuery.error} onRetry={() => anatomyQuery.refetch()} />;
 
   const observations = observationsQuery.data;
   const conflicts = conflictsQuery.data;
   const conflictOf = (observationId: Id) => conflicts.find((c) => c.status === 'open' && c.observation_ids.includes(observationId));
 
   const items: ReviewItem[] = [
+    ...(anatomyQuery.data ?? []).map(f => ({
+      key: `anatomy_finding:${f.id}`, type: 'anatomy_finding' as const, id: f.id,
+      title: f.description, detail: `${humanize(f.finding_type)} · ${f.body_region}`,
+      origin: f.origin, status: f.review_status
+    })),
     ...observations.map((o) => ({
       key: `observation:${o.id}`,
       type: 'observation' as const,

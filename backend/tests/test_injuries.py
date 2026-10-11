@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 from sqlalchemy import select
 
 from app.models import AuditLog, Injury
+from app.schemas.anatomy import MedicalDetails
 from tests.factories import make_case, make_investigator, make_person
 
 
@@ -55,6 +56,7 @@ def test_list_injuries_returns_only_this_case_in_id_order(client, db):
             "description": "Above the left eye.",
             "origin": "ai",
             "review_status": "pending",
+            "medical_details": MedicalDetails().model_dump(),
         },
         {
             "id": second.id,
@@ -69,6 +71,7 @@ def test_list_injuries_returns_only_this_case_in_id_order(client, db):
             "description": "",
             "origin": "investigator",
             "review_status": "confirmed",
+            "medical_details": MedicalDetails().model_dump(),
         },
     ]
 
@@ -111,6 +114,7 @@ def test_create_injury_is_confirmed_and_audited(client, db):
         "description": "",
         "origin": "investigator",
         "review_status": "confirmed",
+        "medical_details": MedicalDetails().model_dump(),
     }
     [entry] = audit_rows(db)
     assert (entry.action, entry.record_id, entry.case_id, entry.actor_id, entry.detail) == (
