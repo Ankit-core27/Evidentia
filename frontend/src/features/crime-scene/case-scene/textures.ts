@@ -209,3 +209,78 @@ export function paintWearTexture() {
     true
   );
 }
+
+/** An irregular pool or spatter, alpha only at the edge: blood when red, soot when black. */
+export function stainTexture(kind: 'blood' | 'scorch' | 'soot', seed = 1) {
+  return canvasTexture(`stain:${kind}:${seed}`, 512, 512, (ctx) => {
+    const rnd = random(seed * 7 + (kind === 'blood' ? 1 : kind === 'scorch' ? 2 : 3));
+    const colour = kind === 'blood' ? [74, 6, 10] : [14, 11, 9];
+    // A lumpy outline from overlapping blobs, softened at the rim.
+    const blobs = kind === 'blood' ? 14 : 26;
+    for (let i = 0; i < blobs; i += 1) {
+      const a = rnd() * Math.PI * 2;
+      const d = rnd() * (kind === 'blood' ? 90 : 120);
+      const x = 256 + Math.cos(a) * d;
+      const y = 256 + Math.sin(a) * d;
+      const r = (kind === 'blood' ? 60 : 80) + rnd() * 70;
+      const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+      const alpha = kind === 'blood' ? 0.9 : kind === 'scorch' ? 0.85 : 0.55;
+      g.addColorStop(0, `rgba(${colour[0]},${colour[1]},${colour[2]},${alpha})`);
+      g.addColorStop(0.75, `rgba(${colour[0]},${colour[1]},${colour[2]},${alpha * 0.8})`);
+      g.addColorStop(1, `rgba(${colour[0]},${colour[1]},${colour[2]},0)`);
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    if (kind === 'blood') {
+      // Satellite drops around the pool.
+      for (let i = 0; i < 40; i += 1) {
+        const a = rnd() * Math.PI * 2;
+        const d = 170 + rnd() * 70;
+        ctx.fillStyle = `rgba(80,6,12,${0.6 + rnd() * 0.35})`;
+        ctx.beginPath();
+        ctx.arc(256 + Math.cos(a) * d, 256 + Math.sin(a) * d, 2 + rnd() * 7, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    } else {
+      // Ash and char flecks.
+      for (let i = 0; i < 900; i += 1) {
+        const a = rnd() * Math.PI * 2;
+        const d = rnd() * 230;
+        const v = Math.floor(rnd() * 50);
+        ctx.fillStyle = `rgba(${v},${v},${v},${0.2 + rnd() * 0.5})`;
+        ctx.fillRect(256 + Math.cos(a) * d, 256 + Math.sin(a) * d, 1 + rnd() * 4, 1 + rnd() * 4);
+      }
+    }
+  });
+}
+
+/** One shoe print, toe towards +u. */
+export function shoeTexture() {
+  return canvasTexture('shoe', 128, 256, (ctx) => {
+    ctx.fillStyle = 'rgba(40,30,24,0.75)';
+    ctx.beginPath();
+    ctx.ellipse(64, 80, 40, 70, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(64, 200, 30, 40, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalCompositeOperation = 'destination-out';
+    for (let y = 20; y < 150; y += 14) ctx.fillRect(20, y, 88, 4);
+  });
+}
+
+/** The number on a yellow evidence tent. */
+export function tentTexture(text: string) {
+  return canvasTexture(`tent:${text}`, 256, 256, (ctx) => {
+    ctx.fillStyle = '#f2c518';
+    ctx.fillRect(0, 0, 256, 256);
+    ctx.fillStyle = '#111';
+    ctx.fillRect(0, 0, 256, 18);
+    ctx.font = 'bold 150px Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, 128, 142, 230);
+  });
+}

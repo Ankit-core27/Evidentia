@@ -1,17 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Pause, Play, Plus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Pause, Play, Plus, Sparkles } from 'lucide-react';
 import { PageHeader, SectionHeader } from '@/components/shared/PageHeader';
 import { EmptyState, ErrorState, LoadingState } from '@/components/shared/QueryState';
 import { Tabs } from '@/components/shared/Segmented';
-import { linkClass, primaryButtonClass, smallButtonClass } from '@/components/shared/formStyles';
+import { linkClass, primaryButtonClass, secondaryButtonClass, smallButtonClass } from '@/components/shared/formStyles';
 import { useReconstruction, useReconstructions } from '@/hooks/useReconstruction';
 import { casePath } from '@/lib/caseModules';
 import { formatTimeRange } from '@/lib/format';
 import { useStageStore } from '@/stores/stage';
 import { CaseWorkspace } from '@/types/api';
 import { CompareScenarios } from './CompareScenarios';
-import { ScenarioDialog, StageDialog } from './ReconstructionDialogs';
+import { GenerateDialog, ScenarioDialog, StageDialog } from './ReconstructionDialogs';
+import { SceneScriptPanel } from './SceneScriptPanel';
 import { SceneObjectPanel } from './SceneObjectPanel';
 import { SchematicSceneView } from './SchematicSceneView';
 
@@ -53,7 +54,7 @@ export const ReconstructionModule: React.FC<{ workspace: CaseWorkspace }> = ({ w
   const { reconstructionId, stageId, sceneObjectId, setReconstruction, setStage, selectSceneObject } = useStageStore();
   const detailQuery = useReconstruction(reconstructionId);
   const [mode, setMode] = useState<'stages' | 'compare'>('stages');
-  const [dialog, setDialog] = useState<'scenario' | 'stage' | null>(null);
+  const [dialog, setDialog] = useState<'generate' | 'scenario' | 'stage' | null>(null);
   const [playing, setPlaying] = useState(false);
   const [viewerKind, setViewerKind] = useState<'3d' | 'plan' | 'demo'>('3d');
 
@@ -101,9 +102,14 @@ export const ReconstructionModule: React.FC<{ workspace: CaseWorkspace }> = ({ w
         title="Reconstruction"
         description="Competing scenarios of what happened, stage by stage, with the scene at each stage."
         actions={
-          <button onClick={() => setDialog('scenario')} className={primaryButtonClass}>
-            <Plus className="size-4" aria-hidden /> New scenario
-          </button>
+          <>
+            <button onClick={() => setDialog('scenario')} className={secondaryButtonClass}>
+              <Plus className="size-4" aria-hidden /> New scenario
+            </button>
+            <button onClick={() => setDialog('generate')} className={primaryButtonClass}>
+              <Sparkles className="size-4" aria-hidden /> Generate from evidence
+            </button>
+          </>
         }
       />
 
@@ -118,7 +124,10 @@ export const ReconstructionModule: React.FC<{ workspace: CaseWorkspace }> = ({ w
       />
 
       {scenarios.length === 0 && (
-        <EmptyState title="No scenarios yet" message="Create a scenario, then add its stages from the timeline's events." />
+        <EmptyState
+          title="No scenarios yet"
+          message="Generate one from the case’s evidence, or create a scenario and add its stages from the timeline’s events."
+        />
       )}
 
       {mode === 'compare' && scenarios.length > 0 && <CompareScenarios workspace={workspace} scenarios={scenarios} />}
@@ -142,7 +151,10 @@ export const ReconstructionModule: React.FC<{ workspace: CaseWorkspace }> = ({ w
                   }`}
                 >
                   <span className={`block text-body ${active ? 'text-ink font-medium' : 'text-ink-soft'}`}>{s.scenario}</span>
-                  <span className="block text-2xs text-ink-muted">Version {s.version}</span>
+                  <span className="flex items-center gap-1 text-2xs text-ink-muted">
+                    {s.origin === 'ai' && <Sparkles className="size-3 text-accent-text" aria-label="Generated from the evidence" />}
+                    Version {s.version}
+                  </span>
                 </button>
               );
             })}
@@ -153,7 +165,8 @@ export const ReconstructionModule: React.FC<{ workspace: CaseWorkspace }> = ({ w
 
           {detail && (
             <div className="space-y-4">
-              {detail.assumptions && (
+              {detail.scene && <SceneScriptPanel reconstruction={detail} workspace={workspace} />}
+              {!detail.scene && detail.assumptions && (
                 <div className="pl-3 border-l-2 border-line-strong max-w-4xl">
                   <div className="text-xs font-medium text-ink-muted">Assumptions</div>
                   <p className="text-body text-ink-soft">{detail.assumptions}</p>
@@ -212,6 +225,7 @@ export const ReconstructionModule: React.FC<{ workspace: CaseWorkspace }> = ({ w
               </div>
 
               {stages.length === 0 && <EmptyState title="This scenario has no stages yet" message="Add a stage and choose its events." />}
+              {stage && <StageNote reconstruction={detail} stageOrder={stage.stage_order} />}
 
               {stage && (
                 <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 items-start">
@@ -295,6 +309,16 @@ export const ReconstructionModule: React.FC<{ workspace: CaseWorkspace }> = ({ w
         </>
       )}
 
+      {dialog === 'generate' && (
+        <GenerateDialog
+          caseId={caseId}
+          onClose={() => setDialog(null)}
+          onCreated={(id) => {
+            setMode('stages');
+            setReconstruction(id);
+          }}
+        />
+      )}
       {dialog === 'scenario' && (
         <ScenarioDialog caseId={caseId} onClose={() => setDialog(null)} onCreated={(r) => setReconstruction(r.id)} />
       )}
@@ -309,5 +333,18 @@ export const ReconstructionModule: React.FC<{ workspace: CaseWorkspace }> = ({ w
         />
       )}
     </div>
+  );
+};
+
+/** What happens at a generated stage, and when, from its scene script. */
+const StageNote: React.FC<{ reconstruction: { scene?: unknown }; stageOrder: number }> = ({ reconstruction, stageOrder }) => {
+  const stages = (reconstruction.scene as { stages?: { stage_order: number; time: string; description: string }[] } | null)?.stages;
+  const note = stages?.find((s) => s.stage_order === stageOrder);
+  if (!note?.description) return null;
+  return (
+    <p className="max-w-4xl text-body text-ink-soft">
+      {note.time && <span className="mr-2 font-mono text-2xs text-ink-muted">{note.time}</span>}
+      {note.description}
+    </p>
   );
 };

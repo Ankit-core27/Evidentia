@@ -1,13 +1,16 @@
 """Reconstruction routes (task B4 in docs/BACKEND_TASKS.md):
 
 - GET, POST /api/cases/{id}/reconstructions
+- POST /api/cases/{id}/reconstructions/generate: scenarios generated from the evidence
 - GET /api/reconstructions/{id}
 - POST /api/reconstructions/{id}/stages
 - PUT /api/stages/{id}/scene-objects
 - GET, POST /api/reconstructions/{id}/annotations
 """
 
-from fastapi import APIRouter, status
+from typing import Annotated
+
+from fastapi import APIRouter, Body, status
 from sqlalchemy import func, select
 
 from app.core.deps import ActorId, DbSession
@@ -20,10 +23,13 @@ from app.schemas.reconstruction import (
     ReconstructionStage as StageOut,
     SceneAnnotation as SceneAnnotationOut,
     SceneAnnotationCreate,
+    SceneGenerateRequest,
+    SceneGeneration,
     SceneObject as SceneObjectOut,
     SceneObjectInput,
     StageCreate,
 )
+from app.services.reconstruction.generate import generate_reconstructions
 from app.services.reconstruction.scenes import (
     invalid,
     missing_from_case,
@@ -51,6 +57,32 @@ def create_reconstruction(case_id: int, body: ReconstructionCreate, db: DbSessio
     )
     db.commit()
     return reconstruction
+
+
+@router.post(
+    "/cases/{case_id}/reconstructions/generate",
+    response_model=SceneGeneration,
+    status_code=status.HTTP_201_CREATED,
+)
+def generate_reconstruction(
+    case_id: int,
+    db: DbSession,
+    actor_id: ActorId,
+    body: Annotated[SceneGenerateRequest | None, Body()] = None,
+):
+    """Reads the case's evidence and records, writes a scene script (with Gemini, or
+    from the records without a key) and saves one reconstruction per scenario."""
+    case = get_or_404(db, Case, case_id)
+    result = generate_reconstructions(
+        db, case, instructions=body.instructions if body else "", actor_id=actor_id
+    )
+    return SceneGeneration(
+        generator=result.generator,
+        model=result.model,
+        script=result.script,
+        warnings=result.warnings,
+        reconstructions=[ReconstructionOut.model_validate(r) for r in result.reconstructions],
+    )
 
 
 @router.get("/reconstructions/{reconstruction_id}", response_model=ReconstructionDetail)

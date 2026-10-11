@@ -278,8 +278,8 @@ export function buildHatchback(asm) {
     const fog = place(new THREE.CylinderGeometry(0.035, 0.035, 0.01, 20), faceX(0.64, 0.34, 1) - 0.01, 0.34, s * 0.64, 0, 0, Math.PI / 2);
     asm.add('headlight', fog);
   }
-  const emblem = place(new THREE.TorusGeometry(0.045, 0.008, 8, 28), faceX(0, 0.635, 1) + 0.008, 0.635, 0, 0, Math.PI / 2, 0);
-  emblem.scale(1, 0.75, 1);
+  // Squashed to an oval before it is placed, so the scale doesn't move it.
+  const emblem = place(new THREE.TorusGeometry(0.045, 0.008, 8, 28).scale(1, 0.75, 1), faceX(0, 0.635, 1) + 0.008, 0.635, 0, 0, Math.PI / 2, 0);
   asm.add('chrome', emblem);
   asm.plate('plate_front', faceX(0, 0.485, 1) + 0.007, 0.485, 1);
 

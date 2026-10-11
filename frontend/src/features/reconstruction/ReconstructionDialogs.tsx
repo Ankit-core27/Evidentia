@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Sparkles } from 'lucide-react';
 import { Dialog } from '@/components/shared/Dialog';
 import { inputClass, labelClass, primaryButtonClass, secondaryButtonClass } from '@/components/shared/formStyles';
-import { useAddStage, useCreateReconstruction } from '@/hooks/useReconstruction';
+import { useAddStage, useCreateReconstruction, useGenerateReconstructions } from '@/hooks/useReconstruction';
 import { formatTimeRange } from '@/lib/format';
 import { CaseEvent, Id, Reconstruction } from '@/types/api';
 
@@ -180,6 +180,112 @@ export const StageDialog: React.FC<StageDialogProps> = ({ caseId, reconstruction
         </fieldset>
         {add.isError && <p className="text-xs text-danger">{(add.error as Error).message}</p>}
       </form>
+    </Dialog>
+  );
+};
+
+/**
+ * Generates scenarios from the case's evidence (POST /api/cases/{id}/reconstructions/generate):
+ * the backend reads every evidence item and record, writes a scene script and builds the 3D
+ * scene from it, one scenario per competing account.
+ */
+export const GenerateDialog: React.FC<{ caseId: Id; onClose: () => void; onCreated: (id: Id) => void }> = ({ caseId, onClose, onCreated }) => {
+  const generate = useGenerateReconstructions(caseId);
+  const [instructions, setInstructions] = useState('');
+  const result = generate.data;
+
+  return (
+    <Dialog
+      open
+      title="Generate from evidence"
+      onClose={onClose}
+      busy={generate.isPending}
+      footer={
+        result ? (
+          <button
+            onClick={() => {
+              if (result.reconstructions[0]) onCreated(result.reconstructions[0].id);
+              onClose();
+            }}
+            className={primaryButtonClass}
+          >
+            Open the scene
+          </button>
+        ) : (
+          <>
+            <button onClick={onClose} disabled={generate.isPending} className={secondaryButtonClass}>
+              Cancel
+            </button>
+            <button type="submit" form="generate-form" disabled={generate.isPending} className={primaryButtonClass}>
+              {generate.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" aria-hidden />}
+              {generate.isPending ? 'Generating…' : 'Generate'}
+            </button>
+          </>
+        )
+      }
+    >
+      {!result && (
+        <form
+          id="generate-form"
+          className="space-y-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            generate.mutate({ instructions: instructions.trim() });
+          }}
+        >
+          <p className="text-body text-ink-soft">
+            Forensix reads every evidence item and record in this case and writes a scene script: the place, the vehicles,
+            people and items, the traces found there, and what happened stage by stage. It then builds the 3D scene from the
+            script. Where accounts conflict, you get one scenario per account. Every position it has to estimate is listed in
+            the scenario’s assumptions, for you to check.
+          </p>
+          <div>
+            <label htmlFor="generate-instructions" className={labelClass}>
+              Instructions (optional)
+            </label>
+            <textarea
+              id="generate-instructions"
+              rows={3}
+              value={instructions}
+              onChange={(e) => setInstructions(e.target.value)}
+              placeholder="e.g. Show each driver’s account as its own scenario."
+              className={`${inputClass} resize-none`}
+              disabled={generate.isPending}
+            />
+          </div>
+          {generate.isPending && (
+            <p className="text-xs text-ink-muted" role="status">
+              Reading the evidence and writing the scene script. With Gemini this takes up to a minute.
+            </p>
+          )}
+          {generate.isError && <p className="text-xs text-danger">{(generate.error as Error).message}</p>}
+        </form>
+      )}
+      {result && (
+        <div className="space-y-3" role="status">
+          <p className="text-body text-ink">
+            {result.reconstructions.length === 1 ? 'One scenario' : `${result.reconstructions.length} scenarios`} generated{' '}
+            {result.generator === 'gemini' ? `by Gemini (${result.model})` : 'from the case records, without AI'}.
+          </p>
+          <ul className="space-y-1">
+            {result.reconstructions.map((r) => (
+              <li key={r.id} className="text-body text-ink-soft">
+                {r.scenario} <span className="text-2xs text-ink-muted">version {r.version}</span>
+              </li>
+            ))}
+          </ul>
+          {result.warnings.length > 0 && (
+            <div>
+              <div className="text-xs font-medium text-ink-muted">Notes on the script</div>
+              <ul className="mt-1 list-disc space-y-0.5 pl-4 text-xs text-ink-soft">
+                {result.warnings.map((w) => (
+                  <li key={w}>{w}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
     </Dialog>
   );
 };

@@ -689,7 +689,8 @@ export const buildSeed = async (): Promise<MockDb> => {
       version: 1,
       assumptions:
         'The hatchback entered on amber at about 21:40:09. The van moved off during the all-red phase at 21:40:11. Assumes the camera clock matches the signal controller. Supported by Anita Desai and the signal log.',
-      scene_file: 'road-accident/junction.json'
+      scene_file: 'road-accident/junction.json',
+      origin: 'investigator'
     },
     {
       id: 2,
@@ -698,7 +699,8 @@ export const buildSeed = async (): Promise<MockDb> => {
       version: 1,
       assumptions:
         'The hatchback entered after 21:40:11 on red. The van moved off on green at 21:40:13. Assumes the camera clock runs about 2 seconds behind the signal controller. Supported by Vikram Singh.',
-      scene_file: 'road-accident/junction.json'
+      scene_file: 'road-accident/junction.json',
+      origin: 'investigator'
     }
   );
   db.stages.push(
