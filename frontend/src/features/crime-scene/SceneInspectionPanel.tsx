@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { AssetDimensionSpec, SceneSelection } from '@forensix/scene-engine';
+import type { AssetDimensionSpec, SceneSelection } from '@evidentia/scene-engine';
 
 interface SceneInspectionPanelProps {
   selection: SceneSelection | null;

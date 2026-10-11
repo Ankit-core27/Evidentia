@@ -1,4 +1,4 @@
-# BodyParts3D reference anatomy for Forensix
+# BodyParts3D reference anatomy for Evidentia
 
 **BodyParts3D, © The Database Center for Life Science, licensed under Creative Commons Attribution–ShareAlike 2.1 Japan (CC BY-SA 2.1 JP).**
 
@@ -9,7 +9,7 @@ The optimized `bodyparts3d.glb` is a derivative of BodyParts3D version 3.0 (2011
 - Original project: [BodyParts3D / Anatomography](https://lifesciencedb.jp/bp3d/).
 - Source mirror: [Kevin-Mattheus-Moerman/BodyParts3D](https://github.com/Kevin-Mattheus-Moerman/BodyParts3D), fixed commit `f0eeb6e843380cfe6b83797cf8c3e1af74de5e61`.
 - Input: individually segmented STL files under `assets/BodyParts3D_data/stl/`, converted from original OBJ geometry by that mirror. Original labels and composite membership come from its `parts_list_e.txt` and `composite_parts.txt`.
-- Forensix changes: selected 120 source parts; assembled 18 named structures; simplified triangle meshes; recalculated smooth normals; assigned display colors; exported glTF 2.0 binary. No primitive proxy organs were substituted.
+- Evidentia changes: selected 120 source parts; assembled 18 named structures; simplified triangle meshes; recalculated smooth normals; assigned display colors; exported glTF 2.0 binary. No primitive proxy organs were substituted.
 - Axes: original millimetres, X left / Y posterior / Z superior, transformed to metres, X left / Y superior / Z anterior. The skin bounding-box center defines the body origin. Each structure has a centered local coordinate system and a retained original translation.
 - Provenance and source SHA-256 hashes: `frontend/scripts/anatomy/source-parts.json` in the repository. Runtime IDs, FMA identifiers, source mesh names, original bounds, triangle counts and output SHA-256: `manifest.json` beside this file.
 - Output: about 4.4 MB; 18 independently selectable structures, comprising skin, brain, heart, paired lungs, liver, stomach, spleen, pancreas, paired kidneys, small/large intestine, paired clavicles, paired humeri and frontal bone.
@@ -25,9 +25,9 @@ The forehead and upper-arm soft-tissue regions are not independently segmented h
 Normal application startup uses the checked-in GLB; no model download or Python asset tools are needed. To reproduce it from the repository root, in a separate tools environment:
 
 ```bash
-python -m venv /tmp/forensix-anatomy-tools
-/tmp/forensix-anatomy-tools/bin/pip install numpy==2.5.4 fast-simplification==0.2.0
-/tmp/forensix-anatomy-tools/bin/python frontend/scripts/anatomy/build.py /tmp/forensix-anatomy-source
+python -m venv /tmp/evidentia-anatomy-tools
+/tmp/evidentia-anatomy-tools/bin/pip install numpy==2.5.4 fast-simplification==0.2.0
+/tmp/evidentia-anatomy-tools/bin/python frontend/scripts/anatomy/build.py /tmp/evidentia-anatomy-source
 ```
 
 The converter downloads only pinned source files, checks each hash, and writes the GLB and manifest. Source downloads total approximately 203 MB and are not included in the application. Serve this directory through the application's existing assets configuration at `/3d/anatomy/`.

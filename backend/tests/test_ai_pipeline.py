@@ -259,7 +259,7 @@ def test_pdf_page_without_text_layer_is_read_by_ocr(db, gemini):
     [call] = gemini.media_calls()
     assert call.contents[0].inline_data.mime_type == "image/png"
     [run] = runs_of(db, "ocr")
-    assert (run.evidence_id, run.case_id, run.model) == (evidence.id, case.id, "gemini-2.5-flash")
+    assert (run.evidence_id, run.case_id, run.model) == (evidence.id, case.id, "gemini-3.5-flash")
     assert run.output == {"page": 2, "text": "Handwritten note: van moved early."}
 
 

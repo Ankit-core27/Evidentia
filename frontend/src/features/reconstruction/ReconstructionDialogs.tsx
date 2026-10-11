@@ -234,7 +234,7 @@ export const GenerateDialog: React.FC<{ caseId: Id; onClose: () => void; onCreat
           }}
         >
           <p className="text-body text-ink-soft">
-            Forensix reads every evidence item and record in this case and writes a scene script: the place, the vehicles,
+            Evidentia reads every evidence item and record in this case and writes a scene script: the place, the vehicles,
             people and items, the traces found there, and what happened stage by stage. It then builds the 3D scene from the
             script. Where accounts conflict, you get one scenario per account. Every position it has to estimate is listed in
             the scenario’s assumptions, for you to check.

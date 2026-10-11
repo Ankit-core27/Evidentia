@@ -1,7 +1,7 @@
 [project]
-name = "forensix-backend"
+name = "evidentia-backend"
 version = "0.1.0"
-description = "FastAPI backend for Forensix, the AI forensic investigation platform"
+description = "FastAPI backend for Evidentia, the AI forensic investigation platform"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.115",

@@ -15,6 +15,7 @@ summary, proposals or conflict check.
 """
 
 import logging
+import threading
 
 from sqlalchemy.orm import Session
 
@@ -32,9 +33,12 @@ logger = logging.getLogger(__name__)
 
 MAX_REASON_LENGTH = 500
 
+# One file at a time, so a batch upload doesn't burst past Gemini's rate limit.
+_processing_lock = threading.Lock()
+
 
 def process_evidence(evidence_id: int) -> None:
-    with SessionLocal() as db:
+    with _processing_lock, SessionLocal() as db:
         evidence = db.get(Evidence, evidence_id)
         if evidence is None:
             return

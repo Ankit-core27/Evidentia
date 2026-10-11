@@ -21,7 +21,7 @@ from app.routers import (
     timeline,
 )
 
-app = FastAPI(title="Forensix API", version="0.1.0")
+app = FastAPI(title="Evidentia API", version="0.1.0")
 
 app.add_middleware(
     CORSMiddleware,

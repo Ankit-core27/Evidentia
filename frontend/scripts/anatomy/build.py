@@ -15,7 +15,7 @@ import numpy as np
 
 REPO = Path(__file__).resolve().parents[3]
 DEST = REPO / "assets/3d/anatomy"
-CACHE = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("/tmp/forensix-anatomy-source")
+CACHE = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("/tmp/evidentia-anatomy-source")
 COMMIT = "f0eeb6e843380cfe6b83797cf8c3e1af74de5e61"
 SOURCE = f"https://raw.githubusercontent.com/Kevin-Mattheus-Moerman/BodyParts3D/{COMMIT}/assets/BodyParts3D_data/stl/"
 GROUPS = json.loads(Path(__file__).with_name("source-parts.json").read_text())
@@ -44,7 +44,7 @@ def main():
         return vertices[:, [0, 2, 1]] * np.array([0.001, 0.001, -0.001])
     skin = axes(skin)
     center = (skin.min(axis=0) + skin.max(axis=0)) / 2
-    gltf = {"asset": {"version": "2.0", "generator": "Forensix BodyParts3D converter",
+    gltf = {"asset": {"version": "2.0", "generator": "Evidentia BodyParts3D converter",
              "copyright": "BodyParts3D, (c) The Database Center for Life Science licensed under CC Attribution-Share Alike 2.1 Japan"},
             "scene": 0, "scenes": [{"nodes": []}], "nodes": [], "meshes": [], "materials": [],
             "buffers": [], "bufferViews": [], "accessors": []}

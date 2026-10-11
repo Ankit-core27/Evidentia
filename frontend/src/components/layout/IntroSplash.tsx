@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 
-const SEEN_KEY = 'forensix:intro-seen';
+const SEEN_KEY = 'evidentia:intro-seen';
 // Served from the repo-root assets/ folder (vite publicDir).
 const INTRO_SRC = '/intro/forensix-loader.mp4';
 // If the video stalls or never loads, don't keep the app hidden behind it.
@@ -15,7 +15,7 @@ function shouldPlayIntro(): boolean {
   }
 }
 
-/** Plays the Forensix intro video over the app the first time it opens in a browser session. */
+/** Plays the Evidentia intro video over the app the first time it opens in a browser session. */
 export const IntroSplash: React.FC = () => {
   const [visible, setVisible] = useState(shouldPlayIntro);
   const [leaving, setLeaving] = useState(false);

@@ -34,7 +34,7 @@ def test_health(client):
 
 def test_openapi_is_served(client):
     schema = client.get("/openapi.json").json()
-    assert schema["info"]["title"] == "Forensix API"
+    assert schema["info"]["title"] == "Evidentia API"
 
 
 def test_every_schema_builds_a_json_schema():

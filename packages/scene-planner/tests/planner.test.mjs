@@ -7,7 +7,7 @@ import {
   mockRoadAccidentScene,
   mockRoomLayoutScenes,
   validateScene,
-} from '@forensix/scene-engine';
+} from '@evidentia/scene-engine';
 import { DeterministicMockScenePlanner, ScenePlanner, planScene } from '../dist/index.js';
 
 const exampleDescription = 'A synthetic residential house has a living room, a bedroom and a kitchen. The rooms are connected by doorways. A table and chairs are in the living room. A knife is reported near the bedroom doorway. The body exact position has not been measured.';
@@ -186,7 +186,7 @@ test('mock provider output is deterministic and uses only registry asset identif
         { id: 'kitchen', name: 'Kitchen', dimensions: { width: 5, depth: 4, height: 2.8 } },
       ],
     },
-    responseFormat: { name: 'forensix_scene_v1', schema: undefined },
+    responseFormat: { name: 'evidentia_scene_v1', schema: undefined },
   };
   const first = await provider.generateScene(request);
   const second = await provider.generateScene(request);
@@ -206,7 +206,7 @@ test('explicitly supplied world positions and connection topology are preserved'
       id: 'test-constrained-provider',
       supportsStructuredOutput: true,
       async generateScene({ responseFormat }) {
-        sawSchemaFormat = responseFormat.name === 'forensix_scene_v1' &&
+        sawSchemaFormat = responseFormat.name === 'evidentia_scene_v1' &&
           typeof responseFormat.schema.safeParse === 'function';
         const result = await new DeterministicMockScenePlanner().generateScene({
           plannerRequest: {

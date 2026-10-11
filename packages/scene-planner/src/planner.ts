@@ -4,7 +4,7 @@ import {
   loadScene,
   sceneSchema,
   type AssetRegistry,
-} from '@forensix/scene-engine';
+} from '@evidentia/scene-engine';
 
 import { DeterministicMockScenePlanner } from './mock-provider.js';
 import type {
@@ -135,7 +135,7 @@ export class ScenePlanner {
       candidate = await this.provider.generateScene({
         plannerRequest: request,
         responseFormat: {
-          name: 'forensix_scene_v1',
+          name: 'evidentia_scene_v1',
           schema: sceneSchema,
         },
       });

@@ -174,7 +174,7 @@ def test_findings_are_saved_as_open_conflicts_and_logged(db, gemini):
     assert case.case_number in call.contents[0]
 
     [run] = db.scalars(select(AiRun).where(AiRun.task == "conflicts")).all()
-    assert (run.case_id, run.evidence_id, run.model) == (case.id, None, "gemini-2.5-flash")
+    assert (run.case_id, run.evidence_id, run.model) == (case.id, None, "gemini-3.5-flash")
     assert run.output == {"groups": [group], "output": gemini.findings}
 
 

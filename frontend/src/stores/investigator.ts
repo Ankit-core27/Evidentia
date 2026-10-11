@@ -14,6 +14,6 @@ export const useInvestigatorStore = create<InvestigatorState>()(
       investigatorId: null,
       setInvestigatorId: (investigatorId) => set({ investigatorId })
     }),
-    { name: 'forensix.investigator' }
+    { name: 'evidentia.investigator' }
   )
 );

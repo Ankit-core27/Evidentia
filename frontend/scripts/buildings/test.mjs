@@ -5,7 +5,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
-const directory = await mkdtemp(join(tmpdir(), 'forensix-buildings-test-'));
+const directory = await mkdtemp(join(tmpdir(), 'evidentia-buildings-test-'));
 try {
   const outfile = join(directory, 'tests.mjs');
   await build({

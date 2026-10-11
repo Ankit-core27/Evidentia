@@ -43,7 +43,7 @@ export const ReportDocument: React.FC<ReportDocumentProps> = ({ report, investig
     >
       <header className="flex justify-between gap-6 border-b-2 border-slate-800 pb-4">
         <div>
-          <div className="text-[10px] uppercase tracking-widest text-slate-500">Forensix · {TEMPLATE_LABELS[report.template]}</div>
+          <div className="text-[10px] uppercase tracking-widest text-slate-500">Evidentia · {TEMPLATE_LABELS[report.template]}</div>
           <h1 className="text-xl font-bold text-slate-900 mt-1">{c.case.title}</h1>
           <div className="text-slate-600 mt-1">
             {c.case.case_number} · {humanize(c.case.incident_type)} · Status: {humanize(c.case.status)} · Priority: {humanize(c.case.priority)}

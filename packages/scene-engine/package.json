@@ -1,7 +1,7 @@
 {
-  "name": "@forensix/scene-engine",
+  "name": "@evidentia/scene-engine",
   "version": "0.1.0",
-  "description": "Reusable scene schema, validation and mock fixtures for the Forensix crime-scene engine.",
+  "description": "Reusable scene schema, validation and mock fixtures for the Evidentia crime-scene engine.",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -22,7 +22,7 @@
     "test": "npm run build && node --test tests/scene-engine.test.mjs"
   },
   "keywords": [
-    "forensix",
+    "evidentia",
     "crime-scene",
     "three",
     "scene-engine",

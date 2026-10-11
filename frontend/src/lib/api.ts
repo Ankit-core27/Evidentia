@@ -72,7 +72,7 @@ export async function request<T>(method: string, path: string, options: RequestO
     response = await transport(buildUrl(path, options.query), { method, headers, body, signal: options.signal });
   } catch (error) {
     if ((error as Error).name === 'AbortError') throw error;
-    throw new ApiError(0, 'Cannot reach the Forensix API. Is the backend running on port 8000?', null);
+    throw new ApiError(0, 'Cannot reach the Evidentia API. Is the backend running on port 8000?', null);
   }
 
   if (response.status === 204) return undefined as T;

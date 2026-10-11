@@ -4,7 +4,7 @@ Instructions for AI coding agents (Claude Code, Codex, Cursor, Copilot, Gemini C
 
 ## The project
 
-Forensix is an AI forensic investigation platform built for Hackinverse. [docs/PLAN.md](docs/PLAN.md) is the source of truth for the architecture, API contract, directory layout, milestones and which track owns which folders. Read the sections that cover your task before you change anything.
+Evidentia is an AI forensic investigation platform built for Hackinverse. [docs/PLAN.md](docs/PLAN.md) is the source of truth for the architecture, API contract, directory layout, milestones and which track owns which folders. Read the sections that cover your task before you change anything.
 
 ## Working in parallel
 
