@@ -10,6 +10,8 @@ import {
   ReconstructionStage,
   SceneAnnotation,
   SceneAnnotationCreate,
+  SceneGenerateRequest,
+  SceneGeneration,
   SceneObject,
   SceneObjectInput,
   StageCreate
@@ -35,6 +37,18 @@ export const useCreateReconstruction = (caseId: Id) => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: ReconstructionCreate) => api.post<Reconstruction>(`/cases/${caseId}/reconstructions`, input),
+    onSuccess: () => invalidateCase(queryClient, caseId)
+  });
+};
+
+/**
+ * Reads the case's evidence and records on the backend, writes a scene script (with
+ * Gemini, or from the records without a key) and saves one scenario per account.
+ */
+export const useGenerateReconstructions = (caseId: Id) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: SceneGenerateRequest) => api.post<SceneGeneration>(`/cases/${caseId}/reconstructions/generate`, input),
     onSuccess: () => invalidateCase(queryClient, caseId)
   });
 };

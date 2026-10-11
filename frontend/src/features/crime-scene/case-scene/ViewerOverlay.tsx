@@ -7,7 +7,7 @@ import { useCreateAnnotation } from '@/hooks/useReconstruction';
 import { ReconstructionDetail, Vec3 } from '@/types/api';
 import { asVec3, visibleOn } from './Annotations';
 import { driverView } from './CaseSceneViewer';
-import { SceneFile, groundHeight } from './sceneFile';
+import { SceneFile, groundHeight, modelSpec } from './sceneFile';
 import { flyTo, useViewerStore, ViewerTool } from './viewerStore';
 
 const chip =
@@ -82,14 +82,14 @@ export const ViewerOverlay: React.FC<{
         </div>
       </div>
 
-      {(sceneError || !reconstruction.scene_file) && (
+      {(sceneError || (!reconstruction.scene_file && !reconstruction.scene)) && (
         <p className="pointer-events-auto self-center rounded border border-line-strong bg-canvas/90 px-3 py-1.5 text-xs text-ink-soft">
           {sceneError ? `${sceneError} Showing the scene objects only.` : 'This scenario has no scene file, so only its scene objects are shown.'}
         </p>
       )}
 
       <div className="flex items-end justify-between gap-2">
-        <Compass azimuth={s.azimuth} night={s.timeOfDay === 'night'} />
+        <Compass azimuth={s.azimuth} night={s.timeOfDay === 'night'} scene={scene} />
         <ToolPanel reconstruction={reconstruction} stageId={stageId} />
         {notes.length > 0 ? (
           <section className="pointer-events-auto max-h-40 w-60 overflow-y-auto rounded border border-line-strong bg-canvas/90 p-2 text-xs" aria-label="Notes">
@@ -110,7 +110,16 @@ export const ViewerOverlay: React.FC<{
   );
 };
 
-const Compass: React.FC<{ azimuth: number; night: boolean }> = ({ azimuth, night }) => (
+/** What the scene's origin is, for the caption under the compass. */
+function originOf(scene: SceneFile | undefined) {
+  const kind = scene?.setting?.kind;
+  if (kind === 'indoor') return 'the centre of the main room';
+  if (kind === 'outdoor') return 'the incident spot';
+  if (scene && scene.roads.length === 1) return 'the incident spot';
+  return 'the junction centre';
+}
+
+const Compass: React.FC<{ azimuth: number; night: boolean; scene: SceneFile | undefined }> = ({ azimuth, night, scene }) => (
   <div className="pointer-events-none flex items-end gap-2">
     <div className="grid size-11 place-items-center rounded-full border border-line-strong bg-canvas/85 shadow-sm" aria-label="North">
       <div style={{ transform: `rotate(${azimuth}rad)` }} className="flex flex-col items-center">
@@ -119,7 +128,9 @@ const Compass: React.FC<{ azimuth: number; night: boolean }> = ({ azimuth, night
       </div>
     </div>
     <span className="hidden max-w-56 rounded bg-canvas/70 px-1.5 py-0.5 text-2xs text-ink-muted md:inline">
-      {night ? 'Night view: lighting is approximate, and the records don’t say what the signals showed.' : 'Distances in metres from the junction centre.'}
+      {night
+        ? `Night view: lighting is approximate${scene?.junction?.signals || scene?.static.some((i) => i.kind === 'signal') ? ', and the records don’t say what the signals showed' : ''}.`
+        : `Distances in metres from ${originOf(scene)}.`}
     </span>
   </div>
 );
@@ -138,11 +149,22 @@ const ViewsMenu: React.FC<{ scene: SceneFile | undefined; reconstruction: Recons
   const views = useMemo(() => {
     const list: { key: string; label: string; group: string; position: Vec3; target: Vec3 }[] = [
       { key: 'overview', label: 'Overview', group: 'Scene', ...defaultCamera },
-      { key: 'plan', label: 'Top-down plan', group: 'Scene', position: [defaultCamera.target[0], 85, defaultCamera.target[2] + 0.01], target: defaultCamera.target }
+      {
+        key: 'plan',
+        label: 'Top-down plan',
+        group: 'Scene',
+        position: [defaultCamera.target[0], scene?.setting?.kind === 'indoor' ? 24 : 85, defaultCamera.target[2] + 0.01],
+        target: defaultCamera.target
+      }
     ];
     for (const o of stage?.scene_objects ?? []) {
-      const v = driverView(o, groundHeight(scene, o.position[0], o.position[2]));
-      list.push({ key: `driver-${o.id}`, label: `${o.label}: driver’s eye`, group: `This stage${stage ? ` (${stage.label})` : ''}`, ...v });
+      const spec = modelSpec(scene, o.model_id);
+      const kind = spec?.kind ?? 'vehicle';
+      if (kind !== 'vehicle' && kind !== 'person') continue;
+      if (o.model_id.endsWith(':lying') || o.model_id.endsWith(':fallen')) continue;
+      const v = driverView(o, groundHeight(scene, o.position[0], o.position[2]), spec);
+      const eye = kind === 'person' || o.model_id.includes(':') ? 'eye level' : 'driver’s eye';
+      list.push({ key: `driver-${o.id}`, label: `${o.label}: ${eye}`, group: `This stage${stage ? ` (${stage.label})` : ''}`, ...v });
     }
     for (const a of reconstruction.annotations) {
       if (a.kind !== 'viewpoint' || !visibleOn(a, stageId)) continue;

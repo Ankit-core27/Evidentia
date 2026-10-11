@@ -3,35 +3,62 @@ import { useTexture } from '@react-three/drei';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { SCENE_ROOT, SceneFile } from './sceneFile';
-import { kerbTexture, paintWearTexture, skidTexture } from './textures';
+import { kerbTexture, paintWearTexture } from './textures';
 
-// The road surface of a four-way junction: one carriageway, raised footpaths with
-// painted kerbs, and the markings, all built from the scene file's dimensions.
+// The road surface: one straight road, a T-junction or a crossroads, with raised
+// footpaths and painted kerbs, and the markings, all built from the scene's roads.
+
+type Arm = 'E' | 'S' | 'W' | 'N';
+// Traversal order around the junction; consecutive arms are 90 degrees apart.
+const ORDER: Arm[] = ['E', 'S', 'W', 'N'];
+const OUTWARD: Record<Arm, [number, number]> = { E: [1, 0], S: [0, 1], W: [-1, 0], N: [0, -1] };
 
 interface Layout {
+  arms: Arm[];
   hwx: number;
   hwz: number;
   x0: number;
   x1: number;
   z0: number;
   z1: number;
+  /** Extent of the footpath blocks. */
+  X0: number;
+  X1: number;
+  Z0: number;
+  Z1: number;
   r: number;
   kerb: number;
+  junction: boolean;
 }
 
 function layoutOf(scene: SceneFile): Layout | null {
   const xRoad = scene.roads.find((r) => r.axis === 'x');
   const zRoad = scene.roads.find((r) => r.axis === 'z');
-  if (!xRoad || !zRoad) return null;
+  if (!xRoad && !zRoad) return null;
+  const hwx = xRoad ? xRoad.lanes_each_way * xRoad.lane_width : 0;
+  const hwz = zRoad ? zRoad.lanes_each_way * zRoad.lane_width : 0;
+  const [x0, x1] = xRoad ? [xRoad.from, xRoad.to] : [0, 0];
+  const [z0, z1] = zRoad ? [zRoad.from, zRoad.to] : [0, 0];
+  const arms = ORDER.filter((a) =>
+    a === 'E' ? !!xRoad && x1 > hwz + 1 : a === 'W' ? !!xRoad && x0 < -hwz - 1 : a === 'S' ? !!zRoad && z1 > hwx + 1 : !!zRoad && z0 < -hwx - 1
+  );
+  if (arms.length < 2) return null;
+  const ext = Math.max(Math.abs(x0), Math.abs(x1), Math.abs(z0), Math.abs(z1), 40);
   return {
-    hwx: xRoad.lanes_each_way * xRoad.lane_width,
-    hwz: zRoad.lanes_each_way * zRoad.lane_width,
-    x0: xRoad.from,
-    x1: xRoad.to,
-    z0: zRoad.from,
-    z1: zRoad.to,
+    arms,
+    hwx,
+    hwz,
+    x0,
+    x1,
+    z0,
+    z1,
+    X0: arms.includes('W') ? x0 : -ext,
+    X1: arms.includes('E') ? x1 : ext,
+    Z0: arms.includes('N') ? z0 : -ext,
+    Z1: arms.includes('S') ? z1 : ext,
     r: scene.junction?.corner_radius ?? 3,
-    kerb: scene.junction?.kerb_height ?? 0.15
+    kerb: scene.junction?.kerb_height ?? 0.15,
+    junction: !!xRoad && !!zRoad
   };
 }
 
@@ -47,6 +74,33 @@ function cornerArc(l: Layout, sx: number, sz: number, steps = 10) {
   return pts;
 }
 
+/** Where an arm's carriageway meets the scene edge: its two kerb ends, in traversal order. */
+function farPoints(l: Layout, a: Arm): [number, number][] {
+  if (a === 'E') return [[l.x1, -l.hwx], [l.x1, l.hwx]];
+  if (a === 'S') return [[l.hwz, l.z1], [-l.hwz, l.z1]];
+  if (a === 'W') return [[l.x0, l.hwx], [l.x0, -l.hwx]];
+  return [[-l.hwz, l.z0], [l.hwz, l.z0]];
+}
+
+/** The kerb between two arms 90 degrees apart (none when an arm between them is missing). */
+function connector(l: Layout, a: Arm, b: Arm): [number, number][] {
+  if ((ORDER.indexOf(a) + 1) % 4 !== ORDER.indexOf(b)) return [];
+  if (a === 'E') return cornerArc(l, 1, 1);
+  if (a === 'S') return cornerArc(l, -1, 1).reverse();
+  if (a === 'W') return cornerArc(l, -1, -1);
+  return cornerArc(l, 1, -1).reverse();
+}
+
+/** The scene-edge corner between consecutive arms in the traversal order. */
+function extentCorner(l: Layout, i: number): [number, number] {
+  return [
+    [l.X1, l.Z1],
+    [l.X0, l.Z1],
+    [l.X0, l.Z0],
+    [l.X1, l.Z0]
+  ][i] as [number, number];
+}
+
 /** A shape in the XZ plane; shapes are drawn in (x, -z) and laid flat by rotating -90 degrees about x. */
 function shapeOf(points: [number, number][]) {
   const shape = new THREE.Shape();
@@ -55,37 +109,30 @@ function shapeOf(points: [number, number][]) {
   return shape;
 }
 
+const pairs = (l: Layout) => l.arms.map((a, i) => [a, l.arms[(i + 1) % l.arms.length]] as [Arm, Arm]);
+
 function carriageway(l: Layout) {
-  const pts: [number, number][] = [
-    [l.x1, -l.hwx],
-    [l.x1, l.hwx],
-    ...cornerArc(l, 1, 1),
-    [l.hwz, l.z1],
-    [-l.hwz, l.z1],
-    ...cornerArc(l, -1, 1).reverse(),
-    [l.x0, l.hwx],
-    [l.x0, -l.hwx],
-    ...cornerArc(l, -1, -1),
-    [-l.hwz, l.z0],
-    [l.hwz, l.z0],
-    ...cornerArc(l, 1, -1).reverse()
-  ];
+  const pts: [number, number][] = [];
+  for (const [a, b] of pairs(l)) pts.push(...farPoints(l, a), ...connector(l, a, b));
   const geo = new THREE.ShapeGeometry(shapeOf(pts), 12);
   geo.rotateX(-Math.PI / 2);
   return geo;
 }
 
-/** The four footpath blocks between the road arms, extruded up to kerb height. */
+/** The footpath blocks between the road arms, extruded up to kerb height. */
 function footpaths(l: Layout) {
-  const quads: [number, number][][] = [];
-  for (const [sx, sz] of [[1, 1], [-1, 1], [-1, -1], [1, -1]]) {
-    const xEnd = sx > 0 ? l.x1 : l.x0;
-    const zEnd = sz > 0 ? l.z1 : l.z0;
-    quads.push([[xEnd, sz * l.hwx], ...cornerArc(l, sx, sz), [sx * l.hwz, zEnd], [xEnd, zEnd]]);
-  }
-  // Separate meshes keep each extrusion's groups: top surface first, kerb faces second.
-  return quads.map((q) => {
-    const g = new THREE.ExtrudeGeometry(shapeOf(q), { depth: l.kerb, bevelEnabled: false, curveSegments: 12 });
+  return pairs(l).map(([a, b]) => {
+    const pts: [number, number][] = [farPoints(l, a)[1], ...connector(l, a, b), farPoints(l, b)[0]];
+    // Back round the scene edge from b to a.
+    const ia = ORDER.indexOf(a);
+    let k = (ORDER.indexOf(b) + 3) % 4;
+    for (let n = 0; n < 4; n += 1) {
+      pts.push(extentCorner(l, k));
+      if (k === ia) break;
+      k = (k + 3) % 4;
+    }
+    // Separate meshes keep each extrusion's groups: top surface first, kerb faces second.
+    const g = new THREE.ExtrudeGeometry(shapeOf(pts), { depth: l.kerb, bevelEnabled: false, curveSegments: 12 });
     g.rotateX(-Math.PI / 2);
     return g;
   });
@@ -98,33 +145,45 @@ function rect(x0: number, z0: number, x1: number, z1: number, y: number) {
   return g;
 }
 
+/** A rectangle on an arm: from a0 to a1 along its outward direction, c0 to c1 across it along `side`. */
+function armRect(a: Arm, side: [number, number], a0: number, a1: number, c0: number, c1: number, y: number) {
+  const [dx, dz] = OUTWARD[a];
+  const xs = [dx * a0 + side[0] * c0, dx * a1 + side[0] * c1];
+  const zs = [dz * a0 + side[1] * c0, dz * a1 + side[1] * c1];
+  return rect(Math.min(...xs), Math.min(...zs), Math.max(...xs), Math.max(...zs), y);
+}
+
 function markings(scene: SceneFile, l: Layout) {
   const y = 0.004;
   const parts: THREE.BufferGeometry[] = [];
-  const stop = scene.junction?.stop_line ?? l.hwz + l.r + 2;
-  const [c0, c1] = scene.junction?.crossing ?? [l.hwz + 1, l.hwz + 4];
+  const keepLeft = (scene.setting?.drive_side ?? 'left') === 'left';
+  const stop = l.junction ? (scene.junction?.stop_line ?? Math.max(l.hwx, l.hwz) + l.r + 1.5) : 0;
   const w = 0.3;
-  // Stop lines across each approach lane (traffic keeps left).
-  parts.push(rect(-stop - w, -l.hwx + 0.2, -stop, -0.1, y));
-  parts.push(rect(stop, 0.1, stop + w, l.hwx - 0.2, y));
-  parts.push(rect(-l.hwz + 0.2, stop, -0.1, stop + w, y));
-  parts.push(rect(0.1, -stop - w, l.hwz - 0.2, -stop, y));
-  // Zebra crossings: bars along the traffic direction.
-  for (const s of [1, -1]) {
-    for (let z = -l.hwx + 0.5; z <= l.hwx - 0.5 + 1e-6; z += 1) parts.push(rect(s * c0, z - 0.25, s * c1, z + 0.25, y));
-    for (let x = -l.hwz + 0.5; x <= l.hwz - 0.5 + 1e-6; x += 1) parts.push(rect(x - 0.25, s * c0, x + 0.25, s * c1, y));
+  const half = (a: Arm) => (a === 'E' || a === 'W' ? l.hwx : l.hwz);
+  const end = (a: Arm) => (a === 'E' ? l.x1 : a === 'W' ? -l.x0 : a === 'S' ? l.z1 : -l.z0);
+  for (const a of l.arms) {
+    const [dx, dz] = OUTWARD[a];
+    // Traffic on this arm heads in to the centre; its lane is on the side it keeps to.
+    const lane: [number, number] = keepLeft ? [-dz, dx] : [dz, -dx];
+    const hw = half(a);
+    if (l.junction) {
+      parts.push(armRect(a, lane, stop, stop + w, 0.1, hw - 0.2, y));
+      const crossing = scene.junction?.crossing;
+      if (crossing) {
+        for (let c = -hw + 0.5; c <= hw - 0.5 + 1e-6; c += 1) parts.push(armRect(a, lane, crossing[0], crossing[1], c - 0.25, c + 0.25, y));
+      }
+    }
+    // Broken centre line, then solid edge lines.
+    for (let d = stop + 1; d + 3 < end(a); d += 6) parts.push(armRect(a, lane, d, d + 3, -0.06, 0.06, y));
+    for (const e of [1, -1]) parts.push(armRect(a, lane, stop + 0.4, end(a), e * (hw - 0.25) - 0.06, e * (hw - 0.25) + 0.06, y));
   }
-  // Broken centre lines and solid edge lines beyond the stop lines.
-  const dash = 3;
-  const gap = 3;
-  for (const s of [1, -1]) {
-    for (let d = stop + 1; d + dash < (s > 0 ? l.x1 : -l.x0); d += dash + gap) parts.push(rect(s * d, -0.06, s * (d + dash), 0.06, y));
-    for (let d = stop + 1; d + dash < (s > 0 ? l.z1 : -l.z0); d += dash + gap) parts.push(rect(-0.06, s * d, 0.06, s * (d + dash), y));
-    const xEnd = s > 0 ? l.x1 : l.x0;
-    const zEnd = s > 0 ? l.z1 : l.z0;
-    for (const e of [1, -1]) {
-      parts.push(rect(s * (stop + 0.4), e * (l.hwx - 0.25) - 0.06, xEnd, e * (l.hwx - 0.25) + 0.06, y));
-      parts.push(rect(e * (l.hwz - 0.25) - 0.06, s * (stop + 0.4), e * (l.hwz - 0.25) + 0.06, zEnd, y));
+  // A road's edge line runs straight on past a junction where no road leaves that side.
+  if (l.junction) {
+    for (const [side, armOnSide] of [[-1, 'N'], [1, 'S']] as const) {
+      if (!l.arms.includes(armOnSide)) parts.push(rect(-stop, side * (l.hwx - 0.25) - 0.06, stop, side * (l.hwx - 0.25) + 0.06, y));
+    }
+    for (const [side, armOnSide] of [[-1, 'W'], [1, 'E']] as const) {
+      if (!l.arms.includes(armOnSide)) parts.push(rect(side * (l.hwz - 0.25) - 0.06, -stop, side * (l.hwz - 0.25) + 0.06, stop, y));
     }
   }
   const merged = mergeGeometries(parts);
@@ -213,31 +272,6 @@ export const Junction: React.FC<{ scene: SceneFile }> = ({ scene }) => {
         <planeGeometry args={[900, 900]} />
         <meshStandardMaterial color="#5d5a54" roughness={1} />
       </mesh>
-      {scene.static.map((item, i) =>
-        item.kind === 'skid-marks' ? <SkidMarks key={i} from={item.from} to={item.to} track={item.track} /> : null
-      )}
     </group>
   );
-};
-
-/** A pair of tyre marks from where braking began to where the vehicle stopped skidding. */
-const SkidMarks: React.FC<{ from: number[]; to: number[]; track: number }> = ({ from, to, track }) => {
-  const { geometry, material } = useMemo(() => {
-    const dx = to[0] - from[0];
-    const dz = to[2] - from[2];
-    const len = Math.hypot(dx, dz);
-    const angle = Math.atan2(-dz, dx);
-    const strips = [-1, 1].map((s) => {
-      const g = new THREE.PlaneGeometry(len, 0.2);
-      g.rotateX(-Math.PI / 2);
-      g.translate(len / 2, 0.006, (s * track) / 2);
-      return g;
-    });
-    const g = mergeGeometries(strips);
-    g.rotateY(angle);
-    g.translate(from[0], 0, from[2]);
-    const m = new THREE.MeshStandardMaterial({ map: skidTexture(), transparent: true, depthWrite: false, roughness: 0.6, polygonOffset: true, polygonOffsetFactor: -3 });
-    return { geometry: g, material: m };
-  }, [from, to, track]);
-  return <mesh geometry={geometry} material={material} receiveShadow name="skid-marks" />;
 };
