@@ -134,6 +134,57 @@
   }
 }
 
+/*
+ * Leaflet's chrome on the dashboard risk heatmap (components/dashboard/IncidentMap). Kept out of
+ * a layer so it outranks leaflet.css, which is unlayered too.
+ */
+.risk-map.leaflet-container {
+  background-color: var(--color-well);
+  font-family: var(--font-sans);
+}
+
+.risk-map .risk-map-imagery {
+  filter: brightness(0.62) saturate(0.8) contrast(1.05);
+}
+
+.risk-map .leaflet-tooltip.risk-map-tooltip {
+  padding: 6px 10px;
+  border: 1px solid var(--color-line-strong);
+  border-radius: 6px;
+  background-color: var(--color-raised);
+  color: var(--color-ink-soft);
+  font-size: 0.75rem;
+  line-height: 1.45;
+  box-shadow: var(--shadow-overlay);
+}
+
+.risk-map .leaflet-tooltip-top.risk-map-tooltip::before {
+  border-top-color: var(--color-line-strong);
+}
+
+.risk-map .leaflet-control-attribution {
+  background-color: rgb(11 13 14 / 0.75);
+  color: var(--color-ink-faint);
+  font-size: 10px;
+}
+
+.risk-map .leaflet-control-attribution a {
+  color: var(--color-ink-muted);
+}
+
+/* The scale sits under the "Risk heatmap" chip. */
+.risk-map .leaflet-top.leaflet-left {
+  top: 2.25rem;
+}
+
+.risk-map .leaflet-control-scale-line {
+  border-color: var(--color-ink-muted);
+  background-color: rgb(11 13 14 / 0.75);
+  color: var(--color-ink-soft);
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
 /* Report export is the browser's print of the report's print copy (features/reports/ReportBuilder). */
 .print-root {
   display: none;

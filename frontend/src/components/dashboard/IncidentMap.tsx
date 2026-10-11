@@ -1,5 +1,8 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import * as L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+import { Expand, Shrink, ZoomIn, ZoomOut } from 'lucide-react';
 import { PriorityBadge } from '@/components/shared/Badges';
 import { FilterChips } from '@/components/shared/Segmented';
 import { SectionHeader } from '@/components/shared/PageHeader';
@@ -7,64 +10,115 @@ import { secondaryButtonClass } from '@/components/shared/formStyles';
 import { casePath } from '@/lib/caseModules';
 import { formatDateTime, humanize } from '@/lib/format';
 import { CasePriority, Id, IncidentPoint, IncidentType } from '@/types/api';
+import { RISK_AREAS, RISK_REGION, RiskArea, RiskBand, riskBand } from './riskAreas';
 
-const W = 800;
-const H = 340;
-const PAD = 48;
-const KM_PER_DEGREE = 111.32;
+// Darkened satellite imagery under CARTO's light-on-dark place names. Neither needs a key.
+const IMAGERY_URL = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+const LABELS_URL = 'https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png';
 
-const PRIORITY_FILL: Record<CasePriority, string> = {
-  critical: 'fill-danger',
-  high: 'fill-warn',
-  medium: 'fill-info',
-  low: 'fill-ink-muted'
+// Leaflet draws the circles as SVG paths; these classes override its stroke and fill attributes.
+const RISK_PATH: Record<RiskBand, string> = {
+  high: 'stroke-danger fill-danger/25 hover:fill-danger/45',
+  elevated: 'stroke-warn fill-warn/20 hover:fill-warn/40',
+  moderate: 'stroke-info fill-info/15 hover:fill-info/35'
 };
 
-const PRIORITY_HALO: Record<CasePriority, string> = {
-  critical: 'fill-danger/15',
-  high: 'fill-warn/15',
-  medium: 'fill-info/15',
-  low: 'fill-ink-muted/15'
+const RISK_SWATCH: Record<RiskBand, string> = {
+  high: 'border-danger bg-danger/25',
+  elevated: 'border-warn bg-warn/20',
+  moderate: 'border-info bg-info/15'
+};
+
+const RISK_LEGEND: { band: RiskBand; label: string }[] = [
+  { band: 'high', label: 'High 80+' },
+  { band: 'elevated', label: 'Elevated 60–79' },
+  { band: 'moderate', label: 'Moderate' }
+];
+
+const PRIORITY_DOT: Record<CasePriority, string> = {
+  critical: 'bg-danger',
+  high: 'bg-warn',
+  medium: 'bg-info',
+  low: 'bg-ink-muted'
 };
 
 const PRIORITY_LEGEND: CasePriority[] = ['critical', 'high', 'medium', 'low'];
 
+const MAX_CRIMES = Math.max(...RISK_AREAS.map((a) => a.crimes));
+
+/** Circle area in proportion to crimes, so the busiest area has the largest circle by area, not radius. */
+const radiusFor = (crimes: number) => Math.max(12, 34 * Math.sqrt(crimes / MAX_CRIMES));
+
+const mapButton = 'flex size-9 items-center justify-center text-accent-text hover:bg-raised hover:text-ink transition-colors';
+
+const areaTooltip = (a: RiskArea) => {
+  const el = document.createElement('div');
+  const head = el.appendChild(document.createElement('div'));
+  const name = head.appendChild(document.createElement('strong'));
+  name.className = 'font-semibold text-ink';
+  name.textContent = a.name;
+  const division = head.appendChild(document.createElement('span'));
+  division.className = 'text-ink-muted';
+  division.textContent = ` (${a.division})`;
+  for (const [label, value] of [
+    ['Crimes', a.crimes],
+    ['Risk', a.risk],
+    ['Officers', a.officers]
+  ] as const) {
+    el.appendChild(document.createElement('div')).textContent = `${label}: ${value}`;
+  }
+  return el;
+};
+
+/** A priority dot with the case number beside it; aria-pressed (set per render) marks the selected pin. */
+const pinIcon = (p: IncidentPoint) => {
+  const label = document.createElement('span');
+  label.className =
+    'absolute left-full top-1/2 -translate-y-1/2 ml-1.5 px-1 rounded bg-canvas/80 font-mono text-2xs whitespace-nowrap text-ink-soft group-aria-pressed:bg-canvas group-aria-pressed:text-ink';
+  label.textContent = p.case_number;
+  return L.divIcon({
+    className: `group rounded-full border-2 border-well aria-pressed:border-ink ${PRIORITY_DOT[p.priority]}`,
+    iconSize: [14, 14],
+    html: label
+  });
+};
+
+type Pin = { point: IncidentPoint; marker: L.Marker };
+
+const SelectedCase: React.FC<{ point: IncidentPoint; className?: string }> = ({ point, className = '' }) => (
+  <div
+    className={`px-3 py-2.5 rounded-md border border-line bg-surface flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${className}`}
+    data-testid="incident-map-selection"
+  >
+    <div className="min-w-0">
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-body font-medium text-ink">{point.title}</span>
+        <PriorityBadge priority={point.priority} />
+      </div>
+      <div className="text-xs text-ink-muted mt-0.5">
+        <span className="font-mono">{point.case_number}</span> · {humanize(point.incident_type)} · {point.address}
+        {point.incident_at && ` · ${formatDateTime(point.incident_at)}`}
+      </div>
+    </div>
+    <Link to={casePath(point.case_id)} className={`${secondaryButtonClass} shrink-0`}>
+      Open case
+    </Link>
+  </div>
+);
+
 /**
- * Equirectangular projection of the incident sites into the panel, scaled to fit all of
- * them with the same scale on both axes, so distances between pins are true to the map.
+ * Risk heatmap of the city around the reconstruction site, with the incident site of every case
+ * (GET /api/dashboard incident_points) pinned on top and filterable by incident type.
  */
-const project = (points: IncidentPoint[]) => {
-  const lat0 = points.reduce((sum, p) => sum + p.lat, 0) / Math.max(points.length, 1);
-  const k = Math.cos((lat0 * Math.PI) / 180);
-  const xs = points.map((p) => p.lng * k);
-  const ys = points.map((p) => p.lat);
-  const [minX, maxX, minY, maxY] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
-  // A lone site, or sites on one street, still get a sensible scale (about 2 km across).
-  const spanX = Math.max(maxX - minX, 0.018);
-  const spanY = Math.max(maxY - minY, 0.018 * (H / W));
-  const scale = Math.min((W - 2 * PAD) / spanX, (H - 2 * PAD) / spanY);
-  const cx = (minX + maxX) / 2;
-  const cy = (minY + maxY) / 2;
-  return {
-    at: (p: IncidentPoint) => ({ x: W / 2 + (p.lng * k - cx) * scale, y: H / 2 - (p.lat - cy) * scale }),
-    kmPerUnit: KM_PER_DEGREE / scale
-  };
-};
-
-/** A round scale-bar length (1, 2 or 5 × 10^n km) about a sixth of the panel wide. */
-const scaleBar = (kmPerUnit: number) => {
-  const target = (W / 6) * kmPerUnit;
-  const magnitude = 10 ** Math.floor(Math.log10(target));
-  const km = [5, 2, 1].map((m) => m * magnitude).find((v) => v <= target) ?? magnitude;
-  return { km, width: km / kmPerUnit };
-};
-
-const formatKm = (km: number) => (km >= 1 ? `${km} km` : `${Math.round(km * 1000)} m`);
-
-/** Incident sites of every case (GET /api/dashboard incident_points), filterable by incident type. */
 export const IncidentMap: React.FC<{ points: IncidentPoint[] }> = ({ points }) => {
   const [type, setType] = useState<IncidentType | null>(null);
   const [selectedId, setSelectedId] = useState<Id | null>(null);
+  const [fullscreen, setFullscreen] = useState(false);
+  const frameRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<HTMLDivElement>(null);
+  const map = useRef<L.Map | null>(null);
+  const pinLayer = useRef<L.LayerGroup | null>(null);
+  const pins = useRef<Pin[]>([]);
 
   const types = useMemo(() => {
     const counts = new Map<IncidentType, number>();
@@ -73,10 +127,101 @@ export const IncidentMap: React.FC<{ points: IncidentPoint[] }> = ({ points }) =
   }, [points]);
 
   const shown = type ? points.filter((p) => p.incident_type === type) : points;
-  // Project every point, so filtering doesn't rescale the map under the investigator.
-  const projection = useMemo(() => project(points), [points]);
-  const bar = scaleBar(projection.kmPerUnit);
   const selected = shown.find((p) => p.case_id === selectedId) ?? null;
+
+  // The map, its tiles and the area circles. Built once, so refetches never move the view.
+  useEffect(() => {
+    const el = mapRef.current;
+    if (!el) return;
+    const m = L.map(el, { zoomControl: false, attributionControl: false, scrollWheelZoom: false, zoomSnap: 0.5, minZoom: 3, maxZoom: 18 });
+    L.control.attribution({ prefix: false, position: 'bottomright' }).addTo(m);
+    L.control.scale({ imperial: false, position: 'topleft' }).addTo(m);
+    L.tileLayer(IMAGERY_URL, { maxZoom: 18, className: 'risk-map-imagery', attribution: 'Imagery © Esri, Maxar, Earthstar Geographics' }).addTo(m);
+    L.tileLayer(LABELS_URL, { maxZoom: 18, subdomains: 'abcd', attribution: '© OpenStreetMap contributors © CARTO' }).addTo(m);
+
+    RISK_AREAS.forEach((a) => {
+      const radius = radiusFor(a.crimes);
+      L.circleMarker([a.lat, a.lng], { radius, weight: 2, opacity: 1, fillOpacity: 1, className: RISK_PATH[riskBand(a.risk)] })
+        .bindTooltip(areaTooltip(a), { direction: 'top', offset: [0, -radius], opacity: 1, className: 'risk-map-tooltip' })
+        .addTo(m);
+    });
+    pinLayer.current = L.layerGroup().addTo(m);
+
+    // Centre on the reconstruction site, zoomed out just far enough to show every area and
+    // incident site around it (each spot is mirrored through the centre to keep it centred).
+    const { lat, lng } = RISK_REGION.center;
+    const spots = [...RISK_AREAS, ...points];
+    const around = L.latLngBounds(spots.flatMap((s): L.LatLngTuple[] => [[s.lat, s.lng], [2 * lat - s.lat, 2 * lng - s.lng]]));
+    m.setView([lat, lng], Math.min(m.getBoundsZoom(around, false, L.point(72, 72)), 15));
+
+    const resize = new ResizeObserver(() => m.invalidateSize());
+    resize.observe(el);
+    map.current = m;
+    return () => {
+      resize.disconnect();
+      m.remove();
+      map.current = null;
+      pinLayer.current = null;
+    };
+  }, []);
+
+  // One marker per incident site.
+  useEffect(() => {
+    const built = points.map((point) => {
+      const marker = L.marker([point.lat, point.lng], {
+        icon: pinIcon(point),
+        title: `${point.case_number}: ${point.title}\n${point.address}`,
+        riseOnHover: true
+      });
+      const toggle = () => setSelectedId((id) => (id === point.case_id ? null : point.case_id));
+      marker.on('click', toggle);
+      // Leaflet makes the pins focusable but doesn't act on Enter or Space itself.
+      marker.on('keydown', (e) => {
+        const key = (e as L.LeafletKeyboardEvent).originalEvent;
+        if (key.key === 'Enter' || key.key === ' ') {
+          key.preventDefault();
+          toggle();
+        }
+      });
+      return { point, marker };
+    });
+    pins.current = built;
+    return () => built.forEach(({ marker }) => (pinLayer.current ? pinLayer.current.removeLayer(marker) : marker.remove()));
+  }, [points]);
+
+  // Show the pins of the chosen incident type and mark the selected one.
+  useEffect(() => {
+    const layer = pinLayer.current;
+    if (!layer) return;
+    pins.current.forEach(({ point, marker }) => {
+      const isSelected = point.case_id === selectedId;
+      if (!type || point.incident_type === type) layer.addLayer(marker);
+      else layer.removeLayer(marker);
+      marker.setZIndexOffset(isSelected ? 1000 : 0);
+      const icon = marker.getElement();
+      if (!icon) return;
+      icon.setAttribute('aria-label', `${point.case_number}: ${point.title}`);
+      icon.setAttribute('aria-pressed', String(isSelected));
+      icon.dataset.caseId = String(point.case_id);
+    });
+  }, [points, type, selectedId]);
+
+  // Scroll-wheel zoom only in full screen, so the dashboard still scrolls past the map.
+  useEffect(() => {
+    const onChange = () => {
+      const on = document.fullscreenElement === frameRef.current;
+      setFullscreen(on);
+      if (on) map.current?.scrollWheelZoom.enable();
+      else map.current?.scrollWheelZoom.disable();
+    };
+    document.addEventListener('fullscreenchange', onChange);
+    return () => document.removeEventListener('fullscreenchange', onChange);
+  }, []);
+
+  const toggleFullscreen = () => {
+    if (document.fullscreenElement) void document.exitFullscreen();
+    else void frameRef.current?.requestFullscreen?.();
+  };
 
   return (
     <section className="space-y-2" aria-label="Incident map">
@@ -96,86 +241,77 @@ export const IncidentMap: React.FC<{ points: IncidentPoint[] }> = ({ points }) =
         }
       />
 
-      <div className="relative h-[300px] lg:h-[340px] w-full rounded-md bg-well border border-line overflow-hidden">
-        {/* A plain reference grid: there is no base map yet, only true-to-scale positions. */}
-        <div className="absolute inset-0 bg-[linear-gradient(var(--color-line)_1px,transparent_1px),linear-gradient(90deg,var(--color-line)_1px,transparent_1px)] [background-size:40px_40px] opacity-50" />
-        {points.length === 0 ? (
-          <p className="absolute inset-0 flex items-center justify-center text-body text-ink-muted">No incident sites with coordinates yet.</p>
-        ) : (
-          <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet" className="absolute inset-0 w-full h-full" data-testid="incident-map">
-            {shown.map((p) => {
-              const { x, y } = projection.at(p);
-              const isSelected = p.case_id === selectedId;
-              return (
-                <g
-                  key={`${p.case_id}-${p.lat}-${p.lng}`}
-                  transform={`translate(${x} ${y})`}
-                  role="button"
-                  tabIndex={0}
-                  aria-label={`${p.case_number}: ${p.title}`}
-                  aria-pressed={isSelected}
-                  data-case-id={p.case_id}
-                  onClick={() => setSelectedId(isSelected ? null : p.case_id)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      setSelectedId(isSelected ? null : p.case_id);
-                    }
-                  }}
-                  className="group cursor-pointer outline-none"
-                >
-                  <circle r={14} strokeWidth={2} className={`${PRIORITY_HALO[p.priority]} stroke-transparent group-focus-visible:stroke-accent`} />
-                  <circle r={6} className={`${PRIORITY_FILL[p.priority]} ${isSelected ? 'stroke-ink' : 'stroke-well'}`} strokeWidth={isSelected ? 2.5 : 2} />
-                  <text x={12} y={4} fontSize={11} className={`font-mono ${isSelected ? 'fill-ink' : 'fill-ink-soft'}`}>
-                    {p.case_number}
-                  </text>
-                  <title>{`${p.case_number}: ${p.title}\n${p.address}`}</title>
-                </g>
-              );
-            })}
-            <g transform={`translate(${PAD / 2} ${H - PAD / 2})`} aria-label={`Scale: ${formatKm(bar.km)}`} className="stroke-ink-muted">
-              <line x1={0} x2={bar.width} y1={0} y2={0} strokeWidth={1.5} />
-              <line x1={0} x2={0} y1={-4} y2={4} strokeWidth={1.5} />
-              <line x1={bar.width} x2={bar.width} y1={-4} y2={4} strokeWidth={1.5} />
-              <text x={bar.width / 2} y={-8} textAnchor="middle" fontSize={10} className="font-mono fill-ink-muted stroke-none">
-                {formatKm(bar.km)}
-              </text>
-            </g>
-          </svg>
-        )}
-        <ul className="absolute right-2 bottom-2 flex gap-3 px-2 py-1 rounded bg-well/90 text-2xs text-ink-muted" aria-label="Pin colour: priority">
-          {PRIORITY_LEGEND.map((pr) => (
-            <li key={pr} className="flex items-center gap-1">
-              <svg className="size-2" viewBox="0 0 8 8" aria-hidden>
-                <circle cx={4} cy={4} r={4} className={PRIORITY_FILL[pr]} />
-              </svg>
-              {humanize(pr)}
-            </li>
-          ))}
-        </ul>
+      <div
+        ref={frameRef}
+        className={`relative isolate w-full overflow-hidden bg-well ${fullscreen ? '' : 'h-[340px] sm:h-[400px] lg:h-[440px] rounded-md border border-line'}`}
+      >
+        <div ref={mapRef} className="risk-map absolute inset-0 z-0" data-testid="incident-map" />
+
+        <div className="pointer-events-none absolute left-3 top-3 z-10 rounded-full border border-line-strong bg-canvas/85 px-3 py-1 text-2xs font-medium uppercase tracking-[0.12em] text-ink-soft backdrop-blur">
+          Risk heatmap · {RISK_REGION.name}
+        </div>
+
+        <div className="absolute right-3 top-3 z-10 flex flex-col gap-2">
+          <div className="flex flex-col overflow-hidden rounded-md border border-line-strong bg-canvas/85 backdrop-blur divide-y divide-line-strong">
+            <button type="button" className={mapButton} onClick={() => map.current?.zoomIn()} aria-label="Zoom in" title="Zoom in">
+              <ZoomIn className="size-4" aria-hidden />
+            </button>
+            <button type="button" className={mapButton} onClick={() => map.current?.zoomOut()} aria-label="Zoom out" title="Zoom out">
+              <ZoomOut className="size-4" aria-hidden />
+            </button>
+          </div>
+          {document.fullscreenEnabled && (
+            <button
+              type="button"
+              className={`${mapButton} rounded-md border border-line-strong bg-canvas/85 backdrop-blur`}
+              onClick={toggleFullscreen}
+              aria-label={fullscreen ? 'Exit full screen' : 'Full screen'}
+              title={fullscreen ? 'Exit full screen' : 'Full screen'}
+            >
+              {fullscreen ? <Shrink className="size-4" aria-hidden /> : <Expand className="size-4" aria-hidden />}
+            </button>
+          )}
+        </div>
+
+        <div className="pointer-events-none absolute left-3 bottom-9 sm:bottom-3 z-10 max-w-[calc(100%-1.5rem)] space-y-1 rounded-md border border-line-strong bg-canvas/85 px-2.5 py-1.5 text-2xs text-ink-muted backdrop-blur">
+          <ul className="flex flex-wrap items-center gap-x-3 gap-y-1" aria-label="Circle colour: area risk score; circle size: crimes">
+            <li className="text-ink-soft">Area risk</li>
+            {RISK_LEGEND.map(({ band, label }) => (
+              <li key={band} className="flex items-center gap-1">
+                <span className={`size-2.5 rounded-full border ${RISK_SWATCH[band]}`} aria-hidden />
+                {label}
+              </li>
+            ))}
+          </ul>
+          <ul className="flex flex-wrap items-center gap-x-3 gap-y-1" aria-label="Pin colour: case priority">
+            <li className="text-ink-soft">Cases</li>
+            {PRIORITY_LEGEND.map((pr) => (
+              <li key={pr} className="flex items-center gap-1">
+                <span className={`size-2 rounded-full ${PRIORITY_DOT[pr]}`} aria-hidden />
+                {humanize(pr)}
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {fullscreen && selected && <SelectedCase point={selected} className="absolute left-1/2 top-3 z-10 w-[min(36rem,calc(100%-8rem))] -translate-x-1/2 shadow-overlay" />}
       </div>
 
+      <ul className="sr-only" aria-label="Area risk figures">
+        {RISK_AREAS.map((a) => (
+          <li key={a.name}>
+            {a.name}, {a.division} division: {a.crimes} crimes in the last 30 days, risk {a.risk}, {a.officers} officers
+          </li>
+        ))}
+      </ul>
+
       {selected ? (
-        <div
-          className="px-3 py-2.5 rounded-md border border-line bg-surface flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3"
-          data-testid="incident-map-selection"
-        >
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-body font-medium text-ink">{selected.title}</span>
-              <PriorityBadge priority={selected.priority} />
-            </div>
-            <div className="text-xs text-ink-muted mt-0.5">
-              <span className="font-mono">{selected.case_number}</span> · {humanize(selected.incident_type)} · {selected.address}
-              {selected.incident_at && ` · ${formatDateTime(selected.incident_at)}`}
-            </div>
-          </div>
-          <Link to={casePath(selected.case_id)} className={`${secondaryButtonClass} shrink-0`}>
-            Open case
-          </Link>
-        </div>
+        <SelectedCase point={selected} />
       ) : (
-        points.length > 0 && <p className="text-xs text-ink-muted">Select a pin to see its case.</p>
+        <p className="text-xs text-ink-muted">
+          Circle size shows crimes in the last 30 days and colour the area's risk score; hover an area for its figures. Area figures are illustrative.{' '}
+          {points.length > 0 ? 'Select a pin to see its case.' : 'No incident sites with coordinates yet.'}
+        </p>
       )}
     </section>
   );
