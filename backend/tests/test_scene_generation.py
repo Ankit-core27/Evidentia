@@ -111,7 +111,7 @@ def test_without_gemini_the_junction_case_is_drafted_from_its_records(client, se
     ).all()
     assert [(link.evidence_id, link.chunk_id is not None) for link in links] == [(1, True)]
     assert "travelling east on Ring Road" in links[0].passage
-    run = seeded.scalars(select(AiRun).where(AiRun.task == "scene_script")).one()
+    run = seeded.scalars(select(AiRun).where(AiRun.task == "scene_script", AiRun.case_id == 1)).one()
     assert (run.case_id, run.model) == (1, "rules-v1")
     audit = seeded.scalars(
         select(AuditLog).where(AuditLog.record_type == "reconstruction", AuditLog.record_id == created["id"])
