@@ -1,5 +1,6 @@
 import React, { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 import * as Cesium from 'cesium';
+import { SATELLITE } from '@/lib/basemaps';
 import 'cesium/Build/Cesium/Widgets/widgets.css';
 import type { Location } from '@/types/api';
 import type { AreaSelection, CameraPose } from '@/stores/area';
@@ -14,8 +15,6 @@ declare global {
 window.CESIUM_BASE_URL ??= '/cesium';
 
 const ION_TOKEN = (import.meta.env.VITE_CESIUM_ION_TOKEN as string | undefined)?.trim() || '';
-/** The dark basemap the dashboard map uses, so the two views read the same. */
-const DARK_TILES = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png';
 
 const COLOURS = {
   incident: Cesium.Color.fromCssColorString('#f07a72'),
@@ -34,7 +33,7 @@ const COLOURS = {
 export interface AreaStatus {
   terrain: 'loading' | 'world' | 'ellipsoid' | 'failed';
   buildings: 'loading' | 'osm' | 'authored-only' | 'failed';
-  imagery: 'ion' | 'carto';
+  imagery: 'ion' | 'esri';
 }
 
 export interface AreaViewerHandle {
@@ -147,7 +146,7 @@ export const CesiumAreaViewer = forwardRef<AreaViewerHandle, Props>(function Ces
     const status: AreaStatus = {
       terrain: ION_TOKEN ? 'loading' : 'ellipsoid',
       buildings: ION_TOKEN ? 'loading' : 'authored-only',
-      imagery: ION_TOKEN ? 'ion' : 'carto'
+      imagery: ION_TOKEN ? 'ion' : 'esri'
     };
     const report = () => latest.current.onStatus({ ...status });
 
@@ -155,7 +154,10 @@ export const CesiumAreaViewer = forwardRef<AreaViewerHandle, Props>(function Ces
     const viewer = new Cesium.Viewer(el, {
       baseLayer: ION_TOKEN
         ? Cesium.ImageryLayer.fromWorldImagery({})
-        : new Cesium.ImageryLayer(new Cesium.UrlTemplateImageryProvider({ url: DARK_TILES, subdomains: 'abcd', maximumLevel: 19, credit: '© OpenStreetMap contributors © CARTO' })),
+        : // Without an ion token: Esri's satellite imagery, the same as the dashboard map's.
+          new Cesium.ImageryLayer(
+            new Cesium.UrlTemplateImageryProvider({ url: SATELLITE.url, maximumLevel: SATELLITE.maxZoom, credit: SATELLITE.attribution })
+          ),
       terrain,
       animation: false,
       timeline: false,

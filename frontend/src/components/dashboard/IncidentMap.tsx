@@ -2,18 +2,25 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import * as L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Expand, Shrink, ZoomIn, ZoomOut } from 'lucide-react';
+import { Expand, Map as MapIcon, Satellite, Shrink, ZoomIn, ZoomOut } from 'lucide-react';
 import { PriorityBadge } from '@/components/shared/Badges';
 import { FilterChips } from '@/components/shared/Segmented';
 import { SectionHeader } from '@/components/shared/PageHeader';
 import { secondaryButtonClass } from '@/components/shared/formStyles';
+import { BasemapKind, SATELLITE, SATELLITE_LABELS, STREETS } from '@/lib/basemaps';
 import { casePath } from '@/lib/caseModules';
 import { formatDateTime, humanize } from '@/lib/format';
 import { CasePriority, Id, IncidentPoint, IncidentType } from '@/types/api';
 import { RISK_AREAS, RISK_REGION, RiskArea, RiskBand, riskBand } from './riskAreas';
 
-// CARTO's dark street map of OpenStreetMap data, with place and road names. Needs no key.
-const BASE_MAP_URL = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+const BASEMAP_KEY = 'evidentia:dashboard-basemap';
+const savedBasemap = (): BasemapKind => {
+  try {
+    return localStorage.getItem(BASEMAP_KEY) === 'streets' ? 'streets' : 'satellite';
+  } catch {
+    return 'satellite';
+  }
+};
 
 // Leaflet draws the circles as SVG paths; these classes override its stroke and fill attributes.
 const RISK_PATH: Record<RiskBand, string> = {
@@ -113,6 +120,8 @@ export const IncidentMap: React.FC<{ points: IncidentPoint[] }> = ({ points }) =
   const [type, setType] = useState<IncidentType | null>(null);
   const [selectedId, setSelectedId] = useState<Id | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
+  const [basemap, setBasemap] = useState<BasemapKind>(savedBasemap);
+  const baseLayers = useRef<Record<BasemapKind, L.Layer> | null>(null);
   const frameRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
@@ -135,7 +144,13 @@ export const IncidentMap: React.FC<{ points: IncidentPoint[] }> = ({ points }) =
     const m = L.map(el, { zoomControl: false, attributionControl: false, scrollWheelZoom: false, zoomSnap: 0.5, minZoom: 3, maxZoom: 18 });
     L.control.attribution({ prefix: false, position: 'bottomright' }).addTo(m);
     L.control.scale({ imperial: false, position: 'topleft' }).addTo(m);
-    L.tileLayer(BASE_MAP_URL, { maxZoom: 18, subdomains: 'abcd', attribution: '© OpenStreetMap contributors © CARTO' }).addTo(m);
+    baseLayers.current = {
+      satellite: L.layerGroup([
+        L.tileLayer(SATELLITE.url, { maxZoom: SATELLITE.maxZoom, attribution: SATELLITE.attribution, zIndex: 1 }),
+        L.tileLayer(SATELLITE_LABELS.url, { maxZoom: SATELLITE_LABELS.maxZoom, attribution: SATELLITE_LABELS.attribution, zIndex: 2 })
+      ]),
+      streets: L.tileLayer(STREETS.url, { maxZoom: STREETS.maxZoom, attribution: STREETS.attribution, zIndex: 1 })
+    };
 
     RISK_AREAS.forEach((a) => {
       const radius = radiusFor(a.crimes);
@@ -160,8 +175,26 @@ export const IncidentMap: React.FC<{ points: IncidentPoint[] }> = ({ points }) =
       m.remove();
       map.current = null;
       pinLayer.current = null;
+      baseLayers.current = null;
     };
   }, []);
+
+  // The chosen basemap, under the circles and pins; remembered for next time.
+  useEffect(() => {
+    const m = map.current;
+    const layers = baseLayers.current;
+    if (!m || !layers) return;
+    const layer = layers[basemap];
+    layer.addTo(m);
+    try {
+      localStorage.setItem(BASEMAP_KEY, basemap);
+    } catch {
+      // Not remembered in a private window; the map still works.
+    }
+    return () => {
+      layer.remove();
+    };
+  }, [basemap]);
 
   // One marker per incident site.
   useEffect(() => {
@@ -256,6 +289,28 @@ export const IncidentMap: React.FC<{ points: IncidentPoint[] }> = ({ points }) =
             </button>
             <button type="button" className={mapButton} onClick={() => map.current?.zoomOut()} aria-label="Zoom out" title="Zoom out">
               <ZoomOut className="size-4" aria-hidden />
+            </button>
+          </div>
+          <div className="flex flex-col overflow-hidden rounded-md border border-line-strong bg-canvas/85 backdrop-blur divide-y divide-line-strong" role="group" aria-label="Map type">
+            <button
+              type="button"
+              className={`${mapButton} ${basemap === 'satellite' ? 'bg-accent/20 text-ink' : ''}`}
+              onClick={() => setBasemap('satellite')}
+              aria-pressed={basemap === 'satellite'}
+              aria-label="Satellite"
+              title="Satellite imagery"
+            >
+              <Satellite className="size-4" aria-hidden />
+            </button>
+            <button
+              type="button"
+              className={`${mapButton} ${basemap === 'streets' ? 'bg-accent/20 text-ink' : ''}`}
+              onClick={() => setBasemap('streets')}
+              aria-pressed={basemap === 'streets'}
+              aria-label="Street map"
+              title="OpenStreetMap street map"
+            >
+              <MapIcon className="size-4" aria-hidden />
             </button>
           </div>
           {document.fullscreenEnabled && (
