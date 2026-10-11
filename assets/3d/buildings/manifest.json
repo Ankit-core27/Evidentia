@@ -1,7 +1,7 @@
 {
   "version": 1,
   "area": {
-    "name": "Ring Road and 5th Avenue junction, Sector 12",
+    "name": "Ring Road and 5th Avenue junction, Bengaluru; Sahyadri Chowk, Pune",
     "frame": "Model metres: origin at ground centre of footprint, +x east, -z north, +y up; heading_deg rotates the model clockwise from north."
   },
   "buildings": [
@@ -88,6 +88,88 @@
           "doors": 9,
           "furniture": 56,
           "stairs": 2
+        }
+      },
+      "note": "Authored illustrative model. The case records hold no survey or floor plan of this building."
+    },
+    {
+      "id": "shinde-tea-stall",
+      "name": "Shinde Tea Stall",
+      "use": "Tea stall with residence above",
+      "geo_building_id": "sahyadri-nw-01",
+      "anchor": {
+        "lat": 18.505894,
+        "lng": 73.808201,
+        "heading_deg": 0
+      },
+      "footprint": {
+        "width_m": 7,
+        "depth_m": 6
+      },
+      "height_m": 7.3,
+      "floors": [
+        {
+          "level": 0,
+          "label": "Ground floor · tea stall",
+          "elevation_m": 0
+        },
+        {
+          "level": 1,
+          "label": "First floor · residence",
+          "elevation_m": 3.1
+        }
+      ],
+      "model": {
+        "url": "/3d/buildings/shinde-tea-stall.glb",
+        "source": "authored",
+        "components": {
+          "floors": 2,
+          "rooms": 7,
+          "walls": 12,
+          "doors": 6,
+          "furniture": 9,
+          "stairs": 1
+        }
+      },
+      "note": "Authored illustrative model. The case records hold no survey or floor plan of this building."
+    },
+    {
+      "id": "sahyadri-pharmacy",
+      "name": "Pharmacy",
+      "use": "Pharmacy with clinic above",
+      "geo_building_id": "sahyadri-se-01",
+      "anchor": {
+        "lat": 18.505697,
+        "lng": 73.808409,
+        "heading_deg": 0
+      },
+      "footprint": {
+        "width_m": 9,
+        "depth_m": 7
+      },
+      "height_m": 7.8,
+      "floors": [
+        {
+          "level": 0,
+          "label": "Ground floor · pharmacy",
+          "elevation_m": 0
+        },
+        {
+          "level": 1,
+          "label": "First floor · clinic",
+          "elevation_m": 3.3
+        }
+      ],
+      "model": {
+        "url": "/3d/buildings/sahyadri-pharmacy.glb",
+        "source": "authored",
+        "components": {
+          "floors": 2,
+          "rooms": 9,
+          "walls": 14,
+          "doors": 9,
+          "furniture": 16,
+          "stairs": 1
         }
       },
       "note": "Authored illustrative model. The case records hold no survey or floor plan of this building."
