@@ -11,7 +11,8 @@
     "lint": "tsc --noEmit",
     "gen:api": "openapi-typescript http://localhost:8000/openapi.json --default-non-nullable false -o src/lib/api-types.ts",
     "build:3d-models": "node scripts/crime-scene-models/build.mjs",
-    "postinstall": "npm --prefix ../packages/scene-engine install --no-audit --no-fund && npm --prefix ../packages/scene-engine run build && npm --prefix ../packages/scene-planner install --no-audit --no-fund && npm --prefix ../packages/scene-planner run build"
+    "postinstall": "npm --prefix ../packages/scene-engine install --no-audit --no-fund && npm --prefix ../packages/scene-engine run build && npm --prefix ../packages/scene-planner install --no-audit --no-fund && npm --prefix ../packages/scene-planner run build",
+    "test:anatomy": "node scripts/anatomy/test.mjs"
   },
   "dependencies": {
     "@dagrejs/dagre": "^1.1.8",

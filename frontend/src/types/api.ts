@@ -167,6 +167,11 @@ export type SearchHit = Schemas['SearchHit'];
 export type Injury = Schemas['Injury'];
 export type InjuryCreate = Schemas['InjuryCreate'];
 export type InjuryUpdate = Schemas['InjuryUpdate'];
+export type AnatomyFinding = Schemas['AnatomyFinding'];
+export type MedicalDetails = Schemas['MedicalDetails'];
+export type MarkerPlacement = Schemas['MarkerPlacement'];
+export type MedicalAnalysisRequest = Schemas['MedicalAnalysisRequest'];
+export type MedicalAnalysisResult = Schemas['MedicalAnalysisResult'];
 
 // ---------------------------------------------------------------------------
 // Workspace

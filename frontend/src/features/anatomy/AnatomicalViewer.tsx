@@ -1,215 +1,284 @@
-import React, { useState } from 'react';
+import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import { Canvas, ThreeEvent, useFrame } from '@react-three/fiber';
+import { CameraControls, Html, useGLTF } from '@react-three/drei';
+import CameraControlsImpl from 'camera-controls';
+import { Box3, Group, MathUtils, Mesh, MeshStandardMaterial, Vector3 } from 'three';
+import { useQuery } from '@tanstack/react-query';
+import { smallButtonClass } from '@/components/shared/formStyles';
+import type { Vec3 } from '@/types/api';
 import {
-  Activity,
-  AlertCircle,
-  Eye,
-  ShieldAlert,
-  Flame,
-  Zap,
-  RotateCcw,
-  Info,
-  CheckCircle2
-} from 'lucide-react';
+  AnatomyManifest, AnatomicalMarker, FindingState, buildExplosion, clampProgress,
+  findingKey, positionAt, skinOpacity, structureBounds
+} from './anatomyEngine';
 
-/** The UI draft's injury shape; T13 replaces it with the API's Injury. */
-export interface AnatomicalInjury {
-  id: string;
-  region: 'head' | 'neck' | 'chest' | 'abdomen' | 'left_arm' | 'right_arm' | 'left_leg' | 'right_leg' | 'back';
-  title: string;
-  type: 'Laceration' | 'Blunt Force Trauma' | 'Gunshot Wound' | 'Toxic Chemical Residue' | 'Defensive Wound' | 'Asphyxiation Mark';
-  severity: 'Minor' | 'Moderate' | 'Severe' | 'Fatal';
-  depth: string;
-  description: string;
-  estimatedTimeOfInjury: string;
-  aiNotes: string;
-  coordinates: { x: number; y: number }; // Percentage position on mannequin SVG/canvas
+export const useAnatomyManifest = () => useQuery({
+  queryKey: ['anatomy-model-manifest'], staleTime: Infinity,
+  queryFn: async ({ signal }): Promise<AnatomyManifest> => {
+    const response = await fetch('/3d/anatomy/manifest.json', { signal });
+    if (!response.ok) throw new Error('The reference anatomy manifest is unavailable. Findings remain accessible below.');
+    const data = await response.json();
+    if (data.modelId !== 'bodyparts3d-3.0-forensix-v1' || !Array.isArray(data.structures) || !data.structures.length)
+      throw new Error('Unsupported anatomy manifest.');
+    if (data.url !== '/3d/anatomy/bodyparts3d.glb') throw new Error('Unsupported anatomy model URL.');
+    const ids = new Set<string>();
+    for (const s of data.structures) {
+      if (!s.id || ids.has(s.id) || !s.meshNames?.length || s.originalPosition?.length !== 3 || s.size?.length !== 3
+        || !s.originalPosition.every(Number.isFinite) || !s.size.every((v: number) => Number.isFinite(v) && v > 0))
+        throw new Error('The reference anatomy manifest contains invalid structure bounds.');
+      ids.add(s.id);
+    }
+    return data;
+  }
+});
+
+interface Props {
+  manifest: AnatomyManifest;
+  selected: string | null;
+  onSelect: (id: string | null) => void;
+  selectedFinding: string | null;
+  onFinding: (key: string) => void;
+  markers: AnatomicalMarker[];
+  states: Record<string, FindingState>;
+  system: string;
+  placing: boolean;
+  onPlace: (structureId: string, local: Vec3) => void;
+}
+interface CameraAPI { zoom: (delta: number) => void; frame: (back?: boolean) => void; exitFocus: () => void }
+
+class ModelBoundary extends React.Component<React.PropsWithChildren<{ onError: () => void }>, { error: string | null }> {
+  state = { error: null as string | null };
+  static getDerivedStateFromError(error: Error) { return { error: error.message }; }
+  componentDidCatch() { this.props.onError(); }
+  render() {
+    return this.state.error ? <div role="alert" className="p-8 text-body text-warn">Unable to load reference anatomy. {this.state.error} The findings panel remains available.</div> : this.props.children;
+  }
 }
 
-interface AnatomicalViewerProps {
-  injuries: AnatomicalInjury[];
-}
-
-export const AnatomicalViewer: React.FC<AnatomicalViewerProps> = ({ injuries }) => {
-  const [viewAngle, setViewAngle] = useState<'front' | 'back'>('front');
-  const [selectedInjuryId, setSelectedInjuryId] = useState<string>(injuries[0]?.id || '');
-  const [toxScanActive, setToxScanActive] = useState<boolean>(true);
-
-  const selectedInjury = injuries.find((i) => i.id === selectedInjuryId) || injuries[0];
-
-  return (
-    <div className="flex flex-col h-full bg-slate-950 rounded-2xl border border-slate-800/90 overflow-hidden">
-      {/* Visualizer Header */}
-      <div className="px-4 py-3 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between font-mono text-xs">
-        <div className="flex items-center gap-2">
-          <Activity className="w-4 h-4 text-cyan-400" />
-          <span className="font-bold text-slate-200 uppercase tracking-wider">
-            3D AUTOPSY ANATOMICAL BREAKDOWN
-          </span>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {/* Tox Scan Toggle */}
-          <button
-            onClick={() => setToxScanActive(!toxScanActive)}
-            className={`px-2.5 py-1 rounded-lg border text-[11px] transition-all flex items-center gap-1.5 ${
-              toxScanActive
-                ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-[0_0_10px_rgba(245,158,11,0.2)]'
-                : 'bg-slate-900 text-slate-400 border-slate-800'
-            }`}
-          >
-            <Flame className="w-3 h-3" />
-            <span>Tox Scan Overlay</span>
-          </button>
-
-          {/* Front / Back Angle Toggle */}
-          <button
-            onClick={() => setViewAngle(viewAngle === 'front' ? 'back' : 'front')}
-            className="p-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-cyan-400 transition-colors"
-            title="Rotate Body Angle"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      </div>
-
-      {/* Main Body Grid */}
-      <div className="p-4 grid grid-cols-1 md:grid-cols-12 gap-4 flex-1 items-stretch">
-        {/* Left Interactive Body Silhouette SVG Stage (7 Cols) */}
-        <div className="md:col-span-7 relative bg-slate-900/60 border border-slate-800/80 rounded-xl p-4 flex flex-col items-center justify-center min-h-[380px] overflow-hidden">
-          {/* Background Grid Pattern */}
-          <div className="absolute inset-0 bg-[radial-gradient(#334155_1px,transparent_1px)] [background-size:12px_12px] opacity-30 pointer-events-none"></div>
-
-          {/* Glowing Toxicological Scan Radial Rays */}
-          {toxScanActive && (
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(245,158,11,0.08)_0,transparent_70%)] pointer-events-none animate-pulse"></div>
-          )}
-
-          {/* Body Silhouette SVG */}
-          <div className="relative w-48 h-[340px] flex items-center justify-center">
-            <svg
-              viewBox="0 0 100 220"
-              className={`w-full h-full transition-transform duration-500 filter drop-shadow-[0_0_10px_rgba(6,182,212,0.15)] ${
-                viewAngle === 'back' ? 'scale-x-[-1]' : ''
-              }`}
-            >
-              {/* Body Silhouette Outline */}
-              <g fill="#0f172a" stroke="#06b6d4" strokeWidth="1" strokeOpacity="0.6">
-                {/* Head */}
-                <ellipse cx="50" cy="22" rx="14" ry="17" />
-                {/* Neck */}
-                <path d="M 43 38 L 57 38 L 59 48 L 41 48 Z" />
-                {/* Torso & Abdomen */}
-                <path d="M 32 48 L 68 48 L 63 115 L 37 115 Z" />
-                {/* Left Arm */}
-                <path d="M 32 48 L 22 55 L 15 105 L 22 105 L 28 65 L 34 52 Z" />
-                {/* Right Arm */}
-                <path d="M 68 48 L 78 55 L 85 105 L 78 105 L 72 65 L 66 52 Z" />
-                {/* Pelvis & Legs */}
-                <path d="M 37 115 L 49 115 L 47 200 L 35 200 Z" />
-                <path d="M 51 115 L 63 115 L 65 200 L 53 200 Z" />
-              </g>
-
-              {/* Toxicological Chemical Vascular Overlay */}
-              {toxScanActive && (
-                <g stroke="#f59e0b" strokeWidth="0.8" fill="none" opacity="0.8" className="animate-pulse">
-                  <path d="M 50 40 Q 50 60, 48 80 Q 42 100, 44 140" strokeDasharray="2 2" />
-                  <path d="M 50 40 Q 52 60, 54 80 Q 60 100, 58 140" strokeDasharray="2 2" />
-                  <circle cx="52" cy="42" r="3" fill="#f59e0b" fillOpacity="0.4" />
-                </g>
-              )}
-
-              {/* Anatomical Injury Interactive Touchpoints */}
-              {injuries.map((injury) => {
-                const isSelected = selectedInjury?.id === injury.id;
-                const isFatal = injury.severity === 'Fatal';
-
-                return (
-                  <g
-                    key={injury.id}
-                    onClick={() => setSelectedInjuryId(injury.id)}
-                    className="cursor-pointer group"
-                  >
-                    {/* Glowing Ping Circle */}
-                    <circle
-                      cx={injury.coordinates.x}
-                      cy={injury.coordinates.y}
-                      r={isSelected ? '8' : '5'}
-                      fill={isFatal ? '#ef4444' : '#f59e0b'}
-                      fillOpacity={isSelected ? '0.6' : '0.3'}
-                      className="animate-ping"
-                    />
-
-                    {/* Touchpoint Core Pin */}
-                    <circle
-                      cx={injury.coordinates.x}
-                      cy={injury.coordinates.y}
-                      r={isSelected ? '4' : '3'}
-                      fill={isFatal ? '#ef4444' : '#f59e0b'}
-                      stroke="#020617"
-                      strokeWidth="1.5"
-                      className="transition-all duration-200 group-hover:scale-125"
-                    />
-                  </g>
-                );
-              })}
-            </svg>
-          </div>
-
-          <div className="mt-2 text-[10px] text-slate-500 font-mono text-center">
-            Click anatomical touchpoints to inspect injury depth & chemical chromatography.
-          </div>
-        </div>
-
-        {/* Right Selected Injury Card (5 Cols) */}
-        <div className="md:col-span-5 bg-slate-900/90 border border-slate-800 rounded-xl p-4 flex flex-col justify-between">
-          {selectedInjury ? (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-                <span className="text-[10px] font-mono text-cyan-400 uppercase tracking-widest">
-                  ANATOMICAL TOUCHPOINT DETAILS
-                </span>
-                <span
-                  className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
-                    selectedInjury.severity === 'Fatal'
-                      ? 'bg-red-500/20 text-red-400 border border-red-500/40'
-                      : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
-                  }`}
-                >
-                  {selectedInjury.severity}
-                </span>
-              </div>
-
-              <div>
-                <h3 className="text-sm font-mono font-bold text-slate-100">
-                  {selectedInjury.title}
-                </h3>
-                <p className="text-[11px] text-slate-400 font-mono mt-0.5">
-                  Type: {selectedInjury.type} • Trauma Depth: {selectedInjury.depth}
-                </p>
-              </div>
-
-              <div className="p-3 rounded-xl bg-slate-950 border border-slate-800/80 text-xs text-slate-300 leading-relaxed">
-                {selectedInjury.description}
-              </div>
-
-              <div className="p-3 rounded-xl bg-cyan-950/30 border border-cyan-500/30 text-xs text-cyan-200 space-y-1">
-                <span className="text-[10px] font-mono text-cyan-400 font-bold uppercase block flex items-center gap-1">
-                  <Zap className="w-3.5 h-3.5" /> AI DIAGNOSTIC CORRELATION
-                </span>
-                <p className="text-[11px] leading-normal">{selectedInjury.aiNotes}</p>
-              </div>
-
-              <div className="text-[10px] text-slate-500 font-mono">
-                Estimated Time of Injury: {selectedInjury.estimatedTimeOfInjury}
-              </div>
-            </div>
-          ) : (
-            <div className="flex items-center justify-center h-full text-xs text-slate-500 font-mono">
-              Select a touchpoint to inspect medical examiner records.
-            </div>
-          )}
-        </div>
+/** The canvas remains mounted across structure selections; only person/case changes reset it. */
+export const AnatomicalViewer: React.FC<Props> = (props) => {
+  const [progress, setProgress] = useState(0);
+  const [labels, setLabels] = useState(false);
+  const [hovered, setHovered] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const root = useRef<HTMLDivElement>(null);
+  const api = useRef<CameraAPI | null>(null);
+  useEffect(() => {
+    const element = root.current;
+    if (!element) return;
+    const wheel = (event: WheelEvent) => {
+      event.preventDefault(); event.stopPropagation();
+      api.current?.zoom(event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? 600 : 1));
+    };
+    element.addEventListener('wheel', wheel, { capture: true, passive: false });
+    return () => element.removeEventListener('wheel', wheel, true);
+  }, []);
+  const structure = props.manifest.structures.find(s => s.id === hovered);
+  const mode = props.selected ? 'Organ inspection' : progress < 0.01 ? 'Intact reference body' : progress < 0.3 ? 'Anatomical exposure' : progress < 0.99 ? 'Separating structures' : 'Exploded examination';
+  const changeProgress = (value: number) => { api.current?.exitFocus(); props.onSelect(null); setProgress(value); };
+  return <div className="flex min-w-0 flex-col rounded border border-line-strong bg-well" data-testid="anatomy-viewer">
+    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-3 py-2">
+      <span className="font-mono text-xs text-ink-soft" data-testid="anatomy-mode">{mode}</span>
+      <div className="flex gap-1">
+        <button className={smallButtonClass} disabled={!loaded} onClick={() => changeProgress(progress > 0 ? 0 : 1)}>{progress > 0 ? 'Reassemble' : 'Explode'}</button>
+        {props.selected && <button className={smallButtonClass} onClick={() => props.onSelect(null)}>Return to anatomy</button>}
+        <button className={smallButtonClass} disabled={!loaded} onClick={() => { props.onSelect(null); api.current?.frame(); }}>Front</button>
+        <button className={smallButtonClass} disabled={!loaded} onClick={() => { props.onSelect(null); api.current?.frame(true); }}>Back</button>
       </div>
     </div>
-  );
+    <div ref={root} className="relative shrink-0 touch-none" style={{ height: 620 }} data-testid="anatomy-canvas">
+      <ModelBoundary onError={() => setLoadFailed(true)}>
+        <Canvas dpr={[1, 1.5]} camera={{ position: [0, 0, 3.8], fov: 42, near: 0.01, far: 30 }}
+          fallback={<p className="p-8 text-warn">WebGL is unavailable. Use the findings and source-evidence panels.</p>}>
+          <color attach="background" args={['#0b0d0e']} />
+          <ambientLight intensity={1.1} />
+          <directionalLight position={[3, 5, 5]} intensity={2.1} />
+          <directionalLight position={[-3, 1, -3]} intensity={1.4} color="#d6e3e6" />
+          <Suspense fallback={null}>
+            <Scene {...props} progress={progress} setProgress={setProgress} labels={labels} hovered={hovered}
+              onHover={setHovered} cameraAPI={api} onLoaded={setLoaded} />
+          </Suspense>
+        </Canvas>
+      </ModelBoundary>
+      {!loaded && !loadFailed && <div role="status" className="pointer-events-none absolute inset-0 flex items-center justify-center text-ink-soft">Loading segmented reference anatomy…</div>}
+      {structure && <div className="pointer-events-none absolute left-3 top-3 rounded border border-line-strong bg-surface/95 px-3 py-2">
+        <div className="font-medium text-ink">{structure.label}</div>
+        <div className="text-xs text-ink-muted">{(props.states[structure.id] ?? 'not_documented').replaceAll('_', ' ')}</div>
+      </div>}
+      {props.placing && <div role="status" className="absolute inset-x-4 top-4 border border-accent bg-surface p-3 text-accent-text">Click the supported structure to place this injury’s illustrative marker. This does not establish its exact clinical location.</div>}
+      <div className="absolute bottom-3 right-3 flex gap-1">
+        <button className={smallButtonClass} aria-label="Zoom in" disabled={!loaded} onClick={() => api.current?.zoom(-150)}>+</button>
+        <button className={smallButtonClass} aria-label="Zoom out" disabled={!loaded} onClick={() => api.current?.zoom(150)}>−</button>
+      </div>
+    </div>
+    <div className="space-y-2 border-t border-line px-3 py-3 text-xs text-ink-muted">
+      <div className="flex items-center gap-3">
+        <label htmlFor="anatomy-explosion">Exposure / separation</label>
+        <input id="anatomy-explosion" aria-label="Explosion progress" className="min-w-12 flex-1 accent-accent" type="range" min="0" max="1" step="0.01" value={progress} disabled={!loaded || !!props.selected} onChange={e => changeProgress(Number(e.target.value))} />
+        <span className="font-mono">{Math.round(progress*100)}%</span>
+        <label className="flex items-center gap-1"><input type="checkbox" checked={labels} onChange={e => setLabels(e.target.checked)} /> Labels</label>
+      </div>
+      <p>Drag to rotate · right-drag to pan · scroll inward to expose and separate, then zoom closer. Scroll outward to reverse.</p>
+      <p>Reference anatomy, not a patient scan. Organ-only badges indicate an associated structure, not a measured injury location.</p>
+      <p>BodyParts3D, © The Database Center for Life Science · <a className="text-accent-text underline" href="https://creativecommons.org/licenses/by-sa/2.1/jp/deed.en" target="_blank" rel="noreferrer">CC BY-SA 2.1 Japan</a> · <a className="text-accent-text underline" href="/3d/anatomy/README.md" target="_blank" rel="noreferrer">Model scope and attribution</a></p>
+    </div>
+  </div>;
 };
+
+function Scene(p: Props & { progress: number; setProgress: (v: number) => void; labels: boolean; hovered: string | null;
+  onHover: (id: string | null) => void; cameraAPI: React.MutableRefObject<CameraAPI | null>; onLoaded: (v: boolean) => void }) {
+  const gltf = useGLTF(p.manifest.url);
+  const controls = useRef<CameraControls>(null);
+  const currentProgress = useRef(0);
+  const targetProgress = useRef(p.progress);
+  const latest = useRef(p); latest.current = p;
+  const focus = useRef<{ position: Vector3; target: Vector3; progress: number } | null>(null);
+  const baseDistance = useRef(3.8);
+  const transforms = useMemo(() => buildExplosion(p.manifest.structures), [p.manifest]);
+  const groups = useMemo(() => {
+    const scene = gltf.scene.clone(true);
+    const result = new Map<string, Group>();
+    for (const structure of p.manifest.structures) {
+      const group = scene.getObjectByName(structure.id) as Group | undefined;
+      if (!group || structure.meshNames.some(name => !group.getObjectByName(name))) throw new Error(`Missing model components for ${structure.label}.`);
+      group.traverse(child => {
+        if (child instanceof Mesh) {
+          child.material = (child.material as MeshStandardMaterial).clone();
+        }
+      });
+      result.set(structure.id, group);
+    }
+    return result;
+  }, [gltf.scene, p.manifest]);
+  useEffect(() => {
+    p.onLoaded(true);
+    return () => { for (const group of groups.values()) group.traverse(child => { if (child instanceof Mesh) (child.material as MeshStandardMaterial).dispose(); }); };
+  }, [groups]);
+  useEffect(() => { targetProgress.current = p.progress; }, [p.progress]);
+  const overall = useMemo(() => {
+    const bounds = new Box3();
+    for (const t of transforms) {
+      const s = p.manifest.structures.find(s => s.id === t.structureId)!;
+      bounds.union(structureBounds(s, t.originalPosition));
+      bounds.union(structureBounds(s, t.explodedPosition));
+    }
+    return bounds.expandByScalar(0.08);
+  }, [transforms, p.manifest]);
+  useEffect(() => {
+    const control = controls.current;
+    if (!control) return;
+    const frame = (back = false) => {
+      const center = overall.getCenter(new Vector3());
+      const distance = Math.max(3.3, overall.getSize(new Vector3()).length()*1.35);
+      baseDistance.current = distance;
+      focus.current = null;
+      void control.setLookAt(center.x, center.y, back ? -distance : distance, ...center.toArray(), true);
+    };
+    frame();
+    p.cameraAPI.current = {
+      frame,
+      exitFocus() {
+        if (focus.current) {
+          const previous = focus.current;
+          focus.current = null;
+          void control.setLookAt(...previous.position.toArray(), ...previous.target.toArray(), true);
+        }
+      },
+      zoom(delta) {
+        const { selected, progress, setProgress } = latest.current;
+        if (selected || (progress >= 1 && (delta < 0 || control.distance < baseDistance.current - 0.05))) {
+          void control.dolly(-delta*0.0015, true);
+        } else if (progress <= 0 && delta > 0) {
+          void control.dolly(-delta*0.0015, true);
+        } else {
+          if (delta < 0 && progress === 0) baseDistance.current = control.distance;
+          setProgress(clampProgress(progress - delta/1100));
+        }
+      }
+    };
+    return () => { p.cameraAPI.current = null; };
+  }, [overall]);
+  useEffect(() => {
+    const control = controls.current;
+    if (!control) return;
+    if (p.selected) {
+      if (!focus.current) {
+        focus.current = { position: control.getPosition(new Vector3()), target: control.getTarget(new Vector3()), progress: targetProgress.current };
+        targetProgress.current = currentProgress.current;
+        p.setProgress(currentProgress.current);
+      }
+      const group = groups.get(p.selected);
+      if (group) {
+        group.updateWorldMatrix(true, true);
+        const bounds = new Box3().setFromObject(group).expandByScalar(0.025);
+        void control.fitToBox(bounds, true, { paddingTop: 0.04, paddingBottom: 0.04, paddingLeft: 0.04, paddingRight: 0.04 });
+      }
+    } else if (focus.current) {
+      const previous = focus.current;
+      focus.current = null;
+      p.setProgress(previous.progress);
+      void control.setLookAt(...previous.position.toArray(), ...previous.target.toArray(), true);
+    }
+  }, [p.selected, groups]);
+  useFrame((_, delta) => {
+    let value = MathUtils.damp(currentProgress.current, targetProgress.current, 8, Math.min(delta, 0.1));
+    if (Math.abs(value-targetProgress.current) < 0.0001) value = targetProgress.current;
+    currentProgress.current = value;
+    for (const t of transforms) {
+      const group = groups.get(t.structureId)!;
+      group.position.set(...positionAt(t, value));
+      const s = p.manifest.structures.find(s => s.id === t.structureId)!;
+      const selected = p.selected === s.id;
+      const visibleSystem = p.system === 'all' || p.system === s.system || selected;
+      let opacity = s.id === 'skin' ? skinOpacity(value) : 1;
+      if (p.selected) opacity = selected ? 1 : Math.min(opacity, 0.045);
+      group.visible = visibleSystem && opacity > 0.005;
+      group.traverse(child => {
+        if (child instanceof Mesh) {
+          child.raycast = group.visible && opacity >= 0.1 ? Mesh.prototype.raycast : () => {};
+          const material = child.material as MeshStandardMaterial;
+          const transparent = opacity < 0.999;
+          if (material.transparent !== transparent) { material.transparent = transparent; material.needsUpdate = true; }
+          material.opacity = opacity; material.depthWrite = !transparent;
+          material.emissive.set(selected || p.hovered === s.id ? '#28646b' : '#000000');
+          material.emissiveIntensity = selected ? 0.35 : 0.2;
+        }
+      });
+    }
+  });
+  const click = (id: string, e: ThreeEvent<MouseEvent>) => {
+    e.stopPropagation();
+    if (p.placing) {
+      const local = groups.get(id)!.worldToLocal(e.point.clone());
+      p.onPlace(id, local.toArray() as Vec3);
+    } else p.onSelect(id);
+  };
+  return <>
+    <CameraControls ref={controls} makeDefault minDistance={0.07} maxDistance={9} smoothTime={0.3}
+      mouseButtons={{ left: CameraControlsImpl.ACTION.ROTATE, middle: CameraControlsImpl.ACTION.TRUCK, right: CameraControlsImpl.ACTION.TRUCK, wheel: CameraControlsImpl.ACTION.NONE }} />
+    {p.manifest.structures.map(s => {
+      const group = groups.get(s.id)!;
+      const annotationVisible = (!p.selected || p.selected === s.id) && (p.system === 'all' || p.system === s.system || p.selected === s.id);
+      const markers = annotationVisible ? p.markers.filter(m => m.structureId === s.id && m.finding.record.review_status !== 'rejected') : [];
+      return <primitive key={s.id} object={group} onClick={(e: ThreeEvent<MouseEvent>) => click(s.id, e)}
+        onPointerMove={(e: ThreeEvent<PointerEvent>) => { e.stopPropagation(); p.onHover(s.id); }} onPointerOut={() => p.onHover(null)}>
+        {annotationVisible && (s.id !== 'skin' || p.progress < 0.3 || p.selected === 'skin') && (p.labels || p.selected === s.id) && <Html position={[0, s.size[1]/2+0.025, 0]} center style={{ pointerEvents: 'none' }}>
+          <span className="whitespace-nowrap rounded bg-surface/90 px-2 py-1 text-xs text-ink">{s.label}</span>
+        </Html>}
+        {markers.map((marker, i) => {
+          const key = findingKey(marker.finding);
+          const pending = marker.finding.record.review_status === 'pending';
+          const position: Vec3 = marker.localPosition ?? [s.size[0]/2+0.02, s.size[1]/2-i*0.025, s.size[2]/2];
+          return <Html key={key} position={position} center zIndexRange={[30, 0]}>
+            <button onClick={e => { e.stopPropagation(); p.onFinding(key); }}
+              title={`${marker.finding.record.description || marker.finding.record.body_region} · ${marker.localPosition ? 'Investigator placement' : 'Organ-only association; illustrative position'}`}
+              aria-label={`Select ${marker.finding.kind === 'injury' ? 'injury' : 'finding'} ${marker.finding.record.id}`}
+              className={`whitespace-nowrap rounded border px-1.5 py-0.5 font-mono text-xs bg-surface/95 ${pending ? 'border-dashed border-pending text-pending' : marker.finding.kind === 'injury' ? 'border-danger text-danger' : 'border-warn text-warn'} ${p.selectedFinding === key ? 'ring-2 ring-accent' : ''}`}>
+              {marker.finding.kind === 'injury' ? 'I' : 'F'}{marker.finding.record.id}{marker.localPosition ? ' ◉' : ' ≈'}
+            </button>
+          </Html>;
+        })}
+      </primitive>;
+    })}
+  </>;
+}

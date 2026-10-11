@@ -677,6 +677,57 @@ export interface paths {
         patch: operations["update_injury_api_injuries__injury_id__patch"];
         trace?: never;
     };
+    "/api/cases/{case_id}/anatomy-findings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Findings */
+        get: operations["list_findings_api_cases__case_id__anatomy_findings_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/anatomy-findings/{finding_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Review Finding */
+        patch: operations["review_finding_api_anatomy_findings__finding_id__patch"];
+        trace?: never;
+    };
+    "/api/cases/{case_id}/medical-analysis": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Analyze */
+        post: operations["analyze_api_cases__case_id__medical_analysis_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/buildings/{building_id}": {
         parameters: {
             query?: never;
@@ -793,7 +844,7 @@ export interface components {
             /** Case Number */
             case_number: string;
             /** Record Type */
-            record_type: ("case" | "evidence" | "person" | "object" | "location" | "event" | "relationship" | "observation" | "conflict" | "injury" | "reconstruction" | "stage" | "scene_object" | "annotation" | "report") | null;
+            record_type: ("case" | "evidence" | "person" | "object" | "location" | "event" | "relationship" | "observation" | "conflict" | "injury" | "anatomy_finding" | "reconstruction" | "stage" | "scene_object" | "annotation" | "report") | null;
             /** Record Id */
             record_id: number | null;
             /**
@@ -801,6 +852,47 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+        };
+        /** AnatomyFinding */
+        AnatomyFinding: {
+            /**
+             * Origin
+             * @enum {string}
+             */
+            origin: "ai" | "investigator";
+            /**
+             * Review Status
+             * @enum {string}
+             */
+            review_status: "pending" | "confirmed" | "rejected";
+            /** Id */
+            id: number;
+            /** Case Id */
+            case_id: number;
+            /** Person Id */
+            person_id: number | null;
+            /** Structure Id */
+            structure_id: string | null;
+            /** Body Region */
+            body_region: string;
+            /**
+             * Finding Type
+             * @enum {string}
+             */
+            finding_type: "abnormality" | "explicitly_normal" | "uncertain";
+            /** Description */
+            description: string;
+            /** Reported Condition */
+            reported_condition: string;
+            medical_details: components["schemas"]["MedicalDetails"];
+        };
+        /** AnatomyFindingUpdate */
+        AnatomyFindingUpdate: {
+            /**
+             * Review Status
+             * @enum {string}
+             */
+            review_status: "pending" | "confirmed" | "rejected";
         };
         /**
          * AskRequest
@@ -851,7 +943,7 @@ export interface components {
              * Record Type
              * @enum {string}
              */
-            record_type: "case" | "evidence" | "person" | "object" | "location" | "event" | "relationship" | "observation" | "conflict" | "injury" | "reconstruction" | "stage" | "scene_object" | "annotation" | "report";
+            record_type: "case" | "evidence" | "person" | "object" | "location" | "event" | "relationship" | "observation" | "conflict" | "injury" | "anatomy_finding" | "reconstruction" | "stage" | "scene_object" | "annotation" | "report";
             /** Record Id */
             record_id: number;
             /**
@@ -1404,7 +1496,7 @@ export interface components {
              * Target Type
              * @enum {string}
              */
-            target_type: "case" | "evidence" | "person" | "object" | "location" | "event" | "relationship" | "observation" | "conflict" | "injury" | "reconstruction" | "stage" | "scene_object" | "annotation" | "report";
+            target_type: "case" | "evidence" | "person" | "object" | "location" | "event" | "relationship" | "observation" | "conflict" | "injury" | "anatomy_finding" | "reconstruction" | "stage" | "scene_object" | "annotation" | "report";
             /** Target Id */
             target_id: number;
             /** Passage */
@@ -1420,7 +1512,7 @@ export interface components {
              * Target Type
              * @enum {string}
              */
-            target_type: "case" | "evidence" | "person" | "object" | "location" | "event" | "relationship" | "observation" | "conflict" | "injury" | "reconstruction" | "stage" | "scene_object" | "annotation" | "report";
+            target_type: "case" | "evidence" | "person" | "object" | "location" | "event" | "relationship" | "observation" | "conflict" | "injury" | "anatomy_finding" | "reconstruction" | "stage" | "scene_object" | "annotation" | "report";
             /** Target Id */
             target_id: number;
             /** Passage */
@@ -1603,13 +1695,14 @@ export interface components {
              * Severity
              * @enum {string}
              */
-            severity: "minor" | "moderate" | "severe" | "fatal";
+            severity: "minor" | "moderate" | "severe" | "fatal" | "unknown";
             /** Depth */
             depth: string | null;
             /** Estimated Time */
             estimated_time: string | null;
             /** Description */
             description: string;
+            medical_details?: components["schemas"]["MedicalDetails"];
         };
         /** InjuryCreate */
         InjuryCreate: {
@@ -1621,7 +1714,7 @@ export interface components {
              * Severity
              * @enum {string}
              */
-            severity: "minor" | "moderate" | "severe" | "fatal";
+            severity: "minor" | "moderate" | "severe" | "fatal" | "unknown";
             /** Person Id */
             person_id?: number | null;
             /** Structure Id */
@@ -1635,6 +1728,7 @@ export interface components {
              * @default
              */
             description?: string;
+            medical_details?: components["schemas"]["MedicalDetails"];
         };
         /**
          * InjuryUpdate
@@ -1646,7 +1740,7 @@ export interface components {
             /** Type */
             type?: string | null;
             /** Severity */
-            severity?: ("minor" | "moderate" | "severe" | "fatal") | null;
+            severity?: ("minor" | "moderate" | "severe" | "fatal" | "unknown") | null;
             /** Person Id */
             person_id?: number | null;
             /** Structure Id */
@@ -1659,6 +1753,7 @@ export interface components {
             description?: string | null;
             /** Review Status */
             review_status?: ("pending" | "confirmed" | "rejected") | null;
+            medical_details?: components["schemas"]["MedicalDetails"] | null;
         };
         /** Investigator */
         Investigator: {
@@ -1763,6 +1858,114 @@ export interface components {
             /** Review Status */
             review_status?: ("pending" | "confirmed" | "rejected") | null;
         };
+        /** MarkerPlacement */
+        MarkerPlacement: {
+            /** Structure Id */
+            structure_id: string;
+            /**
+             * Local Position
+             * @description Metres in the centered structure's local coordinates.
+             */
+            local_position: [
+                number,
+                number,
+                number
+            ];
+            /**
+             * Location Precision
+             * @default regional
+             * @enum {string}
+             */
+            location_precision?: "exact" | "regional" | "organ_only";
+            /**
+             * Placement Origin
+             * @default investigator
+             * @constant
+             */
+            placement_origin?: "investigator";
+            /**
+             * Model Id
+             * @default bodyparts3d-3.0-forensix-v1
+             * @constant
+             */
+            model_id?: "bodyparts3d-3.0-forensix-v1";
+        };
+        /** Measurement */
+        Measurement: {
+            /** Label */
+            label: string;
+            /**
+             * Value
+             * @description Value and units as written; never convert or estimate.
+             */
+            value: string;
+        };
+        /** MedicalAnalysisRequest */
+        MedicalAnalysisRequest: {
+            /** Evidence Id */
+            evidence_id: number;
+            /** Person Id */
+            person_id: number;
+            /**
+             * Report Kind
+             * @enum {string}
+             */
+            report_kind: "medical" | "postmortem";
+        };
+        /** MedicalAnalysisResult */
+        MedicalAnalysisResult: {
+            /** Created */
+            created: number;
+            /** Retained */
+            retained: number;
+            /** Injury Ids */
+            injury_ids: number[];
+            /** Finding Ids */
+            finding_ids: number[];
+            /** Limitations */
+            limitations: string[];
+        };
+        /** MedicalDetails */
+        MedicalDetails: {
+            /**
+             * Reported Condition
+             * @default
+             */
+            reported_condition?: string;
+            /** Measurements */
+            measurements?: components["schemas"]["Measurement"][];
+            /**
+             * Anatomical Location
+             * @default
+             */
+            anatomical_location?: string;
+            /**
+             * Location Precision
+             * @default unresolved
+             * @enum {string}
+             */
+            location_precision?: "regional" | "organ_only" | "unresolved";
+            /**
+             * Assertion
+             * @default documented
+             * @enum {string}
+             */
+            assertion?: "documented" | "uncertain" | "contradictory";
+            /**
+             * Uncertainty
+             * @default
+             */
+            uncertainty?: string;
+            /**
+             * Mapping Origin
+             * @default model_mapping
+             * @enum {string}
+             */
+            mapping_origin?: "ai" | "investigator" | "model_mapping";
+            /** Report Kind */
+            report_kind?: ("medical" | "postmortem") | null;
+            marker?: components["schemas"]["MarkerPlacement"] | null;
+        };
         /** Observation */
         Observation: {
             /**
@@ -1783,7 +1986,7 @@ export interface components {
              * Subject Type
              * @enum {string}
              */
-            subject_type: "case" | "evidence" | "person" | "object" | "location" | "event" | "relationship" | "observation" | "conflict" | "injury" | "reconstruction" | "stage" | "scene_object" | "annotation" | "report";
+            subject_type: "case" | "evidence" | "person" | "object" | "location" | "event" | "relationship" | "observation" | "conflict" | "injury" | "anatomy_finding" | "reconstruction" | "stage" | "scene_object" | "annotation" | "report";
             /** Subject Id */
             subject_id: number;
             /** Statement */
@@ -4219,6 +4422,111 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Injury"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_findings_api_cases__case_id__anatomy_findings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                case_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnatomyFinding"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    review_finding_api_anatomy_findings__finding_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-investigator-id"?: number | null;
+            };
+            path: {
+                finding_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnatomyFindingUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnatomyFinding"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    analyze_api_cases__case_id__medical_analysis_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-investigator-id"?: number | null;
+            };
+            path: {
+                case_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MedicalAnalysisRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MedicalAnalysisResult"];
                 };
             };
             /** @description Validation Error */

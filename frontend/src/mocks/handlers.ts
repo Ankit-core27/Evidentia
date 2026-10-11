@@ -1,6 +1,7 @@
 // Mock implementation of every route in the API contract (docs/PLAN.md).
 // Behaviour is deliberately simple; where the real backend uses Gemini, the mock
 // uses keyword matching over the seed text.
+import anatomyManifest from '../../../assets/3d/anatomy/manifest.json';
 import { humanize } from '@/lib/format';
 import {
   AskRequest,
@@ -71,7 +72,8 @@ const reviewTables = (db: MockDb): [RecordType, (Reviewable & { case_id: Id })[]
   ['event', db.events],
   ['relationship', db.relationships],
   ['observation', db.observations],
-  ['injury', db.injuries]
+  ['injury', db.injuries],
+  ['anatomy_finding', db.anatomyFindings]
 ];
 
 const caseCounts = (db: MockDb, caseId: Id) => {
@@ -347,9 +349,14 @@ const buildReport = async (db: MockDb, caseId: Id, template: ReportTemplate, inc
       .map(({ id, title, type, sha256, size_bytes, collected_at }) => ({ id, title, type, sha256, size_bytes, collected_at })),
     timeline: template === 'court' || template === 'summary' ? events : [],
     persons,
-    confirmed_findings: observations
-      .filter((o) => o.review_status === 'confirmed' && (!medicalOnly || o.subject_type === 'person'))
-      .map((o) => ({ statement: o.statement, evidence_ids: linkedEvidence('observation', o.id) })),
+    confirmed_findings: [
+      ...observations.filter((o) => o.review_status === 'confirmed' && (!medicalOnly || o.subject_type === 'person'))
+        .map((o) => ({ statement: o.statement, evidence_ids: linkedEvidence('observation', o.id) })),
+      ...(template === 'court' || medicalOnly ? db.anatomyFindings.filter(f => f.case_id === caseId && f.review_status === 'confirmed').map(f => ({
+        statement: `${db.persons.find(p => p.id === f.person_id)?.name ?? 'Unassigned person'} — ${f.body_region}: ${f.description}${f.medical_details?.uncertainty ? ` Uncertainty: ${f.medical_details.uncertainty}` : ''}`,
+        evidence_ids: linkedEvidence('anatomy_finding', f.id)
+      })) : [])
+    ],
     open_conflicts:
       template === 'court' || template === 'summary'
         ? db.conflicts
@@ -403,6 +410,16 @@ const buildReport = async (db: MockDb, caseId: Id, template: ReportTemplate, inc
 // ---------------------------------------------------------------------------
 // Routes
 // ---------------------------------------------------------------------------
+
+
+const validateMedicalMarker = (details: Injury['medical_details'], structureId: string | null) => {
+  const marker = details?.marker;
+  if (!marker) return;
+  const structure = anatomyManifest.structures.find(s => s.id === structureId);
+  if (!structure || marker.structure_id !== structureId) invalid('medical_details', 'Marker must reference this injury’s supported structure');
+  if ((marker.model_id && marker.model_id !== anatomyManifest.modelId) || (marker.placement_origin && marker.placement_origin !== 'investigator')) invalid('medical_details', 'Invalid marker model or origin');
+  if (!Array.isArray(marker.local_position) || marker.local_position.length !== 3 || marker.local_position.some((v, i) => !Number.isFinite(v) || Math.abs(v) > structure!.size[i]/2 + 0.02)) invalid('medical_details', 'Marker lies outside the structure bounds');
+};
 
 export const buildRoutes = () => {
   const r = new MockRouter();
@@ -745,6 +762,9 @@ export const buildRoutes = () => {
       const id = idParam(req);
       const caseIdOf = (table(req.db).find((x) => x.id === id) ?? notFound(humanize(recordType))).case_id;
       setTable(req.db, table(req.db).filter((x) => x.id !== id));
+      if (recordType === 'person') {
+        for (const finding of [...req.db.injuries, ...req.db.anatomyFindings]) if (finding.person_id === id) finding.person_id = null;
+      }
       removeLinksTo(req.db, recordType, id);
       removeRelationshipsOf(req.db, recordType as GraphNodeType, id);
       addAudit(req.db, req.actorId, 'modified', recordType, id, { deleted: true, case_id: caseIdOf });
@@ -1038,6 +1058,28 @@ export const buildRoutes = () => {
     return created(annotation);
   });
 
+  // Medical findings share the existing mock records, review and audit machinery.
+  r.on('GET', '/health', () => ok({ status: 'ok', ai_enabled: false }));
+  r.on('GET', '/cases/:id/anatomy-findings', (req) => {
+    const caseId = findCase(req.db, idParam(req)).id;
+    return ok(req.db.anatomyFindings.filter(f => f.case_id === caseId));
+  });
+  r.on('PATCH', '/anatomy-findings/:id', (req) => {
+    const finding = req.db.anatomyFindings.find(f => f.id === idParam(req)) ?? notFound('Anatomical finding');
+    if (Object.keys(req.body).some(k => k !== 'review_status')) invalid('body', 'Only review_status can be updated');
+    if (!['pending', 'confirmed', 'rejected'].includes(req.body.review_status)) invalid('review_status', 'Invalid review status');
+    return ok(patchRecord(req, finding, 'anatomy_finding', ['review_status']));
+  });
+  r.on('POST', '/cases/:id/medical-analysis', (req) => {
+    const caseId = findCase(req.db, idParam(req)).id;
+    if (!req.db.persons.some(p => p.id === req.body.person_id && p.case_id === caseId && p.review_status !== 'rejected')) invalid('person_id', 'Person is not in this case');
+    if (!req.db.evidence.some(e => e.id === req.body.evidence_id && e.case_id === caseId)) invalid('evidence_id', 'Evidence is not in this case');
+    if (!['medical', 'postmortem'].includes(req.body.report_kind)) invalid('report_kind', 'Invalid report classification');
+    const report = req.db.evidence.find(e => e.id === req.body.evidence_id)!;
+    if (!['medical', 'document'].includes(report.type) || report.processing_status !== 'done' || !report.extracted_text) invalid('evidence_id', 'Select a processed medical report or document');
+    throw new MockHttpError(503, { detail: 'Live medical extraction is unavailable in mock mode. Stored findings and reference anatomy remain available.' });
+  });
+
   // injuries ----------------------------------------------------------------
 
   r.on('GET', '/cases/:id/injuries', (req) => {
@@ -1049,12 +1091,14 @@ export const buildRoutes = () => {
     const { db, body } = req;
     const caseId = findCase(db, idParam(req)).id;
     requireFields(body, ['body_region', 'type', 'severity']);
+    validateMedicalMarker(body.medical_details, body.structure_id ?? null);
     const injury: Injury = {
       id: nextId(db.injuries),
       case_id: caseId,
       person_id: body.person_id ?? null,
       body_region: body.body_region,
       structure_id: body.structure_id ?? null,
+      medical_details: body.medical_details ?? {},
       type: body.type,
       severity: body.severity,
       depth: body.depth ?? null,
@@ -1071,6 +1115,8 @@ export const buildRoutes = () => {
   // Proposed addition to the contract: injuries are AI proposals and need review.
   r.on('PATCH', '/injuries/:id', (req) => {
     const injury = req.db.injuries.find((x) => x.id === idParam(req)) ?? notFound('Injury');
+    if (req.body.medical_details === null) invalid('medical_details', 'Field cannot be null');
+    validateMedicalMarker(req.body.medical_details ?? injury.medical_details, req.body.structure_id === undefined ? injury.structure_id : req.body.structure_id);
     return ok(
       patchRecord(req, injury, 'injury', [
         'person_id',
@@ -1081,6 +1127,7 @@ export const buildRoutes = () => {
         'depth',
         'estimated_time',
         'description',
+        'medical_details',
         'review_status'
       ])
     );

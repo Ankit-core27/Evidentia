@@ -171,7 +171,10 @@ const findPassage = (text: string, passage: string): [number, number] | null => 
 const HighlightedText: React.FC<{ text: string | null; passage: string | null }> = ({ text, passage }) => {
   const markRef = useRef<HTMLElement>(null);
   const range = text && passage ? findPassage(text, passage) : null;
-  useEffect(() => markRef.current?.scrollIntoView({ block: 'center' }), [range?.[0]]);
+  useEffect(() => {
+    // Modern browsers may return a Promise; React only accepts a cleanup function.
+    void markRef.current?.scrollIntoView({ block: 'center' });
+  }, [range?.[0]]);
 
   if (!text) {
     return <p className="text-body text-ink-muted">No text has been extracted from this file.</p>;

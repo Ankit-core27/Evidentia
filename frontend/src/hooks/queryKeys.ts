@@ -18,6 +18,7 @@ export const queryKeys = {
   observations: (caseId: Id, status?: ReviewStatus) => ['case', caseId, 'observations', status ?? 'all'] as const,
   conflicts: (caseId: Id) => ['case', caseId, 'conflicts'] as const,
   search: (caseId: Id, q: string) => ['case', caseId, 'search', q] as const,
+  anatomyFindings: (caseId: Id) => ['case', caseId, 'anatomy-findings'] as const,
   injuries: (caseId: Id) => ['case', caseId, 'injuries'] as const,
   reconstructions: (caseId: Id) => ['case', caseId, 'reconstructions'] as const,
   caseReports: (caseId: Id) => ['case', caseId, 'reports'] as const,

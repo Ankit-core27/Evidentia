@@ -207,3 +207,30 @@ def test_negated_fatality_is_not_a_fatal_injury(db, report, monkeypatch, text):
     db.commit()
     with pytest.raises(ValueError, match="negated severity"):
         run(db, report, monkeypatch, [proposal(supporting_passage=text, measurements=[], injury_severity_if_supported="fatal")])
+
+
+def test_configured_analysis_runs_only_on_explicit_post(client, db, report, monkeypatch):
+    from app.core.records import case_counts
+    from app.routers import anatomy as router
+    calls = []
+    def extract(*args, **kwargs):
+        calls.append(kwargs["system"])
+        return {"findings": [proposal()]}, "raw"
+    monkeypatch.setattr(router.client, "get_client", lambda: object())
+    monkeypatch.setattr(anatomy, "generate_json", extract)
+    case, person, evidence = report
+    assert client.get(f"/api/cases/{case.id}/anatomy-findings").status_code == 200
+    assert client.get(f"/api/cases/{case.id}/injuries").status_code == 200
+    assert not calls
+    body = {"person_id": person.id, "evidence_id": evidence.id, "report_kind": "postmortem"}
+    response = client.post(f"/api/cases/{case.id}/medical-analysis", json=body)
+    assert response.status_code == 200
+    assert response.json()["created"] == 1
+    assert len(calls) == 1
+    assert case_counts(db, case.id)["pending_reviews"] == 1
+    injury_id = response.json()["injury_ids"][0]
+    injury = db.get(Injury, injury_id)
+    assert injury.medical_details["report_kind"] == "postmortem"
+    assert person.condition == "injured"
+    again = client.post(f"/api/cases/{case.id}/medical-analysis", json=body)
+    assert (again.json()["created"], again.json()["retained"]) == (0, 1)

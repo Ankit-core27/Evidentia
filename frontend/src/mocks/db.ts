@@ -1,6 +1,7 @@
 // In-memory tables for the mock backend. Shapes follow src/types/api.ts; the extra
 // fields (extracted_text, chunks, files) are what the real backend keeps server-side.
 import {
+  AnatomyFinding,
   AuditAction,
   AuditEntry,
   Case,
@@ -49,6 +50,7 @@ export interface MockDb {
   observations: Observation[];
   conflicts: Conflict[];
   injuries: Injury[];
+  anatomyFindings: AnatomyFinding[];
   reconstructions: Reconstruction[];
   stages: ReconstructionStage[];
   sceneObjects: SceneObject[];

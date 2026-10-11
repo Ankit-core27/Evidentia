@@ -57,8 +57,8 @@ export const CASE_MODULES: CaseModuleInfo[] = [
   { id: 'copilot', label: 'Ask the evidence', icon: MessageSquareText, group: 'analyse' },
   { id: 'reports', label: 'Reports', icon: FileText, group: 'report' },
   { id: 'settings', label: 'Custody & audit', icon: ShieldCheck, group: 'report' },
-  // Wired with the injuries and anatomy explorer in T13 (stretch).
-  { id: 'autopsy', label: 'Autopsy & medical', icon: Activity, group: 'analyse', hidden: true }
+  // Medical findings and segmented reference anatomy.
+  { id: 'autopsy', label: 'Autopsy & medical', icon: Activity, group: 'analyse' }
 ];
 
 export const isCaseModule = (value: string | undefined): value is CaseModule =>
