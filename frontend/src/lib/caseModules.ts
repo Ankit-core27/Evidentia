@@ -10,6 +10,7 @@ import {
   FileText,
   ShieldCheck,
   ClipboardCheck,
+  Map as MapIcon,
   type LucideIcon
 } from 'lucide-react';
 
@@ -22,6 +23,7 @@ export type CaseModule =
   | 'canvas'
   | 'timeline'
   | 'reconstruction'
+  | 'area'
   | 'autopsy'
   | 'copilot'
   | 'reports'
@@ -54,6 +56,8 @@ export const CASE_MODULES: CaseModuleInfo[] = [
   { id: 'canvas', label: 'Canvas', icon: Share2, group: 'analyse' },
   { id: 'timeline', label: 'Timeline', icon: Clock, group: 'analyse' },
   { id: 'reconstruction', label: 'Reconstruction', icon: Box, group: 'analyse' },
+  // CesiumJS area model with building selection and dissection.
+  { id: 'area', label: 'Area & buildings', icon: MapIcon, group: 'analyse' },
   { id: 'copilot', label: 'Ask the evidence', icon: MessageSquareText, group: 'analyse' },
   { id: 'reports', label: 'Reports', icon: FileText, group: 'report' },
   { id: 'settings', label: 'Custody & audit', icon: ShieldCheck, group: 'report' },

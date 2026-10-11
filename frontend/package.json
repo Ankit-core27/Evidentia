@@ -11,8 +11,10 @@
     "lint": "tsc --noEmit",
     "gen:api": "openapi-typescript http://localhost:8000/openapi.json --default-non-nullable false -o src/lib/api-types.ts",
     "build:3d-models": "node scripts/crime-scene-models/build.mjs",
+    "build:buildings": "node scripts/buildings/build.mjs",
     "postinstall": "npm --prefix ../packages/scene-engine install --no-audit --no-fund && npm --prefix ../packages/scene-engine run build && npm --prefix ../packages/scene-planner install --no-audit --no-fund && npm --prefix ../packages/scene-planner run build",
-    "test:anatomy": "node scripts/anatomy/test.mjs"
+    "test:anatomy": "node scripts/anatomy/test.mjs",
+    "test:buildings": "node scripts/buildings/test.mjs"
   },
   "dependencies": {
     "@dagrejs/dagre": "^1.1.8",
@@ -27,6 +29,7 @@
     "@tanstack/react-query": "^5.104.1",
     "@vitejs/plugin-react": "^5.0.4",
     "@xyflow/react": "^12.12.0",
+    "cesium": "^1.146.0",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.546.0",
     "react": "^19.0.1",
@@ -34,6 +37,7 @@
     "react-router-dom": "^7.18.4",
     "three": "^0.186.1",
     "vite": "^6.2.3",
+    "vite-plugin-static-copy": "^4.1.1",
     "zustand": "^5.0.15"
   },
   "devDependencies": {
