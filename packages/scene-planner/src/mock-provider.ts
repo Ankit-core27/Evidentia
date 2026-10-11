@@ -6,7 +6,7 @@ import {
   type RoomWall,
   type SceneDefinition,
   type Vector3,
-} from '@forensix/scene-engine';
+} from '@evidentia/scene-engine';
 
 import type {
   PlannerObjectConstraint,

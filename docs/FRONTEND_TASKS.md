@@ -58,7 +58,7 @@ Moves the draft into the repo and sets up the skeleton from PLAN.md. Every scree
 - Split `CaseWorkspace.tsx` into one file per module under `features/`, so later tasks don't all edit the same file. Drop the CCTV, Phone Records and GPS modules, which PLAN.md removes.
 
 - Copy `ai-forensic-investigation-suite/` from the varaxis repo into `frontend/`, and place files as in PLAN.md's "Where each draft file goes" table.
-- Delete `IndividualCaseView.tsx`, `Sidebar.tsx`, `metadata.json`, the draft's `README.md`, `.env.example` and `bun.lock`. Rename the package to `forensix-frontend`, set the page title to Forensix, and drop "AI FORUM v5.0".
+- Delete `IndividualCaseView.tsx`, `Sidebar.tsx`, `metadata.json`, the draft's `README.md`, `.env.example` and `bun.lock`. Rename the package to `evidentia-frontend`, set the page title to Evidentia, and drop "AI FORUM v5.0".
 - Packages: add `react-router-dom`, `@tanstack/react-query`, `zustand`, and `openapi-typescript` as a dev dependency. Remove `express`, `@types/express`, `dotenv`, `tsx`, `@google/genai` and the unused `motion`. Use npm, with one lockfile.
 - Config: point `@` at `src/` in `tsconfig.json` and `vite.config.ts`; proxy `/api` to `http://localhost:8000`; set `envDir: '..'` and `publicDir: '../assets'`. Scripts: `dev`, `dev:mock` (`vite --mode mock`), `build`, `lint`, `gen:api`.
 - Routing in `main.tsx` with a `QueryClientProvider`: `/` dashboard, `/cases`, `/cases/:caseId/:module?`, `/evidence`, `/reports`, and a not-found page. The URL replaces `App.tsx`'s view, case and module state.

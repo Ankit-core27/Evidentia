@@ -1,6 +1,6 @@
 """Create an isolated, clearly synthetic anatomy demo alongside the unchanged seed.
 
-Usage: .venv/bin/python scripts/anatomy_demo.py /tmp/forensix-anatomy-demo
+Usage: .venv/bin/python scripts/anatomy_demo.py /tmp/evidentia-anatomy-demo
 Refuses to reuse an existing database. Does not call Gemini or read the normal DB.
 """
 import argparse

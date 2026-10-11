@@ -68,7 +68,7 @@ export const installMockBackend = async () => {
 
   installTransport(mockFetch, fileUrl);
 
-  // Handy from the browser console: forensixMock.api.get('/cases'), forensixMock.db.
-  (window as unknown as { forensixMock: unknown }).forensixMock = { db, api };
-  console.info('[Forensix] Mock backend active: data is in memory and resets on reload.');
+  // Handy from the browser console: evidentiaMock.api.get('/cases'), evidentiaMock.db.
+  (window as unknown as { evidentiaMock: unknown }).evidentiaMock = { db, api };
+  console.info('[Evidentia] Mock backend active: data is in memory and resets on reload.');
 };

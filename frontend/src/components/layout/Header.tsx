@@ -27,7 +27,7 @@ const MACRO_TABS = [
 
 const menuClass = 'absolute z-50 mt-1.5 bg-raised border border-line-strong rounded-lg shadow-overlay';
 
-/** The Forensix mark: the shield from the favicon. */
+/** The Evidentia mark: the shield from the favicon. */
 const BrandMark: React.FC = () => (
   <svg viewBox="0 0 24 24" className="size-6 shrink-0" aria-hidden>
     <rect width="24" height="24" rx="5" className="fill-accent" />
@@ -65,9 +65,9 @@ export const Header: React.FC<HeaderProps> = ({ activeModule, onOpenCreateModal 
       {/* Below lg the navigation (or the case breadcrumb) wraps onto a second row. */}
       <div className="flex flex-wrap items-center gap-x-4 px-4 lg:px-6 lg:h-13">
         <div className="order-1 h-13 flex items-center gap-3 shrink-0">
-          <Link to="/" className="flex items-center gap-2 rounded" aria-label="Forensix dashboard">
+          <Link to="/" className="flex items-center gap-2 rounded" aria-label="Evidentia dashboard">
             <BrandMark />
-            <span className="text-[15px] font-semibold text-ink tracking-tight">Forensix</span>
+            <span className="text-[15px] font-semibold text-ink tracking-tight">Evidentia</span>
           </Link>
           {isMockMode && (
             <span

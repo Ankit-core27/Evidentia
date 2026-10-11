@@ -60,10 +60,10 @@ The optional script creates a **new** throwaway database, loads the unchanged ro
 From the repository root:
 
 ```bash
-backend/.venv/bin/python backend/scripts/anatomy_demo.py /tmp/forensix-anatomy-demo
+backend/.venv/bin/python backend/scripts/anatomy_demo.py /tmp/evidentia-anatomy-demo
 cd backend
-DATABASE_URL=sqlite:////tmp/forensix-anatomy-demo/demo.db \
-STORAGE_DIR=/tmp/forensix-anatomy-demo/storage GEMINI_API_KEY='' \
+DATABASE_URL=sqlite:////tmp/evidentia-anatomy-demo/demo.db \
+STORAGE_DIR=/tmp/evidentia-anatomy-demo/storage GEMINI_API_KEY='' \
 .venv/bin/uvicorn app.main:app --port 8001
 ```
 
@@ -90,7 +90,7 @@ The optional browser runner needs Python `playwright` and Chromium; they are tes
 npm run preview -- --port 3002
 # Terminal 2, repository root; synthetic backend from above must be running on 8001
 python frontend/scripts/anatomy/browser_smoke.py --url http://localhost:3002 \
-  --backend http://127.0.0.1:8001 --fixture /tmp/forensix-anatomy-demo/fixture.json
+  --backend http://127.0.0.1:8001 --fixture /tmp/evidentia-anatomy-demo/fixture.json
 # Mock mode, with npm run dev:mock -- --port 3001 running separately
 python frontend/scripts/anatomy/browser_smoke.py --url http://localhost:3001 --mock
 ```

@@ -1,6 +1,6 @@
-# Forensix Development Plan
+# Evidentia Development Plan
 
-Forensix is one integrated AI forensic investigation platform. An officer creates a case, collects evidence, discovers relationships, reconstructs what may have happened, and explores the incident in geographic and 3D views. Every module reads the same case records, so the canvas, timeline, 3D scene and report all point back to the same evidence. The hackathon build delivers one complete road-accident investigation; anatomy, geographic and building views then extend the same architecture.
+Evidentia is one integrated AI forensic investigation platform. An officer creates a case, collects evidence, discovers relationships, reconstructs what may have happened, and explores the incident in geographic and 3D views. Every module reads the same case records, so the canvas, timeline, 3D scene and report all point back to the same evidence. The hackathon build delivers one complete road-accident investigation; anatomy, geographic and building views then extend the same architecture.
 
 ## Hackathon MVP
 
@@ -33,7 +33,7 @@ The UI draft is a frontend-only Google AI Studio export (Vite, React 19, TypeScr
 | CCTV, phone records, GPS modules | Hard-coded images and text for the mock case | No separate module: CCTV and records are evidence items, GPS goes to the geographic view |
 | Reports | `alert()` on export; text names the mock suspect | Summary assembled from case records |
 | Dead code | `IndividualCaseView.tsx`, `Sidebar.tsx` are never imported | Delete |
-| Branding | Title "My Google AI Studio App", package "react-example" | Forensix |
+| Branding | Title "My Google AI Studio App", package "react-example" | Evidentia |
 
 The frontend track should also strip mock strings from `CaseWorkspace.tsx`, such as the "Julian Vance" fallbacks, "5 High-Suspicious Links", "4 AI Breakthrough Flags" and "Det. A. Sharma". Otherwise every new case shows the mock story. Running the prototype also shows counts that contradict the data (the Copilot greets with "14 evidence files" while the locker holds 4), and evidence cards and alerts pointing at a case ID (`CAS-2026-8801`) that doesn't exist.
 
@@ -73,7 +73,7 @@ flowchart TB
         F["Search service<br/>chunks, embeddings, cited answers"]
         G["Timeline and reconstruction<br/>events, stages, scene layouts, report"]
     end
-    DB[("SQLite<br/>storage/forensix.db")]
+    DB[("SQLite<br/>storage/evidentia.db")]
     FS[["File storage<br/>storage/, one folder per case"]]
     GM["Gemini API<br/>extraction, OCR, transcription, embeddings, answers"]
     FE <-->|REST /api| BE
@@ -220,7 +220,7 @@ A report holds the case summary, an evidence inventory with hashes, the timeline
 The repo keeps the frontend modular and isolates each 3D engine inside its own feature folder, so a workspace loads its models only when it opens.
 
 ```text
-forensix/                          repo root
+evidentia/                          repo root
 ├── README.md                      setup and run steps
 ├── .gitignore                     .env, storage/, node_modules/, .venv/
 ├── .env.example                   copy to .env; both apps read the root .env
@@ -301,7 +301,7 @@ forensix/                          repo root
 │       │   └── scenes/            authored layouts: transforms in metres
 │       ├── anatomy/
 │       └── buildings/
-├── storage/                       git-ignored: forensix.db, uploaded originals
+├── storage/                       git-ignored: evidentia.db, uploaded originals
 └── docs/
     ├── PLAN.md                    this plan
     ├── architecture/
@@ -337,7 +337,7 @@ Copy `.env.example` to `.env` at the repo root and fill it in:
 
 | Variable | Used by | Value |
 | --- | --- | --- |
-| `DATABASE_URL` | backend | `sqlite:///../storage/forensix.db` |
+| `DATABASE_URL` | backend | `sqlite:///../storage/evidentia.db` |
 | `GEMINI_API_KEY` | backend | Key from Google AI Studio |
 | `GEMINI_MODEL` | backend | Gemini model for extraction and answers |
 | `GEMINI_EMBED_MODEL` | backend | Gemini embedding model |
@@ -357,7 +357,7 @@ Configuration the scaffold needs:
 - Add a `gen:api` script: `openapi-typescript http://localhost:8000/openapi.json -o src/lib/api-types.ts`. Run it after any backend schema change.
 - For Cesium (M6), copy its static assets with `vite-plugin-static-copy` and define `CESIUM_BASE_URL`, as in Cesium's official Vite example.
 
-`alembic upgrade head` creates `storage/forensix.db`; delete that file to start from an empty database. To run everything (PowerShell):
+`alembic upgrade head` creates `storage/evidentia.db`; delete that file to start from an empty database. To run everything (PowerShell):
 
 ```powershell
 # 1. Backend on http://localhost:8000 (API docs at /docs)

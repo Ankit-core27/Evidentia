@@ -1,9 +1,9 @@
-# Forensix Scene Planner
+# Evidentia Scene Planner
 
-This package proposes scene definitions independently of the renderer. It consumes the public `@forensix/scene-engine` types, Zod schema, asset registry, `loadScene()` and spatial diagnostics. The first provider is deliberately deterministic and mock-only; it is not an LLM integration.
+This package proposes scene definitions independently of the renderer. It consumes the public `@evidentia/scene-engine` types, Zod schema, asset registry, `loadScene()` and spatial diagnostics. The first provider is deliberately deterministic and mock-only; it is not an LLM integration.
 
 ```ts
-import { planScene } from '@forensix/scene-planner';
+import { planScene } from '@evidentia/scene-planner';
 
 const result = await planScene({
   environmentType: 'indoor',

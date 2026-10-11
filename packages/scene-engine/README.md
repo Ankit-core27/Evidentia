@@ -1,6 +1,6 @@
-# Forensix Scene Engine
+# Evidentia Scene Engine
 
-This package defines the reusable scene contract, asset metadata and first working React Three Fiber renderer for Forensix. It deliberately does not own case navigation, evidence upload, backend APIs or forensic workflows.
+This package defines the reusable scene contract, asset metadata and first working React Three Fiber renderer for Evidentia. It deliberately does not own case navigation, evidence upload, backend APIs or forensic workflows.
 
 ## Responsibilities
 
@@ -135,7 +135,7 @@ The registry is separate from the scene data itself. The scene stores the asset 
 Use the exported `validateScene` API to test a scene before sending it to the renderer. `CrimeSceneEngine` also validates its input, presents schema/registry issues, and reports model-loading failures separately while keeping unaffected scene elements visible.
 
 ```ts
-import { validateScene, assetRegistry } from '@forensix/scene-engine';
+import { validateScene, assetRegistry } from '@evidentia/scene-engine';
 
 const result = validateScene(scene, assetRegistry);
 if (!result.success) {
@@ -160,7 +160,7 @@ It does not treat a scene as factually accurate just because it passes validatio
 Use `loadScene` to parse JSON text or validate already-parsed data before rendering:
 
 ```ts
-import { loadScene } from '@forensix/scene-engine';
+import { loadScene } from '@evidentia/scene-engine';
 
 const result = loadScene(jsonText);
 if (result.success) {
@@ -194,7 +194,7 @@ import {
   CrimeSceneEngine,
   validateScene,
   type SceneDefinition,
-} from '@forensix/scene-engine';
+} from '@evidentia/scene-engine';
 ```
 
 The frontend passes a scene to the `CrimeSceneEngine` component with a `scene` prop and optional `onObjectSelect` callback. The viewer provides orbit/zoom controls, camera reset and overhead view, evidence-marker visibility, and object selection. Selection callbacks receive the stable `id`, `assetId`, associated `evidenceIds` and object `metadata`.

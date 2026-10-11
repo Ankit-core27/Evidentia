@@ -10,7 +10,7 @@ import shutil
 import tempfile
 from pathlib import Path
 
-TMP_DIR = Path(tempfile.mkdtemp(prefix="forensix-tests-"))
+TMP_DIR = Path(tempfile.mkdtemp(prefix="evidentia-tests-"))
 os.environ["DATABASE_URL"] = f"sqlite:///{TMP_DIR / 'test.db'}"
 os.environ["STORAGE_DIR"] = str(TMP_DIR / "storage")
 os.environ["GEMINI_API_KEY"] = ""

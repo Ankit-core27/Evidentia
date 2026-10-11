@@ -223,7 +223,7 @@ def make_pdf(pages: list[str], title: str) -> bytes:
         page = doc.new_page(width=595, height=842)
         if page.insert_textbox(pymupdf.Rect(56, 56, 539, 786), text, fontsize=11, fontname="helv") < 0:
             raise SeedError(f"Seed text does not fit on a page of {title!r}")
-    doc.set_metadata({"title": title, "producer": "Forensix seed"})
+    doc.set_metadata({"title": title, "producer": "Evidentia seed"})
     data = doc.tobytes(garbage=3, deflate=True)
     doc.close()
     return data
@@ -1150,7 +1150,7 @@ def table_counts(db: Session) -> dict[str, int]:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="python -m app.seed", description="Load the Forensix seed case.")
+    parser = argparse.ArgumentParser(prog="python -m app.seed", description="Load the Evidentia seed case.")
     parser.add_argument(
         "--reset",
         action="store_true",

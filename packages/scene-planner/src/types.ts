@@ -5,8 +5,8 @@ import type {
   SceneDiagnostic,
   SceneLoadDiagnostic,
   Vector3,
-} from '@forensix/scene-engine';
-import type { sceneSchema } from '@forensix/scene-engine';
+} from '@evidentia/scene-engine';
+import type { sceneSchema } from '@evidentia/scene-engine';
 
 export type PlannerEnvironment = 'indoor' | 'outdoor' | 'mixed';
 
@@ -65,7 +65,7 @@ export interface PlannerRequest {
 export interface ScenePlannerProviderRequest {
   plannerRequest: PlannerRequest;
   responseFormat: {
-    name: 'forensix_scene_v1';
+    name: 'evidentia_scene_v1';
     schema: typeof sceneSchema;
   };
 }

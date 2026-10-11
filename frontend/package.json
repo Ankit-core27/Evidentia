@@ -1,5 +1,5 @@
 {
-  "name": "forensix-frontend",
+  "name": "evidentia-frontend",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -18,8 +18,8 @@
     "@dagrejs/dagre": "^1.1.8",
     "@fontsource/ibm-plex-mono": "^5.3.0",
     "@fontsource/ibm-plex-sans": "^5.3.0",
-    "@forensix/scene-engine": "file:../packages/scene-engine",
-    "@forensix/scene-planner": "file:../packages/scene-planner",
+    "@evidentia/scene-engine": "file:../packages/scene-engine",
+    "@evidentia/scene-planner": "file:../packages/scene-planner",
     "@react-three/drei": "^10.7.9",
     "@react-three/fiber": "^9.8.1",
     "@react-three/postprocessing": "^3.1.3",

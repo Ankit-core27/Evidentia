@@ -9,8 +9,8 @@ import {
   type SceneDefinition,
   type SceneLoadResult,
   type SceneSelection,
-} from '@forensix/scene-engine';
-import { planScene, type ScenePlannerDiagnostic, type ScenePlannerResult } from '@forensix/scene-planner';
+} from '@evidentia/scene-engine';
+import { planScene, type ScenePlannerDiagnostic, type ScenePlannerResult } from '@evidentia/scene-planner';
 import { Eye, EyeOff } from 'lucide-react';
 import { SceneInspectionPanel } from '@/features/crime-scene/SceneInspectionPanel';
 
