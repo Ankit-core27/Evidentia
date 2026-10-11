@@ -23,7 +23,7 @@ Every view reads the same case records, so the graph, the timeline, the 3D scene
 | Canvas | Relationship graph of persons, vehicles, places and evidence |
 | Timeline | Events with time ranges, precision and certainty, each linked to its source |
 | Reconstruction | Competing scenarios, stage by stage, in a navigable 3D scene with a time slider, measurements, notes and saved views |
-| Area and buildings | The incident in its surroundings on satellite imagery (CesiumJS), with building inspection |
+| Area and buildings | The incident in its real surroundings as photorealistic 3D (Google Photorealistic 3D Tiles in CesiumJS), with building inspection |
 | Autopsy and medical | Injuries placed on a 3D anatomy model |
 | Reports | A summary report assembled from the case records, with its hash |
 | Dashboard | Case counts, review queue, storage, incident map on satellite or street tiles, alerts |
@@ -63,7 +63,7 @@ All settings live in the root `.env` (see [.env.example](.env.example)):
 | `DATABASE_URL` | SQLite database; defaults to `storage/evidentia.db` |
 | `STORAGE_DIR` | Where uploaded originals are kept |
 | `GEMINI_API_KEY`, `GEMINI_MODEL`, `GEMINI_EMBED_MODEL` | AI extraction, OCR, transcription, embeddings and answers |
-| `VITE_CESIUM_ION_TOKEN` | Optional. Cesium World Terrain, imagery and 3D buildings in the area view. Without it, the area view uses Esri satellite imagery on a flat globe |
+| `VITE_GOOGLE_MAPS_API_KEY` or `VITE_CESIUM_ION_TOKEN` | Optional. Either one turns the "Area & buildings" view into Google Photorealistic 3D Tiles, the textured 3D city of Google Earth. The Google key needs the Map Tiles API enabled; an ion token is free at [ion.cesium.com](https://ion.cesium.com/tokens). Without either, the view uses flat Esri satellite imagery |
 
 The maps need no key: the dashboard uses Esri World Imagery (satellite) or OpenStreetMap tiles, credited on the map.
 

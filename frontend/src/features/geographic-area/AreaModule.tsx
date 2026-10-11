@@ -17,11 +17,14 @@ const RADIUS_MAX = 500;
 const STATUS_TEXT: Record<string, string> = {
   'terrain:loading': 'Terrain loading',
   'terrain:world': 'World terrain',
-  'terrain:ellipsoid': 'Flat terrain · no ion token',
+  'terrain:ellipsoid': 'Flat satellite · set VITE_GOOGLE_MAPS_API_KEY or VITE_CESIUM_ION_TOKEN for 3D',
+  'terrain:photorealistic': 'Google Photorealistic 3D',
+  'terrain:photorealistic-failed': 'Photorealistic 3D didn’t load (check the key and Map Tiles API) · flat satellite',
   'terrain:failed': 'Terrain unavailable',
   'buildings:loading': 'OSM buildings loading',
   'buildings:osm': 'OSM 3D buildings',
   'buildings:authored-only': 'Authored buildings only',
+  'buildings:photorealistic': 'Real buildings from Google',
   'buildings:failed': 'OSM buildings unavailable'
 };
 
@@ -124,7 +127,7 @@ export const AreaModule: React.FC<{ workspace: CaseWorkspace }> = ({ workspace }
         {!inspecting && status && (
           <div className="pointer-events-none absolute bottom-7 left-2 z-10 flex gap-1 font-mono text-2xs">
             {(['terrain', 'buildings'] as const).map((k) => (
-              <span key={k} className={`rounded bg-surface/90 px-1.5 py-0.5 ${status[k] === 'failed' ? 'text-warn' : 'text-ink-muted'}`}>{STATUS_TEXT[`${k}:${status[k]}`]}</span>
+              <span key={k} className={`rounded bg-surface/90 px-1.5 py-0.5 ${/failed$/.test(status[k]) ? 'text-warn' : 'text-ink-muted'}`}>{STATUS_TEXT[`${k}:${status[k]}`]}</span>
             ))}
           </div>
         )}

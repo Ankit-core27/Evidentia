@@ -19,7 +19,8 @@ These are fetched at run time and are not stored in the repository. Each map cre
 | --- | --- | --- |
 | Esri World Imagery and World Boundaries and Places | Dashboard map (satellite), area view without a Cesium ion token | [Esri terms of use](https://www.esri.com/en-us/legal/terms/full-master-agreement). Imagery © Esri, Maxar, Earthstar Geographics and the GIS User Community |
 | OpenStreetMap standard tiles | Dashboard map (street map) | Data © OpenStreetMap contributors, [ODbL](https://www.openstreetmap.org/copyright); tiles under the [OSMF tile usage policy](https://operations.osmfoundation.org/policies/tiles/), which suits light use. A busy deployment should use its own tile server or a commercial provider |
-| Cesium ion (optional) | Area view terrain, imagery and OSM buildings | [Cesium ion terms](https://cesium.com/legal/terms-of-service/); needs `VITE_CESIUM_ION_TOKEN` |
+| Google Photorealistic 3D Tiles (optional) | Area view, with `VITE_GOOGLE_MAPS_API_KEY` or through Cesium ion | [Google Maps Platform terms](https://cloud.google.com/maps-platform/terms) and the [Map Tiles API policies](https://developers.google.com/maps/documentation/tile/policies): Google's logo and data credits must stay on screen, and tiles may not be cached or copied |
+| Cesium ion (optional) | Area view terrain, imagery, OSM buildings, and Google's 3D tiles through ion | [Cesium ion terms](https://cesium.com/legal/terms-of-service/); needs `VITE_CESIUM_ION_TOKEN` |
 | Google Gemini API (optional) | AI extraction, OCR, transcription, embeddings and answers | [Gemini API terms](https://ai.google.dev/gemini-api/terms); needs `GEMINI_API_KEY` |
 
 ## Dependencies with licences beyond MIT, BSD and Apache-2.0
