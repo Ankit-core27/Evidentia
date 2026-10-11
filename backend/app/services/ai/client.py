@@ -10,6 +10,7 @@ AI step or fall back to local logic.
 from functools import lru_cache
 
 from google import genai
+from google.genai import types
 
 from app.core.config import get_settings
 
@@ -19,4 +20,10 @@ def get_client() -> genai.Client | None:
     settings = get_settings()
     if not settings.ai_enabled:
         return None
-    return genai.Client(api_key=settings.gemini_api_key)
+    # Retries ride out rate limits (429) and busy models (503), which the free
+    # tier hits quickly; the timeout stops a stuck request holding a worker.
+    retry = types.HttpRetryOptions(
+        attempts=8, initial_delay=5, max_delay=60, exp_base=2, http_status_codes=[429, 500, 502, 503, 504]
+    )
+    options = types.HttpOptions(timeout=180_000, retry_options=retry)
+    return genai.Client(api_key=settings.gemini_api_key, http_options=options)

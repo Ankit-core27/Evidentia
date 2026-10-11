@@ -18,10 +18,10 @@ SQLITE_PREFIX = "sqlite:///"
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=REPO_ROOT / ".env", extra="ignore")
 
-    database_url: str = "sqlite:///../storage/forensix.db"
+    database_url: str = "sqlite:///../storage/evidentia.db"
     storage_dir: str = "../storage"
     gemini_api_key: str = ""
-    gemini_model: str = "gemini-2.5-flash"
+    gemini_model: str = "gemini-3.5-flash"
     gemini_embed_model: str = "gemini-embedding-001"
     cors_origins: list[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
 
