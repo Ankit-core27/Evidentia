@@ -26,6 +26,7 @@ import { AUDIT_ACTION_STYLES, describeAuditDetail } from '@/lib/audit';
 import { formatBytes, formatDateTime, humanize } from '@/lib/format';
 import { EVIDENCE_TYPES } from '@/lib/options';
 import { AuditEntry, EvidenceDetail, EvidenceLink, EvidenceType, RecordType } from '@/types/api';
+import { ChainOfCustody } from './ChainOfCustody';
 import { EVIDENCE_ICONS } from './evidenceIcons';
 import { EvidencePreview } from './EvidencePreview';
 
@@ -99,7 +100,7 @@ const InspectorBody: React.FC<{ evidence: EvidenceDetail; passage: string | null
     { value: 'text' as const, label: 'Text' },
     { value: 'details' as const, label: 'Details' },
     { value: 'links' as const, label: 'Linked records', count: evidence.links.length },
-    { value: 'custody' as const, label: 'Custody', count: evidence.custody.length }
+    { value: 'custody' as const, label: 'Chain of custody' }
   ];
 
   return (
@@ -155,7 +156,15 @@ const InspectorBody: React.FC<{ evidence: EvidenceDetail; passage: string | null
         {tab === 'text' && <HighlightedText text={evidence.extracted_text} passage={passage} />}
         {tab === 'details' && <DetailsForm evidence={evidence} />}
         {tab === 'links' && <LinkedRecords evidence={evidence} />}
-        {tab === 'custody' && <CustodyLedger entries={evidence.custody} />}
+        {tab === 'custody' && (
+          <>
+            <ChainOfCustody evidence={evidence} />
+            <section className="space-y-2 pt-2" aria-label="Access log">
+              <h3 className="text-xs font-medium uppercase tracking-wider text-ink-muted">Access log · views, downloads and edits</h3>
+              <CustodyLedger entries={evidence.custody} />
+            </section>
+          </>
+        )}
       </div>
     </>
   );
@@ -361,7 +370,7 @@ const LinkedRecords: React.FC<{ evidence: EvidenceDetail }> = ({ evidence }) => 
 // ---------------------------------------------------------------------------
 
 const CustodyLedger: React.FC<{ entries: AuditEntry[] }> = ({ entries }) => {
-  if (!entries.length) return <p className="text-body text-ink-muted">No custody entries.</p>;
+  if (!entries.length) return <p className="text-body text-ink-muted">No access entries.</p>;
   const sorted = [...entries].sort((a, b) => a.at.localeCompare(b.at));
   return (
     <ol className="rounded-md border border-line divide-y divide-line">

@@ -250,6 +250,125 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/evidence/{evidence_id}/custody": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Custody */
+        get: operations["get_custody_api_evidence__evidence_id__custody_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/evidence/{evidence_id}/custody/transfers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start Transfer */
+        post: operations["start_transfer_api_evidence__evidence_id__custody_transfers_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/custody-transfers/{transfer_id}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Accept Transfer */
+        post: operations["accept_transfer_api_custody_transfers__transfer_id__accept_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/custody-transfers/{transfer_id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reject Transfer */
+        post: operations["reject_transfer_api_custody_transfers__transfer_id__reject_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/custody-transfers/{transfer_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel Transfer */
+        post: operations["cancel_transfer_api_custody_transfers__transfer_id__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/evidence/{evidence_id}/custody/analyses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Record Analysis */
+        post: operations["record_analysis_api_evidence__evidence_id__custody_analyses_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/evidence/{evidence_id}/custody/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Verify Integrity */
+        post: operations["verify_integrity_api_evidence__evidence_id__custody_verify_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/cases/{case_id}/persons": {
         parameters: {
             query?: never;
@@ -874,6 +993,11 @@ export interface components {
              */
             created_at: string;
         };
+        /** AnalysisCreate */
+        AnalysisCreate: {
+            /** Note */
+            note: string;
+        };
         /** AnatomyFinding */
         AnatomyFinding: {
             /**
@@ -1390,6 +1514,108 @@ export interface components {
              */
             status: "open" | "resolved";
         };
+        /** CustodyEvent */
+        CustodyEvent: {
+            /** Id */
+            id: number;
+            /** Evidence Id */
+            evidence_id: number;
+            /** Case Id */
+            case_id: number;
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "REGISTERED" | "COLLECTED" | "TRANSFERRED" | "RECEIVED" | "TRANSFER_REJECTED" | "TRANSFER_CANCELLED" | "ANALYSED" | "INTEGRITY_CHECKED";
+            /** Actor Id */
+            actor_id: number | null;
+            /** Actor Name */
+            actor_name: string;
+            /** From Custodian Id */
+            from_custodian_id: number | null;
+            /** From Custodian Name */
+            from_custodian_name: string;
+            /** To Custodian Id */
+            to_custodian_id: number | null;
+            /** To Custodian Name */
+            to_custodian_name: string;
+            /** Transfer Id */
+            transfer_id: number | null;
+            /** Transfer Status */
+            transfer_status?: ("PENDING" | "ACCEPTED" | "REJECTED" | "CANCELLED") | null;
+            /** Note */
+            note: string;
+            /** Sha256 */
+            sha256: string | null;
+            /** Expected Sha256 */
+            expected_sha256: string | null;
+            /** Integrity Result */
+            integrity_result: ("MATCH" | "MISMATCH" | "FILE_MISSING" | "STORAGE_ERROR") | null;
+            /**
+             * At
+             * Format: date-time
+             */
+            at: string;
+        };
+        /**
+         * CustodyHistory
+         * @description GET /api/evidence/{id}/custody: oldest event first.
+         */
+        CustodyHistory: {
+            /** Evidence Id */
+            evidence_id: number;
+            /** Case Id */
+            case_id: number;
+            custodian: components["schemas"]["CustodyPerson"] | null;
+            /** Baseline Sha256 */
+            baseline_sha256: string;
+            pending_transfer: components["schemas"]["CustodyTransfer"] | null;
+            /** Events */
+            events: components["schemas"]["CustodyEvent"][];
+        };
+        /**
+         * CustodyPerson
+         * @description An investigator as the history recorded them. `id` is None once they are removed.
+         */
+        CustodyPerson: {
+            /** Id */
+            id: number | null;
+            /** Name */
+            name: string;
+        };
+        /** CustodyTransfer */
+        CustodyTransfer: {
+            /** Id */
+            id: number;
+            /** Evidence Id */
+            evidence_id: number;
+            /** From Investigator Id */
+            from_investigator_id: number | null;
+            /** From Name */
+            from_name: string;
+            /** To Investigator Id */
+            to_investigator_id: number | null;
+            /** To Name */
+            to_name: string;
+            /** Initiated By Id */
+            initiated_by_id: number | null;
+            /** Initiated By Name */
+            initiated_by_name: string;
+            /** Reason */
+            reason: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "PENDING" | "ACCEPTED" | "REJECTED" | "CANCELLED";
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Resolved At */
+            resolved_at: string | null;
+        };
         /** Dashboard */
         Dashboard: {
             /** Total Cases */
@@ -1502,6 +1728,8 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /** Custodian Id */
+            custodian_id?: number | null;
         };
         /**
          * EvidenceDetail
@@ -1545,6 +1773,8 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /** Custodian Id */
+            custodian_id?: number | null;
             /** Case Number */
             case_number: string;
             /** Case Title */
@@ -1632,6 +1862,8 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /** Custodian Id */
+            custodian_id?: number | null;
             /** Case Number */
             case_number: string;
             /** Case Title */
@@ -1826,6 +2058,27 @@ export interface components {
             /** Review Status */
             review_status?: ("pending" | "confirmed" | "rejected") | null;
             medical_details?: components["schemas"]["MedicalDetails"] | null;
+        };
+        /**
+         * IntegrityCheck
+         * @description POST /api/evidence/{id}/custody/verify.
+         *
+         *     MATCH means the stored file's bytes hash to the baseline recorded at registration.
+         *     It shows the file hasn't changed since then; it doesn't show the evidence is authentic.
+         */
+        IntegrityCheck: {
+            /**
+             * Result
+             * @enum {string}
+             */
+            result: "MATCH" | "MISMATCH" | "FILE_MISSING" | "STORAGE_ERROR";
+            /** Expected Sha256 */
+            expected_sha256: string;
+            /** Actual Sha256 */
+            actual_sha256: string | null;
+            /** Detail */
+            detail: string;
+            event: components["schemas"]["CustodyEvent"];
         };
         /** Investigator */
         Investigator: {
@@ -3114,6 +3367,27 @@ export interface components {
              */
             sources?: components["schemas"]["Source"][];
         };
+        /** TransferCreate */
+        TransferCreate: {
+            /** To Investigator Id */
+            to_investigator_id: number;
+            /**
+             * Reason
+             * @default
+             */
+            reason?: string;
+        };
+        /**
+         * TransferResolve
+         * @description Accept, reject or cancel a pending transfer, with an optional note.
+         */
+        TransferResolve: {
+            /**
+             * Note
+             * @default
+             */
+            note?: string;
+        };
         /** ValidationError */
         ValidationError: {
             /** Location */
@@ -3716,6 +3990,255 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["VerifyResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_custody_api_evidence__evidence_id__custody_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                evidence_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustodyHistory"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_transfer_api_evidence__evidence_id__custody_transfers_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-investigator-id"?: number | null;
+            };
+            path: {
+                evidence_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TransferCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustodyTransfer"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    accept_transfer_api_custody_transfers__transfer_id__accept_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-investigator-id"?: number | null;
+            };
+            path: {
+                transfer_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TransferResolve"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustodyTransfer"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reject_transfer_api_custody_transfers__transfer_id__reject_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-investigator-id"?: number | null;
+            };
+            path: {
+                transfer_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TransferResolve"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustodyTransfer"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_transfer_api_custody_transfers__transfer_id__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-investigator-id"?: number | null;
+            };
+            path: {
+                transfer_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TransferResolve"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustodyTransfer"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    record_analysis_api_evidence__evidence_id__custody_analyses_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-investigator-id"?: number | null;
+            };
+            path: {
+                evidence_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnalysisCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustodyEvent"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    verify_integrity_api_evidence__evidence_id__custody_verify_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-investigator-id"?: number | null;
+            };
+            path: {
+                evidence_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntegrityCheck"];
                 };
             };
             /** @description Validation Error */
