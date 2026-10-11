@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Maximize2, Minimize2, Pause, Play, Plus, RefreshCw, Sparkles } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Maximize2, Minimize2, Plus, RefreshCw, Sparkles } from 'lucide-react';
 import { PageHeader, SectionHeader } from '@/components/shared/PageHeader';
 import { EmptyState, ErrorState, LoadingState } from '@/components/shared/QueryState';
 import { Tabs } from '@/components/shared/Segmented';
@@ -285,9 +285,6 @@ export const ReconstructionModule: React.FC<{ workspace: CaseWorkspace }> = ({ w
                       aria-label="Next stage"
                     >
                       <ChevronRight className="size-3.5" />
-                    </button>
-                    <button onClick={togglePlay} disabled={stages.length < 2} className={smallButtonClass}>
-                      {playing ? <Pause className="size-3.5" /> : <Play className="size-3.5" />} {playing ? 'Pause' : 'Play stages'}
                     </button>
                     <div className="ml-auto flex items-center gap-1.5">
                       <button onClick={() => setDialog('stage')} className={smallButtonClass}>
