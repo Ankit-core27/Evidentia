@@ -13,7 +13,7 @@ export const PERSON_URL = `${SCENE_ROOT}/library/person.glb`;
 
 /** Where a rider sits, in the vehicle's frame: the pose and the offset of the figure's origin. */
 export const RIDER: Record<string, { pose: string; offset: [number, number, number] }> = {
-  bicycle: { pose: 'cycling', offset: [-0.05, 0, 0] },
+  bicycle: { pose: 'cycling', offset: [-0.37, 0, 0] },
   motorcycle: { pose: 'riding', offset: [-0.1, 0, 0] }
 };
 

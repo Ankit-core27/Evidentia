@@ -117,45 +117,51 @@ export const POSES: Record<string, Pose> = {
     },
     drop: -0.813
   },
-  /** Saddle top 0.95 m; pedals at 3 and 9 o'clock on a crank centred at (0.17, 0.28); hands on bars at (0.55, 1.0). */
+  /**
+   * On bicycle.glb (a roadster) with the figure's origin 0.37 m behind the bicycle's: sitting
+   * on the saddle (top 1.0 m), hands on the grips, right pedal forward and up, left at the bottom.
+   */
   cycling: {
     joints: {
-      pelvis: [0, 0, -0.407],
-      spine: [0, 0, -0.1],
-      neck: [0, 0, 0.3],
+      pelvis: [0, 0, -0.35],
+      spine: [0, 0, -0.186],
+      neck: [0, 0, 0.286],
       head: [0, 0, 0.25],
-      hip_l: [0, 0, 1.295],
-      knee_l: [0, 0, -0.951],
-      ankle_l: [0, 0, -0.036],
-      hip_r: [0, 0, 0.974],
-      knee_r: [0, 0, -1.243],
-      ankle_r: [0, 0, 0.329],
-      shoulder_l: [-0.097, 0, 1.001],
-      elbow_l: [0, 0, 0.2],
-      shoulder_r: [0.097, 0, 1.001],
-      elbow_r: [0, 0, 0.2]
+      hip_l: [0, 0, 0.728],
+      knee_l: [0, 0, -0.417],
+      ankle_l: [0, 0, -0.311],
+      hip_r: [0, 0, 1.35],
+      knee_r: [0, 0, -0.91],
+      ankle_r: [0, 0, -0.14],
+      shoulder_l: [0.124, 0, 0.794],
+      elbow_l: [0, 0, 0.25],
+      shoulder_r: [-0.124, 0, 0.794],
+      elbow_r: [0, 0, 0.25]
     },
-    drop: 0.152
+    drop: 0.209
   },
-  /** Motorcycle: seat 0.8 m, hands on bars at (0.6, 0.97), feet on pegs at (0.16, 0.33). */
+  /**
+   * On motorcycle.glb with the figure's origin 0.1 m behind the motorcycle's: on the seat (top
+   * 0.8 m) against the tank, hands on the grips, feet on the pegs, knees in against the tank.
+   */
   riding: {
     joints: {
       pelvis: [0, 0, -0.22],
       spine: [0, 0, -0.25],
       neck: [0, 0, 0.42],
       head: [0, 0, 0.1],
-      hip_l: [0.2, 0, 1.204],
-      knee_l: [0, 0, -1.659],
-      ankle_l: [0, 0, 0.657],
-      hip_r: [-0.2, 0, 1.204],
-      knee_r: [0, 0, -1.659],
-      ankle_r: [0, 0, 0.657],
-      shoulder_l: [0.418, 0, 1.029],
-      elbow_l: [0, 0, 0.25],
-      shoulder_r: [-0.418, 0, 1.029],
-      elbow_r: [0, 0, 0.25]
+      hip_l: [0.133, 0, 1.166],
+      knee_l: [0, 0, -1.714],
+      ankle_l: [0, 0, 0.779],
+      hip_r: [-0.133, 0, 1.166],
+      knee_r: [0, 0, -1.714],
+      ankle_r: [0, 0, 0.779],
+      shoulder_l: [0.334, 0, 0.572],
+      elbow_l: [0, 0, 0.931],
+      shoulder_r: [-0.334, 0, 0.572],
+      elbow_r: [0, 0, 0.931]
     },
-    drop: 0.028
+    drop: 0.024
   },
   /** At the wheel: car floor at y = 0, seat cushion 0.2 m above it, hands at 9 and 3 on a wheel at (0.45, 0.8). */
   driving: {
