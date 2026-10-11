@@ -189,7 +189,7 @@ export const ReviewModule: React.FC<{ workspace: CaseWorkspace }> = ({ workspace
       .map((section) => (
         <section key={section.type} className="space-y-2" aria-label={section.label}>
           <SectionHeader title={section.label} count={section.items.length} />
-          <div className="rounded-md border border-line divide-y divide-line">{section.items.map((item) => renderItem(item))}</div>
+          <div className="rounded-md border border-line bg-surface divide-y divide-line">{section.items.map((item) => renderItem(item))}</div>
         </section>
       ));
 

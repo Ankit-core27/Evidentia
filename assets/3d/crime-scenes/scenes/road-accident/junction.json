@@ -1,0 +1,737 @@
+{
+  "id": "road-accident/junction",
+  "title": "Ring Road and 5th Avenue junction, Sector 12",
+  "units": "m",
+  "axes": "x east, y up, z south; origin at the junction centre; headings in radians, 0 facing east, pi/2 facing north",
+  "location": {
+    "lat": 12.9716,
+    "lng": 77.5946
+  },
+  "models": {
+    "hatchback": "/3d/crime-scenes/library/hatchback.glb",
+    "delivery-van": "/3d/crime-scenes/library/delivery-van.glb"
+  },
+  "roads": [
+    {
+      "name": "Ring Road",
+      "axis": "x",
+      "from": -70,
+      "to": 70,
+      "lanes_each_way": 1,
+      "lane_width": 3.5
+    },
+    {
+      "name": "5th Avenue",
+      "axis": "z",
+      "from": -50,
+      "to": 50,
+      "lanes_each_way": 1,
+      "lane_width": 3.5
+    }
+  ],
+  "junction": {
+    "corner_radius": 3,
+    "kerb_height": 0.15,
+    "stop_line": 8,
+    "crossing": [
+      4.4,
+      7.4
+    ]
+  },
+  "static": [
+    {
+      "kind": "signal",
+      "position": [
+        -8.4,
+        0.15,
+        -4.0
+      ],
+      "heading": 3.1416,
+      "label": "Signal, Ring Road eastbound"
+    },
+    {
+      "kind": "signal",
+      "position": [
+        8.4,
+        0.15,
+        4.0
+      ],
+      "heading": 0,
+      "label": "Signal, Ring Road westbound"
+    },
+    {
+      "kind": "signal",
+      "position": [
+        -4.0,
+        0.15,
+        8.4
+      ],
+      "heading": -1.5708,
+      "label": "Signal, 5th Avenue northbound"
+    },
+    {
+      "kind": "signal",
+      "position": [
+        4.0,
+        0.15,
+        -8.4
+      ],
+      "heading": 1.5708,
+      "label": "Signal, 5th Avenue southbound"
+    },
+    {
+      "kind": "streetlight",
+      "position": [
+        -56,
+        0.15,
+        -4.2
+      ],
+      "heading": -1.5708
+    },
+    {
+      "kind": "streetlight",
+      "position": [
+        -32,
+        0.15,
+        -4.2
+      ],
+      "heading": -1.5708
+    },
+    {
+      "kind": "streetlight",
+      "position": [
+        -12,
+        0.15,
+        -4.2
+      ],
+      "heading": -1.5708
+    },
+    {
+      "kind": "streetlight",
+      "position": [
+        12,
+        0.15,
+        -4.2
+      ],
+      "heading": -1.5708
+    },
+    {
+      "kind": "streetlight",
+      "position": [
+        32,
+        0.15,
+        -4.2
+      ],
+      "heading": -1.5708
+    },
+    {
+      "kind": "streetlight",
+      "position": [
+        56,
+        0.15,
+        -4.2
+      ],
+      "heading": -1.5708
+    },
+    {
+      "kind": "streetlight",
+      "position": [
+        -44,
+        0.15,
+        4.2
+      ],
+      "heading": 1.5708
+    },
+    {
+      "kind": "streetlight",
+      "position": [
+        -22,
+        0.15,
+        4.2
+      ],
+      "heading": 1.5708
+    },
+    {
+      "kind": "streetlight",
+      "position": [
+        22,
+        0.15,
+        4.2
+      ],
+      "heading": 1.5708
+    },
+    {
+      "kind": "streetlight",
+      "position": [
+        44,
+        0.15,
+        4.2
+      ],
+      "heading": 1.5708
+    },
+    {
+      "kind": "streetlight",
+      "position": [
+        -4.2,
+        0.15,
+        -40
+      ],
+      "heading": 0
+    },
+    {
+      "kind": "streetlight",
+      "position": [
+        -4.2,
+        0.15,
+        -18
+      ],
+      "heading": 0
+    },
+    {
+      "kind": "streetlight",
+      "position": [
+        -4.2,
+        0.15,
+        18
+      ],
+      "heading": 0
+    },
+    {
+      "kind": "streetlight",
+      "position": [
+        -4.2,
+        0.15,
+        40
+      ],
+      "heading": 0
+    },
+    {
+      "kind": "streetlight",
+      "position": [
+        4.2,
+        0.15,
+        -28
+      ],
+      "heading": 3.1416
+    },
+    {
+      "kind": "streetlight",
+      "position": [
+        4.2,
+        0.15,
+        28
+      ],
+      "heading": 3.1416
+    },
+    {
+      "kind": "streetlight",
+      "position": [
+        6.2,
+        0.15,
+        -6.2
+      ],
+      "heading": -2.3562
+    },
+    {
+      "kind": "streetlight",
+      "position": [
+        -6.2,
+        0.15,
+        -6.2
+      ],
+      "heading": -0.7854
+    },
+    {
+      "kind": "streetlight",
+      "position": [
+        -6.2,
+        0.15,
+        6.2
+      ],
+      "heading": 0.7854
+    },
+    {
+      "kind": "streetlight",
+      "position": [
+        6.2,
+        0.15,
+        6.2
+      ],
+      "heading": 2.3562
+    },
+    {
+      "kind": "tree",
+      "position": [
+        -50,
+        0.15,
+        -7.2
+      ],
+      "scale": 1
+    },
+    {
+      "kind": "tree",
+      "position": [
+        -42,
+        0.15,
+        -7.2
+      ],
+      "scale": 1
+    },
+    {
+      "kind": "tree",
+      "position": [
+        -24,
+        0.15,
+        -7.2
+      ],
+      "scale": 1
+    },
+    {
+      "kind": "tree",
+      "position": [
+        -18,
+        0.15,
+        -7.2
+      ],
+      "scale": 1
+    },
+    {
+      "kind": "tree",
+      "position": [
+        20,
+        0.15,
+        -7.2
+      ],
+      "scale": 1
+    },
+    {
+      "kind": "tree",
+      "position": [
+        28,
+        0.15,
+        -7.2
+      ],
+      "scale": 1
+    },
+    {
+      "kind": "tree",
+      "position": [
+        46,
+        0.15,
+        -7.2
+      ],
+      "scale": 1
+    },
+    {
+      "kind": "tree",
+      "position": [
+        -52,
+        0.15,
+        7.2
+      ],
+      "scale": 0.9
+    },
+    {
+      "kind": "tree",
+      "position": [
+        -30,
+        0.15,
+        7.2
+      ],
+      "scale": 0.9
+    },
+    {
+      "kind": "tree",
+      "position": [
+        -16,
+        0.15,
+        7.2
+      ],
+      "scale": 0.9
+    },
+    {
+      "kind": "tree",
+      "position": [
+        16,
+        0.15,
+        7.2
+      ],
+      "scale": 0.9
+    },
+    {
+      "kind": "tree",
+      "position": [
+        34,
+        0.15,
+        7.2
+      ],
+      "scale": 0.9
+    },
+    {
+      "kind": "tree",
+      "position": [
+        52,
+        0.15,
+        7.2
+      ],
+      "scale": 0.9
+    },
+    {
+      "kind": "tree",
+      "position": [
+        -7.2,
+        0.15,
+        -34
+      ],
+      "scale": 1.1
+    },
+    {
+      "kind": "tree",
+      "position": [
+        -7.2,
+        0.15,
+        -24
+      ],
+      "scale": 1.1
+    },
+    {
+      "kind": "tree",
+      "position": [
+        -7.2,
+        0.15,
+        26
+      ],
+      "scale": 1.1
+    },
+    {
+      "kind": "tree",
+      "position": [
+        -7.2,
+        0.15,
+        36
+      ],
+      "scale": 1.1
+    },
+    {
+      "kind": "tree",
+      "position": [
+        7.2,
+        0.15,
+        -36
+      ],
+      "scale": 0.95
+    },
+    {
+      "kind": "tree",
+      "position": [
+        7.2,
+        0.15,
+        -16
+      ],
+      "scale": 0.95
+    },
+    {
+      "kind": "tree",
+      "position": [
+        7.2,
+        0.15,
+        16
+      ],
+      "scale": 0.95
+    },
+    {
+      "kind": "tree",
+      "position": [
+        7.2,
+        0.15,
+        34
+      ],
+      "scale": 0.95
+    },
+    {
+      "kind": "building",
+      "position": [
+        17.25,
+        0.15,
+        -17.25
+      ],
+      "size": [
+        13.5,
+        10.0,
+        13.5
+      ],
+      "heading": -1.5708,
+      "floors": 3,
+      "colour": "#e8d9a8"
+    },
+    {
+      "kind": "building",
+      "position": [
+        32.25,
+        0.15,
+        -16.25
+      ],
+      "size": [
+        15.5,
+        13.2,
+        11.5
+      ],
+      "heading": -1.5708,
+      "floors": 4,
+      "colour": "#c9c6bd"
+    },
+    {
+      "kind": "building",
+      "position": [
+        49.25,
+        0.15,
+        -15.25
+      ],
+      "size": [
+        17.5,
+        6.8,
+        9.5
+      ],
+      "heading": -1.5708,
+      "floors": 2,
+      "colour": "#e6b996"
+    },
+    {
+      "kind": "building",
+      "position": [
+        16.25,
+        0.15,
+        -33.25
+      ],
+      "size": [
+        11.5,
+        10.0,
+        17.5
+      ],
+      "heading": 3.1416,
+      "floors": 3,
+      "colour": "#c8d8b8"
+    },
+    {
+      "kind": "building",
+      "position": [
+        -17.25,
+        0.15,
+        -17.25
+      ],
+      "size": [
+        13.5,
+        6.8,
+        13.5
+      ],
+      "heading": -1.5708,
+      "floors": 2,
+      "colour": "#efe4cc"
+    },
+    {
+      "kind": "building",
+      "position": [
+        -32.25,
+        0.15,
+        -15.75
+      ],
+      "size": [
+        15.5,
+        10.0,
+        10.5
+      ],
+      "heading": -1.5708,
+      "floors": 3,
+      "colour": "#b9c6cf"
+    },
+    {
+      "kind": "building",
+      "position": [
+        -49.25,
+        0.15,
+        -15.25
+      ],
+      "size": [
+        17.5,
+        6.8,
+        9.5
+      ],
+      "heading": -1.5708,
+      "floors": 2,
+      "colour": "#e3a98f"
+    },
+    {
+      "kind": "building",
+      "position": [
+        -16.25,
+        0.15,
+        -33.25
+      ],
+      "size": [
+        11.5,
+        13.2,
+        17.5
+      ],
+      "heading": 0,
+      "floors": 4,
+      "colour": "#ece9e2"
+    },
+    {
+      "kind": "building",
+      "position": [
+        18.25,
+        0.15,
+        16.25
+      ],
+      "size": [
+        15.5,
+        10.0,
+        11.5
+      ],
+      "heading": 1.5708,
+      "floors": 3,
+      "colour": "#ecc6a4"
+    },
+    {
+      "kind": "building",
+      "position": [
+        35.25,
+        0.15,
+        15.25
+      ],
+      "size": [
+        17.5,
+        6.8,
+        9.5
+      ],
+      "heading": 1.5708,
+      "floors": 2,
+      "colour": "#eedc8f"
+    },
+    {
+      "kind": "building",
+      "position": [
+        16.25,
+        0.15,
+        32.25
+      ],
+      "size": [
+        11.5,
+        6.8,
+        19.5
+      ],
+      "heading": 3.1416,
+      "floors": 2,
+      "colour": "#b8c9b4"
+    },
+    {
+      "kind": "building",
+      "position": [
+        52.25,
+        0.15,
+        17.25
+      ],
+      "size": [
+        15.5,
+        13.2,
+        13.5
+      ],
+      "heading": 1.5708,
+      "floors": 4,
+      "colour": "#d6d2c8"
+    },
+    {
+      "kind": "building",
+      "position": [
+        -15.25,
+        0.15,
+        15.25
+      ],
+      "size": [
+        9.5,
+        3.6,
+        9.5
+      ],
+      "heading": 1.5708,
+      "floors": 1,
+      "colour": "#f1e7d0",
+      "sign": "GENERAL STORE",
+      "label": "Corner store, south-west corner"
+    },
+    {
+      "kind": "building",
+      "position": [
+        -29.25,
+        0.15,
+        16.25
+      ],
+      "size": [
+        17.5,
+        10.0,
+        11.5
+      ],
+      "heading": 1.5708,
+      "floors": 3,
+      "colour": "#efe0c2"
+    },
+    {
+      "kind": "building",
+      "position": [
+        -47.25,
+        0.15,
+        15.25
+      ],
+      "size": [
+        17.5,
+        6.8,
+        9.5
+      ],
+      "heading": 1.5708,
+      "floors": 2,
+      "colour": "#b7cad9"
+    },
+    {
+      "kind": "building",
+      "position": [
+        -16.25,
+        0.15,
+        31.25
+      ],
+      "size": [
+        11.5,
+        10.0,
+        21.5
+      ],
+      "heading": 0,
+      "floors": 3,
+      "colour": "#e9c9cc"
+    },
+    {
+      "kind": "skid-marks",
+      "from": [
+        -9.4,
+        0,
+        -1.75
+      ],
+      "to": [
+        -1,
+        0,
+        -1.75
+      ],
+      "track": 1.52,
+      "label": "Hatchback skid marks, 8.4 m"
+    }
+  ],
+  "camera": {
+    "position": [
+      -50,
+      24,
+      8
+    ],
+    "target": [
+      -9,
+      0,
+      2
+    ]
+  }
+}

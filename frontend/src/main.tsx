@@ -4,6 +4,7 @@ import {createBrowserRouter, RouterProvider} from 'react-router-dom';
 import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
 import {AppLayout} from '@/components/layout/AppLayout';
 import {MacroLayout} from '@/components/layout/MacroLayout';
+import {IntroSplash} from '@/components/layout/IntroSplash';
 import {DashboardPage} from '@/routes/DashboardPage';
 import {CasesPage} from '@/routes/CasesPage';
 import {CaseWorkspacePage} from '@/routes/CaseWorkspacePage';
@@ -55,6 +56,7 @@ enableMocks().then(() => {
     <StrictMode>
       <QueryClientProvider client={queryClient}>
         <RouterProvider router={router} />
+        <IntroSplash />
       </QueryClientProvider>
     </StrictMode>,
   );

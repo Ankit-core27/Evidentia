@@ -16,9 +16,32 @@ import { SceneObjectPanel } from './SceneObjectPanel';
 import { SchematicSceneView } from './SchematicSceneView';
 
 const PLAYBACK_MS = 2500;
+// The 3D viewers load only when the tab opens, so three.js stays out of the main bundle.
+const CaseSceneViewer = React.lazy(() =>
+  import('@/features/crime-scene/case-scene/CaseSceneViewer').then((module) => ({ default: module.CaseSceneViewer }))
+);
 const CrimeSceneDemo = React.lazy(() =>
   import('@/features/crime-scene/CrimeSceneDemo').then((module) => ({ default: module.CrimeSceneDemo }))
 );
+
+/** Falls back to the 2D plan when WebGL or a 3D asset fails. */
+class SceneErrorBoundary extends React.Component<{ fallback: React.ReactNode; children: React.ReactNode }, { error: Error | null }> {
+  state = { error: null as Error | null };
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+  render() {
+    if (!this.state.error) return this.props.children;
+    return (
+      <div className="relative h-full">
+        {this.props.fallback}
+        <p className="absolute left-2 top-2 rounded bg-canvas/90 px-2 py-1 text-xs text-ink-soft">
+          The 3D view couldn’t start ({this.state.error.message}), so this is the plan.
+        </p>
+      </div>
+    );
+  }
+}
 
 /**
  * Reconstruction scenarios and their stages. The active scenario, stage and scene object
@@ -32,7 +55,7 @@ export const ReconstructionModule: React.FC<{ workspace: CaseWorkspace }> = ({ w
   const [mode, setMode] = useState<'stages' | 'compare'>('stages');
   const [dialog, setDialog] = useState<'scenario' | 'stage' | null>(null);
   const [playing, setPlaying] = useState(false);
-  const [viewerKind, setViewerKind] = useState<'demo' | 'stage'>('demo');
+  const [viewerKind, setViewerKind] = useState<'3d' | 'plan' | 'demo'>('3d');
 
   const scenarios = listQuery.data ?? [];
   const detail = detailQuery.data?.case_id === caseId ? detailQuery.data : undefined;
@@ -65,6 +88,10 @@ export const ReconstructionModule: React.FC<{ workspace: CaseWorkspace }> = ({ w
   if (listQuery.isError) return <ErrorState error={listQuery.error} onRetry={() => listQuery.refetch()} />;
 
   const sceneObject = stage?.scene_objects.find((o) => o.id === sceneObjectId);
+  const plan =
+    detail && stage ? (
+      <SchematicSceneView reconstruction={detail} stageId={stage.id} selectedSceneObjectId={sceneObjectId} onSelectSceneObject={selectSceneObject} />
+    ) : null;
   const eventsOf = (ids: number[]) =>
     ids.map((id) => workspace.events.find((e) => e.id === id)).filter((e): e is NonNullable<typeof e> => !!e);
 
@@ -195,22 +222,29 @@ export const ReconstructionModule: React.FC<{ workspace: CaseWorkspace }> = ({ w
                       value={viewerKind}
                       onChange={setViewerKind}
                       options={[
-                        { value: 'demo', label: '3D' },
-                        { value: 'stage', label: 'Schematic' }
+                        { value: '3d', label: '3D scene' },
+                        { value: 'plan', label: 'Plan' },
+                        { value: 'demo', label: 'Engine demo' }
                       ]}
                     />
-                    <div className="h-[340px] sm:h-[460px] rounded-md overflow-hidden border border-line">
-                      {viewerKind === 'demo' ? (
+                    <div className="h-[420px] sm:h-[560px] rounded-md overflow-hidden border border-line">
+                      {viewerKind === '3d' && (
+                        <SceneErrorBoundary fallback={plan}>
+                          <React.Suspense fallback={<LoadingState label="Loading 3D scene…" />}>
+                            <CaseSceneViewer
+                              reconstruction={detail}
+                              stageId={stage.id}
+                              selectedSceneObjectId={sceneObjectId}
+                              onSelectSceneObject={selectSceneObject}
+                            />
+                          </React.Suspense>
+                        </SceneErrorBoundary>
+                      )}
+                      {viewerKind === 'plan' && plan}
+                      {viewerKind === 'demo' && (
                         <React.Suspense fallback={<LoadingState label="Loading 3D scene…" />}>
                           <CrimeSceneDemo />
                         </React.Suspense>
-                      ) : (
-                        <SchematicSceneView
-                          reconstruction={detail}
-                          stageId={stage.id}
-                          selectedSceneObjectId={sceneObjectId}
-                          onSelectSceneObject={selectSceneObject}
-                        />
                       )}
                     </div>
                   </div>

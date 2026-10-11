@@ -1,10 +1,9 @@
 // The contract between the frontend track and the 3D track (docs/PLAN.md: features/crime-scene).
 //
-// The Reconstruction module renders a scene viewer with these props. Until the 3D track's
-// React Three Fiber viewer lands, SchematicSceneView (a top-down 2D plot) stands in for it.
-// To plug the 3D viewer in, export a component with this signature from features/crime-scene
-// and swap it into SceneHost. It can save placements and annotations with useSaveSceneObjects,
-// useAnnotations and useCreateAnnotation (hooks/useReconstruction.ts).
+// The Reconstruction module renders a scene viewer with these props: the 3D viewer
+// (features/crime-scene/case-scene/CaseSceneViewer) or the top-down 2D plan
+// (SchematicSceneView). Viewers save annotations with useCreateAnnotation and placements
+// with useSaveSceneObjects (hooks/useReconstruction.ts).
 import { Id, ReconstructionDetail } from '@/types/api';
 
 export interface SceneViewerProps {

@@ -9,7 +9,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "lint": "tsc --noEmit",
-    "gen:api": "openapi-typescript http://localhost:8000/openapi.json -o src/lib/api-types.ts",
+    "gen:api": "openapi-typescript http://localhost:8000/openapi.json --default-non-nullable false -o src/lib/api-types.ts",
+    "build:3d-models": "node scripts/crime-scene-models/build.mjs",
     "postinstall": "npm --prefix ../packages/scene-engine install --no-audit --no-fund && npm --prefix ../packages/scene-engine run build && npm --prefix ../packages/scene-planner install --no-audit --no-fund && npm --prefix ../packages/scene-planner run build"
   },
   "dependencies": {
@@ -20,6 +21,7 @@
     "@forensix/scene-planner": "file:../packages/scene-planner",
     "@react-three/drei": "^10.7.9",
     "@react-three/fiber": "^9.8.1",
+    "@react-three/postprocessing": "^3.1.3",
     "@tailwindcss/vite": "^4.1.14",
     "@tanstack/react-query": "^5.104.1",
     "@vitejs/plugin-react": "^5.0.4",

@@ -1,9 +1,8 @@
-import type { ElementType } from 'react';
-import { File, FileText, Image, MessageSquareQuote, Stethoscope, Video, Volume2 } from 'lucide-react';
+import { File, FileText, Image, MessageSquareQuote, Stethoscope, Video, Volume2, type LucideIcon } from 'lucide-react';
 import { EvidenceType } from '@/types/api';
 
 /** One icon per evidence type. They stay neutral: the type label carries the meaning, colour is kept for status. */
-export const EVIDENCE_ICONS: Record<EvidenceType, { icon: ElementType }> = {
+export const EVIDENCE_ICONS: Record<EvidenceType, { icon: LucideIcon }> = {
   document: { icon: FileText },
   statement: { icon: MessageSquareQuote },
   photo: { icon: Image },

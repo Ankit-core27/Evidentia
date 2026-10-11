@@ -19,7 +19,7 @@ const Figures: React.FC<{ dashboard: Dashboard }> = ({ dashboard: d }) => {
   return (
     <section
       aria-label="Figures"
-      className="grid grid-cols-1 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1fr)] rounded-md border border-line divide-y md:divide-y-0 md:divide-x divide-line"
+      className="grid grid-cols-1 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1fr)] rounded-md border border-line bg-surface divide-y md:divide-y-0 md:divide-x divide-line"
     >
       <div className="p-4 space-y-3" data-testid="metric-total">
         <div className="flex items-baseline justify-between gap-3">
@@ -67,10 +67,10 @@ const NeedsAttention: React.FC = () => {
       {alerts.isPending && <LoadingState label="Loading alerts…" />}
       {alerts.isError && <ErrorState error={alerts.error} onRetry={() => alerts.refetch()} />}
       {alerts.data?.length === 0 && (
-        <p className="px-3 py-6 rounded-md border border-line text-body text-ink-muted">Nothing is waiting on you.</p>
+        <p className="px-3 py-6 rounded-md border border-line bg-surface text-body text-ink-muted">Nothing is waiting on you.</p>
       )}
       {!!alerts.data?.length && (
-        <ul className="rounded-md border border-line divide-y divide-line">
+        <ul className="rounded-md border border-line bg-surface divide-y divide-line">
           {alerts.data.map((alert) => (
             <li key={alert.id}>
               <Link to={alertPath(alert)} className="group flex items-start gap-3 px-3 py-3 hover:bg-surface transition-colors">
@@ -97,7 +97,7 @@ const Investigators: React.FC<{ dashboard: Dashboard }> = ({ dashboard }) => {
   return (
     <section className="space-y-2" aria-label="Investigators">
       <SectionHeader title="Investigators" count={investigators.length} as="h2" />
-      <div className="rounded-md border border-line overflow-x-auto">
+      <div className="rounded-md border border-line bg-surface overflow-x-auto">
         <table className="w-full text-left">
           <thead>
             <tr className="text-xs text-ink-muted border-b border-line">

@@ -71,7 +71,7 @@ export const EvidenceModule: React.FC<{ caseId: Id }> = ({ caseId }) => {
               {visible.length === 0 ? (
                 <EmptyState title="Nothing matches this filter" />
               ) : (
-                <ul className="rounded-md border border-line divide-y divide-line">
+                <ul className="rounded-md border border-line bg-surface divide-y divide-line">
                   {visible.map((item) => (
                     <li key={item.id}>
                       <EvidenceRow item={item} onOpen={() => open(item.id)} />

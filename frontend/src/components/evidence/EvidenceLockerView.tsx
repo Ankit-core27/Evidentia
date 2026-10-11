@@ -61,7 +61,7 @@ export const EvidenceLockerView: React.FC = () => {
       )}
 
       {!!query.data?.length && (
-        <ul className="rounded-md border border-line divide-y divide-line">
+        <ul className="rounded-md border border-line bg-surface divide-y divide-line">
           {query.data.map((item) => (
             <li key={item.id}>
               <EvidenceRow

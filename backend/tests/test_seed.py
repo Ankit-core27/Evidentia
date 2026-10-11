@@ -49,7 +49,7 @@ EXPECTED_COUNTS = {
     ReconstructionStage: 5,
     SceneObject: 10,
     SceneAnnotation: 3,
-    EvidenceLink: 32,
+    EvidenceLink: 36,
     # One upload per evidence item, plus a view, two reviews and a status change.
     AuditLog: 16,
 }
