@@ -383,6 +383,26 @@ function simplify(pos, idx, target) {
   }
   const version = new Int32Array(nv);
   const alive = new Uint8Array(nv).fill(1);
+  // Surface nets can join two sheets at one vertex; collapsing near such a vertex tears
+  // the mesh, so lock every vertex whose faces don't form a single closed fan.
+  const locked = new Uint8Array(nv);
+  for (let v = 0; v < nv; v += 1) {
+    const next = new Map();
+    for (const f of vf[v]) {
+      if (!faceAlive[f]) continue;
+      const k = [0, 1, 2].find((i) => F[3 * f + i] === v);
+      next.set(F[3 * f + ((k + 1) % 3)], F[3 * f + ((k + 2) % 3)]);
+    }
+    let steps = 0;
+    const start = next.keys().next().value;
+    let u = start;
+    do {
+      u = next.get(u);
+      steps += 1;
+    } while (u !== undefined && u !== start && steps <= next.size);
+    if (u !== start || steps !== next.size) locked[v] = 1;
+  }
+  for (let v = 0; v < nv; v += 1) if (locked[v] === 1) for (const f of vf[v]) for (let k = 0; k < 3; k += 1) if (!locked[F[3 * f + k]]) locked[F[3 * f + k]] = 2;
   const qerr = (q, x, y, z) =>
     q[0] * x * x + 2 * q[1] * x * y + 2 * q[2] * x * z + 2 * q[3] * x + q[4] * y * y + 2 * q[5] * y * z + 2 * q[6] * y + q[7] * z * z + 2 * q[8] * z + q[9];
   const qs = new Float64Array(10);
@@ -457,7 +477,7 @@ function simplify(pos, idx, target) {
   const n1 = new Float64Array(6);
   while (nf > target && heap.length) {
     const [, a, b, va, vb] = pop();
-    if (!alive[a] || !alive[b] || version[a] !== va || version[b] !== vb) continue;
+    if (!alive[a] || !alive[b] || version[a] !== va || version[b] !== vb || locked[a] || locked[b]) continue;
     const na = neighbours(a);
     if (!na.has(b)) continue;
     // Link condition: the edge's two wings must be the only shared neighbours.
@@ -588,16 +608,19 @@ const smooth01 = (t) => {
 
 /**
  * One side of a field split at the pivot J, across the plane normal to the axis e. The
- * parent keeps t = (p - J).e < reach and the child t > -reach, each ending in a rounded cut.
- * Across the overlap each side sinks by `sink` where the other takes over, so the rest pose
- * shows one seamless surface and a bent joint still stays closed.
+ * parent keeps t = (p - J).e < 0 and the child t > 0, plus an overlap past the pivot: a slab
+ * up to `reach`, or, with `ball`, everything within that radius of J, so both sides end in
+ * the same spherical cap and a bent joint turns like a ball in its socket. Across the
+ * overlap each side sinks by `sink` where the other takes over, so the rest pose shows one
+ * seamless surface.
  */
-function split(field, J, e, side, { reach = 0.04, sink = 0.002, blend = 0.02, round = 0.012 } = {}) {
+function split(field, J, e, side, { reach = 0.04, ball = 0, sink = 0.002, blend = 0.02, round = 0.012 } = {}) {
   const sg = side === 'parent' ? 1 : -1;
   const make = (base, depth) => (x, y, z) => {
     const t = sg * ((x - J[0]) * e[0] + (y - J[1]) * e[1] + (z - J[2]) * e[2]);
     const d = base(x, y, z) + depth * smooth01(t / blend + 0.5);
-    return -sminK(-d, reach - t, round);
+    const keep = ball ? Math.min(t, Math.hypot(x - J[0], y - J[1], z - J[2]) - ball) : t - reach;
+    return -sminK(-d, -keep, round);
   };
   const f = make(field, sink);
   f.plain = make(field.plain ?? field, 0);
@@ -657,9 +680,9 @@ const neckColumn = () =>
   );
 
 /** The shirt over the trapezius, from the collar to the shoulder point (s = 1 right, -1 left). */
-const shoulderLine = (s) => tube([-0.042, 1.448, 0.045 * s], [-0.025, 1.414, 0.168 * s], FWD, { front: 0.046, back: 0.052, lat: 0.034, round: 0.03 });
+const shoulderLine = (s) => tube([-0.042, 1.45, 0.045 * s], [-0.024, 1.405, 0.162 * s], FWD, { front: 0.046, back: 0.052, lat: [[0, 0.034], [0.12, 0.03]], round: 0.03 });
 /** The shirt over the deltoid; the chest and the sleeve share it so the shoulder reads as one. */
-const deltoid = (s) => ellipsoid([-0.015, 1.393, 0.186 * s], [0.052, 0.048, 0.049]);
+const deltoid = (s) => ellipsoid([-0.014, 1.388, 0.19 * s], [0.05, 0.05, 0.046]);
 
 /** The T-shirt body, hem to collar, including the shoulder line up to the sleeves. */
 function shirtField() {
@@ -667,13 +690,19 @@ function shirtField() {
     du: [[0, -0.004], [0.3, 0], [0.45, -0.008], [0.565, -0.035]],
     front: [[0, 0.111], [0.085, 0.107], [0.17, 0.104], [0.25, 0.106], [0.33, 0.113], [0.39, 0.116], [0.44, 0.111], [0.49, 0.097], [0.53, 0.078], [0.565, 0.052]],
     back: [[0, 0.124], [0.06, 0.112], [0.12, 0.099], [0.2, 0.095], [0.3, 0.102], [0.38, 0.108], [0.45, 0.106], [0.5, 0.098], [0.54, 0.085], [0.565, 0.065]],
-    lat: [[0, 0.181], [0.06, 0.175], [0.13, 0.165], [0.2, 0.16], [0.3, 0.163], [0.38, 0.168], [0.43, 0.169], [0.48, 0.158], [0.52, 0.132], [0.565, 0.085]],
+    lat: [[0, 0.181], [0.06, 0.175], [0.13, 0.165], [0.2, 0.16], [0.3, 0.163], [0.38, 0.167], [0.43, 0.164], [0.47, 0.151], [0.5, 0.134], [0.53, 0.112], [0.565, 0.08]],
     n: [[0, 2.4], [0.35, 2.6], [0.565, 2.2]],
     round: 0.006
   });
   const trap = shoulderLine;
   const blade = (s) => ellipsoid([-0.07, 1.34, 0.075 * s], [0.045, 0.07, 0.06]);
-  const shirt = union(0.035, body, ...sym(trap), ...sym(blade), ...sym(deltoid));
+  // Soft wrinkles where the shirt gathers above the hips, strongest at the sides and back.
+  const gather = (x, y, z) => {
+    const band = smooth01((y - 0.95) / 0.04) * smooth01((1.14 - y) / 0.05);
+    const side = smooth01((Math.abs(z) - 0.08) / 0.07) * (x < 0.04 ? 1 : smooth01((0.1 - x) / 0.06));
+    return 0.0018 * band * side * Math.sin(((y - 0.95) / 0.048) * Math.PI * 2 + z * 9);
+  };
+  const shirt = union(0.035, displace(body, gather), ...sym(blade), ...sym((s) => union(0.045, trap(s), deltoid(s))));
   const hole = inter(0, cone(...NECK_AXIS, 0.066, 0.066), plane([0, 1.415, 0], [0, -1, 0]));
   return { shirt: cut(0.006, shirt, hole), solid: shirt };
 }
@@ -712,16 +741,16 @@ const displace = (f, ...bumps) => (x, y, z) => {
 };
 
 /** Hairline height around the head, by azimuth from the front (0) to the nape (pi). */
-const hairline = curve([[0, 1.676], [0.45, 1.682], [0.75, 1.672], [1.05, 1.63], [1.25, 1.594], [1.4, 1.598], [1.55, 1.628], [1.85, 1.628], [2.15, 1.602], [2.5, 1.57], [3.15, 1.556]]);
+const hairline = curve([[0, 1.67], [0.4, 1.675], [0.75, 1.663], [1.05, 1.638], [1.25, 1.606], [1.4, 1.604], [1.55, 1.628], [1.85, 1.63], [2.15, 1.604], [2.5, 1.572], [3.15, 1.558]]);
 const hairAt = (x, z) => hairline(Math.abs(Math.atan2(z, x + 0.012)));
 
 /** Cranium and face masses before the features; the hair follows this. */
 function skullField() {
   const face = tube([0, 1.488, 0], [0, 1.66, 0], FWD, {
-    front: [[0, 0.07], [0.012, 0.083], [0.03, 0.084], [0.05, 0.087], [0.07, 0.087], [0.095, 0.083], [0.118, 0.077], [0.138, 0.085], [0.172, 0.08]],
+    front: [[0, 0.072], [0.012, 0.086], [0.03, 0.085], [0.05, 0.087], [0.07, 0.087], [0.095, 0.083], [0.118, 0.077], [0.138, 0.085], [0.172, 0.08]],
     back: 0.05,
     lat: [[0, 0.022], [0.015, 0.036], [0.035, 0.05], [0.06, 0.057], [0.1, 0.065], [0.13, 0.066], [0.172, 0.064]],
-    n: 2.3,
+    n: [[0, 2.2], [0.04, 2.7], [0.1, 2.5], [0.172, 2.3]],
     round: 0.012
   });
   // Underside of the jaw, rising from the chin to the jaw angle.
@@ -736,12 +765,12 @@ function headField() {
     bump([0.085, 1.625, 0], [0.02, 0.01, 0.012], 0.002),
     ...sym((s) => bump([0.06, 1.592, 0.05 * s], [0.02, 0.014, 0.02], 0.004)),
     ...sym((s) => bump([0.03, 1.632, 0.068 * s], [0.025, 0.02, 0.015], -0.003)),
-    ...sym((s) => bump([0.052, 1.556, 0.052 * s], [0.02, 0.018, 0.015], -0.003))
+    ...sym((s) => bump([0.072, 1.522, 0.026 * s], [0.012, 0.012, 0.01], 0.002))
   );
   const neck = split(neckColumn(), [-0.02, 1.55, 0], UP, 'child', { reach: 0.06, blend: 0.03, round: 0.02 });
-  const formed = union(0.012, skull, ellipsoid([0.075, 1.5, 0], [0.014, 0.015, 0.021]));
-  const sockets = cut(0.008, formed, union(0, ...sym((s) => ellipsoid([0.08, 1.607, 0.032 * s], [0.013, 0.0115, 0.017]))));
-  const eyes = sym((s) => union(0.002, sphere([0.0575, 1.607, 0.032 * s], 0.0125), ellipsoid([0.06, 1.612, 0.032 * s], [0.0125, 0.0075, 0.015])));
+  const formed = union(0.012, skull, ellipsoid([0.078, 1.501, 0], [0.014, 0.015, 0.021]));
+  const sockets = cut(0.008, formed, union(0, ...sym((s) => ellipsoid([0.081, 1.607, 0.032 * s], [0.012, 0.011, 0.016]))));
+  const eyes = sym((s) => union(0.002, sphere([0.0595, 1.607, 0.032 * s], 0.0125), ellipsoid([0.062, 1.612, 0.032 * s], [0.0125, 0.0075, 0.015])));
   const nose = union(
     0.006,
     cone([0.077, 1.612, 0], [0.101, 1.571, 0], 0.0062, 0.0085),
@@ -749,16 +778,15 @@ function headField() {
     ...sym((s) => ellipsoid([0.086, 1.561, 0.0125 * s], [0.0095, 0.0085, 0.0085])),
     ellipsoid([0.081, 1.566, 0], [0.016, 0.014, 0.012])
   );
-  const lips = union(0.004, ellipsoid([0.083, 1.541, 0], [0.0085, 0.0072, 0.021]), ellipsoid([0.081, 1.527, 0], [0.009, 0.0062, 0.018]));
+  const lips = union(0.004, ellipsoid([0.081, 1.541, 0], [0.0085, 0.0068, 0.02]), ellipsoid([0.0785, 1.528, 0], [0.009, 0.006, 0.017]));
   const face = union(0.004, sockets, ...eyes, nose, lips);
-  const mouth = cut(0.002, face, ellipsoid([0.09, 1.5345, 0], [0.01, 0.0012, 0.02]));
   const ear = (s) =>
     cut(
       0.004,
       ellipsoid([-0.02, 1.597, 0.072 * s], [0.017, 0.03, 0.009], [0.3 * s, 0, 0.22]),
       ellipsoid([-0.018, 1.597, 0.081 * s], [0.011, 0.02, 0.006], [0.3 * s, 0, 0.22])
     );
-  return union(0.012, union(0.006, mouth, ear(1), ear(-1)), neck);
+  return union(0.012, union(0.006, face, ear(1), ear(-1)), neck);
 }
 
 /** Short hair: a shell over the skull, thinning to almost nothing at the hairline. */
@@ -766,8 +794,8 @@ function hairField() {
   const skull = skullField();
   return (x, y, z) => {
     const above = y - hairAt(x, z);
-    const thick = 0.0018 + 0.0062 * smooth01(above / 0.025) + 0.004 * smooth01((y - 1.665) / 0.04);
-    return -sminK(-(skull(x, y, z) - thick), above + 0.0015, 0.003);
+    const thick = 0.0025 + 0.0055 * smooth01(above / 0.025) + 0.004 * smooth01((y - 1.665) / 0.04);
+    return -sminK(-(skull(x, y, z) - thick), above + 0.0015, 0.005);
   };
 }
 
@@ -776,7 +804,7 @@ function headParts() {
   const visible = inter(0, headField(), (x, y, z) => y - hairAt(x, z) - 0.012);
   return [
     { mat: 'skin', field: visible, min: [-0.13, 1.47, -0.1], max: [0.13, 1.74, 0.1], h: 0.0032, tris: 4800 },
-    { mat: 'hair', field: hairField(), min: [-0.13, 1.53, -0.1], max: [0.11, 1.75, 0.1], h: 0.0045, tris: 1300 }
+    { mat: 'hair', field: hairField(), min: [-0.13, 1.53, -0.1], max: [0.11, 1.75, 0.1], h: 0.003, tris: 1400 }
   ];
 }
 
@@ -875,13 +903,15 @@ function armParts() {
   const eElbow = bisect(dir(S, E), dir(E, W));
   const hf = handFrame();
   const eWrist = bisect(dir(E, W), hf.down);
-  const elbowOpts = { reach: 0.045, blend: 0.02, round: 0.015 };
-  const wristOpts = { reach: 0.03, blend: 0.016, sink: 0.0015, round: 0.01 };
-  const grown = (keys, d) => keys.map(([s, r]) => [s, r + d + 0.004 * Math.min(s / 0.15, 1)]);
+  const elbowOpts = { ball: 0.046, blend: 0.02, round: 0.004 };
+  const wristOpts = { ball: 0.032, blend: 0.016, sink: 0.0015, round: 0.003 };
+  // Sleeve ease: tucked inside the deltoid at the top, hanging loose by the hem.
+  const ease = curve([[0, -0.008], [0.04, 0.003], [0.08, 0.009], [0.15, 0.0125]]);
+  const grown = (keys, d) => [0, 0.02, 0.04, 0.06, 0.08, 0.1, 0.12, 0.15].map((t) => [t, curve(keys)(t) + ease(t) + d]);
   const sleeve = union(
     0.035,
-    inter(0.01, union(0.035, shoulderLine(-1), deltoid(-1)), plane([0, 0, -0.135], [0, 0, 1])),
-    tube(S, W, FWD, { front: grown(ARM.front, 0.011), back: grown(ARM.back, 0.011), lat: grown(ARM.lat, 0.01), med: grown(ARM.med, 0.011), du, dv, to: 0.15, round: 0.004 })
+    inter(0.01, union(0.045, shoulderLine(-1), deltoid(-1)), plane([0, 0, -0.135], [0, 0, 1])),
+    tube(S, W, FWD, { front: grown(ARM.front, 0), back: grown(ARM.back, 0), lat: grown(ARM.lat, -0.001), med: grown(ARM.med, 0), du, dv, to: 0.15, round: 0.004 })
   );
   const upper = inter(0, split(skin, E, eElbow, 'parent', elbowOpts), plane(fr.at(0.11), fr.e.clone().negate().toArray()));
   const fore = union(0, split(split(skin, E, eElbow, 'child', elbowOpts), W, eWrist, 'parent', wristOpts), sphere(E, 0.031));
@@ -915,7 +945,21 @@ function legField() {
     med: [[0, 0.083], [0.1, 0.08], [0.22, 0.071], [0.32, 0.062], [0.4, 0.058], [0.55, 0.057], [0.86, 0.056]],
     to: 0.86
   });
-  return { leg: union(0.01, leg, sphere(H, 0.084)), H, K, A, fr };
+  // Cloth: a pressed crease down the front, folds behind the knee, and the break where
+  // the hem rests on the shoe.
+  const folds = (x, y, z) => {
+    const px = x - H[0];
+    const py = y - H[1];
+    const pz = z - H[2];
+    const s = px * fr.e.x + py * fr.e.y + pz * fr.e.z;
+    const u = px * fr.f.x + py * fr.f.y + pz * fr.f.z;
+    const v = px * fr.l.x + py * fr.l.y + pz * fr.l.z;
+    const crease = u > 0 ? 0.0012 * Math.exp(-((v / 0.007) ** 2)) * smooth01((s - 0.1) / 0.1) : 0;
+    const knee = u < 0 ? 0.0018 * Math.exp(-(((s - sK) / 0.035) ** 2)) * Math.sin(((s - sK) / 0.022) * Math.PI * 2) * smooth01(-u / 0.04) : 0;
+    const brk = 0.0025 * Math.exp(-(((s - 0.745 + 0.25 * u) / 0.012) ** 2)) * smooth01((u + 0.03) / 0.05);
+    return crease + knee + brk;
+  };
+  return { leg: union(0.01, displace(leg, folds), sphere(H, 0.084)), H, K, A, fr };
 }
 
 /**
@@ -931,7 +975,7 @@ function trouserParts() {
   const hipOpts = { reach: 0.018, blend: 0.016, sink: 0.0025, round: 0.012 };
   const pelvis = split(split(trousers, J, n, 'parent', hipOpts), [J[0], J[1], -J[2]], [n[0], n[1], -n[2]], 'parent', hipOpts);
   const eKnee = bisect(dir(H, K), dir(K, A));
-  const kneeOpts = { reach: 0.06, blend: 0.025, sink: 0.0025, round: 0.02 };
+  const kneeOpts = { ball: 0.068, blend: 0.025, sink: 0.0025, round: 0.005 };
   // Hem: higher at the front, where it rests on the shoe.
   const hem = (x, y, z) => {
     const px = x - H[0];
@@ -973,7 +1017,7 @@ function shoeLocal() {
     n: 3,
     round: 0.006
   });
-  const ankle = tube([-0.012, -0.05, 0], [-0.004, 0.12, 0], FWD, { front: 0.033, back: 0.037, lat: 0.033, med: 0.031 });
+  const ankle = tube([-0.012, -0.05, 0], [-0.006, 0.08, 0], FWD, { front: 0.031, back: 0.034, lat: 0.031, med: 0.03, round: 0.01 });
   const tongue = ellipsoid([0.06, -0.008, 0], [0.052, 0.01, 0.024], [0, 0, -0.62]);
   const laces = (x, y, z) => {
     const band = Math.abs(z) - 0.016;
@@ -981,7 +1025,7 @@ function shoeLocal() {
     const rows = Math.abs(((along + 0.2) % 0.016) - 0.008) - 0.0035;
     return Math.max(tongue(x, y, z) - 0.0025, band, rows, Math.abs(along - 0.06) - 0.04);
   };
-  return union(0.005, union(0.012, upper, ankle, tongue, laces), sole);
+  return union(0.008, union(0.012, upper, ankle, tongue, laces), sole);
 }
 
 function footParts() {
@@ -990,7 +1034,7 @@ function footParts() {
   const ax = [Math.cos(yaw), 0, -Math.sin(yaw)];
   const az = [Math.sin(yaw), 0, Math.cos(yaw)];
   const field = local(A, ax, UP, az, shoeLocal());
-  return [{ mat: 'shoes', field, min: [-0.12, -0.005, -0.18], max: [0.2, 0.22, -0.01], h: 0.0038, tris: 1800 }];
+  return [{ mat: 'shoes', field, min: [-0.12, -0.005, -0.18], max: [0.2, 0.22, -0.01], h: 0.0032, tris: 1800 }];
 }
 
 function parts() {

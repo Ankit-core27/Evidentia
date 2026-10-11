@@ -42,7 +42,7 @@ const halfWidth = (x) => halfWidthPlan(x) * (1 + flare(x));
 const topLine = curve([
   [-hx, 0.86], [-2.262, 0.95], [-2.246, 1.012], [-2.218, 1.048], [-2.16, 1.066], [-2.0, 1.074], [-1.8, 1.072],
   [-1.6, 1.066], [-1.2, 1.052], [-0.6, 1.028], [0.0, 1.004], [0.5, 0.988], [0.92, 0.97], [1.2, 0.952], [1.5, 0.92],
-  [1.8, 0.88], [2.0, 0.856], [2.12, 0.832], [2.2, 0.8], [2.245, 0.76], [hx, 0.7]
+  [1.8, 0.88], [2.0, 0.856], [2.12, 0.834], [2.2, 0.814], [2.25, 0.792], [hx, 0.762]
 ]);
 const sill = curve([[-hx, 0.42], [-2.2, 0.37], [-2.05, 0.32], [-1.8, 0.295], [1.6, 0.285], [1.85, 0.28], [2.12, 0.3], [hx, 0.34]]);
 const under = curve([[-hx, 0.42], [-2.2, 0.34], [-2.05, 0.24], [-1.8, 0.175], [1.6, 0.17], [1.85, 0.22], [2.12, 0.29], [hx, 0.34]]);
@@ -310,10 +310,10 @@ export function buildSedan(asm) {
   asm.addMirrored('chrome', drl);
 
   // Front: chrome wing across the nose, grille, lower intake, fog lamps, emblem and plate.
-  asm.add('chrome', facePatch(1, (u) => -0.47 * (2 * u - 1), (u, v) => 0.735 + 0.026 * v + 0.01 * (2 * u - 1) ** 2, { nu: 40, nv: 2, offset: 0.006 }));
-  asm.add('trim_gloss', facePatch(1, (u, v) => -(0.38 + 0.04 * v) * (2 * u - 1), (_u, v) => 0.575 + 0.155 * v, { nu: 30, nv: 6, offset: 0.004 }));
+  asm.add('chrome', facePatch(1, (u) => -0.47 * (2 * u - 1), (_u, v) => 0.722 + 0.024 * v, { nu: 40, nv: 2, offset: 0.006 }));
+  asm.add('trim_gloss', facePatch(1, (u, v) => -(0.38 + 0.05 * v) * (2 * u - 1), (_u, v) => 0.57 + 0.145 * v, { nu: 30, nv: 6, offset: 0.004 }));
   for (let k = 0; k < 3; k += 1) {
-    const y = 0.61 + k * 0.04;
+    const y = 0.6 + k * 0.04;
     asm.add('trim', facePatch(1, (u) => -0.37 * (2 * u - 1), (_u, v) => y + 0.006 * v, { nu: 24, nv: 1, offset: 0.006 }));
   }
   asm.add('trim', facePatch(1, (u) => -0.56 * (2 * u - 1), (_u, v) => 0.29 + 0.13 * v, { nu: 30, nv: 4, offset: 0.004 }));
@@ -323,9 +323,8 @@ export function buildSedan(asm) {
     asm.add('trim_gloss', place(new THREE.CylinderGeometry(0.06, 0.06, 0.012, 24), x - 0.012, 0.42, z, 0, 0, Math.PI / 2));
     asm.add('headlight', place(new THREE.CylinderGeometry(0.036, 0.036, 0.012, 20), x - 0.006, 0.42, z, 0, 0, Math.PI / 2));
   }
-  const emblem = place(new THREE.TorusGeometry(0.05, 0.009, 8, 28), faceX(0, 0.748, 1) + 0.012, 0.748, 0, 0, Math.PI / 2, 0);
-  emblem.scale(1, 0.72, 1);
-  asm.add('chrome', emblem);
+  const emblem = new THREE.TorusGeometry(0.05, 0.009, 8, 28).scale(1, 0.72, 1);
+  asm.add('chrome', place(emblem, faceX(0, 0.734, 1) + 0.014, 0.734, 0, 0, Math.PI / 2, 0));
   asm.plate('plate_front', faceX(0, 0.5, 1) + 0.007, 0.5, 1);
 
   // Tail lamps: wedge-shaped, on the boot lid and wrapping round the rear quarters, joined by a chrome bar.

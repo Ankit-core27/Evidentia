@@ -229,9 +229,8 @@ export function buildBus(asm) {
     const y = 0.83 + k * 0.06;
     asm.add('alu', endPatch(1, 0.44, -0.44, y, y + 0.022, { bulge: () => 0.012, nu: 20, nv: 1 }));
   }
-  const badge = place(new THREE.TorusGeometry(0.06, 0.012, 8, 28), endPoint(1.17, 0, 1).x + 0.012, 1.17, 0, 0, Math.PI / 2, 0);
-  badge.scale(1, 0.6, 1);
-  asm.add('chrome', badge);
+  const badge = new THREE.TorusGeometry(0.06, 0.012, 8, 28).scale(1, 0.6, 1);
+  asm.add('chrome', place(badge, endPoint(1.17, 0, 1).x + 0.012, 1.17, 0, 0, Math.PI / 2, 0));
   // A rubber seal round the windscreen.
   const [sy0, sy1] = SCREEN;
   const sEdge = (nF - 1) / nF;
@@ -280,7 +279,8 @@ export function buildBus(asm) {
     asm.add('paint', endPatch(-1, -0.48, 0.48, y, y + 0.03, { bulge: (_u, v) => 0.006 + 0.012 * v, nu: 16, nv: 1 }));
   }
   asm.add('chrome', box(0.02, 0.05, 0.45, endPoint(1.62, 0, -1).x - 0.01, 1.62, 0, 0.008, 1));
-  asm.add('trim', rod([-4.9, 0.3, 0.75], [-hx + 0.02, 0.27, 0.75], 0.05, { radial: 12 }));
+  asm.add('trim', rod([-4.9, 0.34, 0.75], [-5.55, 0.3, 0.75], 0.05, { radial: 12 }));
+  asm.add('trim', rod([-5.55, 0.3, 0.75], [-5.62, 0.24, 0.75], 0.05, { radial: 12 }));
 
   // Side marker lamps and luggage hatches.
   for (const x of [2.0, 0.6, -1.8, -4.0, -5.0]) {

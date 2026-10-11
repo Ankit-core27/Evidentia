@@ -127,9 +127,8 @@ function buildCab(asm) {
     const y = 1.2 + k * 0.085;
     asm.add('chrome', endPatch(1, 0.58, -0.58, y, y + 0.03, { bulge: () => 0.014, nu: 20, nv: 1 }));
   }
-  const badge = place(new THREE.TorusGeometry(0.07, 0.013, 8, 28), endPoint(1.77, 0, 1).x + 0.014, 1.77, 0, 0, Math.PI / 2, 0);
-  badge.scale(1, 0.6, 1);
-  asm.add('chrome', badge);
+  const badge = new THREE.TorusGeometry(0.07, 0.013, 8, 28).scale(1, 0.6, 1);
+  asm.add('chrome', place(badge, endPoint(1.77, 0, 1).x + 0.014, 1.77, 0, 0, Math.PI / 2, 0));
   for (const s of [1, -1]) {
     const lamp = (s0, s1, y0, y1, m, off) => {
       const g = endPatch(1, s0, s1, y0, y1, { offset: off, nu: 8, nv: 3 });

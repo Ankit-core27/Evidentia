@@ -13,9 +13,11 @@ import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js';
 import { mergeGeometries, mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { buildAce } from './ace.mjs';
 import { buildAutoRickshaw } from './autorickshaw.mjs';
+import { buildBicycle } from './bicycle.mjs';
 import { buildBus } from './bus.mjs';
 import { mirrorZ } from './geometry.mjs';
 import { buildHatchback } from './hatchback.mjs';
+import { buildMotorcycle } from './motorcycle.mjs';
 import { buildSedan } from './sedan.mjs';
 import { buildTruck } from './truck.mjs';
 
@@ -171,3 +173,11 @@ await write(truck.build(materials(0xd0631a, 0xf2c200)), 'truck.glb');
 const auto = new Assembly('auto-rickshaw');
 buildAutoRickshaw(auto);
 await write(auto.build(materials(0x1f5c38, 0xf2c200)), 'auto-rickshaw.glb');
+
+const motorcycle = new Assembly('motorcycle');
+buildMotorcycle(motorcycle);
+await write(motorcycle.build(materials(0xa8141c, 0xf4f4f0)), 'motorcycle.glb');
+
+const bicycle = new Assembly('bicycle');
+buildBicycle(bicycle);
+await write(bicycle.build(materials(0x101113, 0xf4f4f0)), 'bicycle.glb');

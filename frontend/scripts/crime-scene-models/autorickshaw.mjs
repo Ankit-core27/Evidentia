@@ -2,7 +2,7 @@
 // the waist and yellow above (the Delhi livery), with a black canvas hood on a tubular frame, open
 // sides, the driver in front on the centre line and a bench for three behind.
 import * as THREE from 'three';
-import { box as roundedBox, curve, indexed, loft, mirrorZ, patch, place, rod, smooth, stations, steelWheel, tube, tyre } from './geometry.mjs';
+import { box as roundedBox, curve, doubleSided, indexed, loft, patch, place, rod, smooth, stations, steelWheel, tube, tyre } from './geometry.mjs';
 
 const box = (...args) => indexed(roundedBox(...args));
 
@@ -149,7 +149,8 @@ function buildBody(asm) {
     { at: xr, span: archR + 0.02, step: 0.012 },
     ...steps.map((at) => ({ at, span: 0.03, step: 0.008 }))
   ]);
-  for (const [m, g] of Object.entries(loft(xs, bodySection, { capStart: 'paint', capEnd: 'paint' }))) asm.add(m, g);
+  // The nose's small end face is left black, behind the front plate.
+  for (const [m, g] of Object.entries(loft(xs, bodySection, { capStart: 'paint', capEnd: 'trim' }))) asm.add(m, g);
 
   // Rear quarter panels round the passenger bench, standing on the body sides: green up to the waist,
   // yellow above it with a rounded front edge, and a black rubbing strip along the joint.
@@ -269,7 +270,7 @@ function buildRunningGear(asm) {
   // An open arc over the front and top of the wheel (theta runs from below the axle, through the front, to the top).
   const guard = new THREE.CylinderGeometry(0.245, 0.245, 0.15, 24, 1, true, 1.75, 1.9);
   guard.rotateX(Math.PI / 2);
-  asm.add('paint', indexed(place(guard, xf, tyreR, 0)));
+  asm.add('paint', doubleSided(place(guard, xf, tyreR, 0)));
   asm.add('under', place(new THREE.CylinderGeometry(0.035, 0.035, 2 * zwR - 0.1, 10), xr, tyreR, 0, Math.PI / 2, 0, 0));
   asm.add('cast', box(0.35, 0.16, 0.5, -0.82, 0.24, -0.05, 0.03, 2));
 

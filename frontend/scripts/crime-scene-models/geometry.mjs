@@ -290,10 +290,7 @@ export function place(geo, x, y, z, rx = 0, ry = 0, rz = 0) {
   return geo;
 }
 
-/**
- * Mirrors a geometry across the z = 0 plane, keeping faces outward. Only indexed geometry has its
- * faces turned back out; pass non-indexed geometry (box, ExtrudeGeometry) through indexed() first.
- */
+/** Mirrors a geometry across the z = 0 plane, turning each face back so it still points outward. */
 export function mirrorZ(geo) {
   const g = geo.clone();
   g.scale(1, 1, -1);
@@ -302,6 +299,16 @@ export function mirrorZ(geo) {
     const a = index.array;
     for (let i = 0; i < a.length; i += 3) [a[i + 1], a[i + 2]] = [a[i + 2], a[i + 1]];
     index.needsUpdate = true;
+  } else {
+    // Unindexed (boxes, extrusions): swap the second and third vertex of every triangle.
+    for (const attr of Object.values(g.attributes)) {
+      const n = attr.itemSize;
+      const a = attr.array;
+      for (let v = 0; v + 2 < attr.count; v += 3) {
+        for (let k = 0; k < n; k += 1) [a[(v + 1) * n + k], a[(v + 2) * n + k]] = [a[(v + 2) * n + k], a[(v + 1) * n + k]];
+      }
+      attr.needsUpdate = true;
+    }
   }
   g.computeVertexNormals();
   return g;
@@ -429,4 +436,93 @@ export function heavyWheel(radius, width, rimRadius, { twin = 0, grooves = 5, se
     chrome: shift(chrome, twin),
     brake: drum
   };
+}
+
+/** A two-wheeler's round-shouldered tyre on an axle along z: radius to the crown, section width, on a rim of rimRadius. */
+export function roundTyre(radius, section, rimRadius, { segments = 48 } = {}) {
+  const h = radius - rimRadius;
+  const rc = rimRadius + h * 0.42;
+  const pts = [new THREE.Vector2(rimRadius + 0.003, -section * 0.34)];
+  const n = 18;
+  for (let k = 0; k <= n; k += 1) {
+    const a = -0.42 + ((Math.PI + 0.84) * k) / n;
+    pts.push(new THREE.Vector2(rc + Math.sin(a) * (radius - rc), -Math.cos(a) * section * 0.5));
+  }
+  pts.push(new THREE.Vector2(rimRadius + 0.003, section * 0.34));
+  const geo = new THREE.LatheGeometry(pts, segments);
+  geo.rotateX(Math.PI / 2);
+  geo.deleteAttribute('uv');
+  return geo;
+}
+
+/**
+ * A wire-spoked wheel on an axle along z: a box-section rim, a hub with two flanges, and spokes laced
+ * tangentially from alternate flanges. Returns { rim, spokes, hub }.
+ */
+export function spokedWheel(rimRadius, rimWidth, { spokes = 36, hubRadius = 0.05, hubWidth = 0.1, flange = 0.06, spokeRadius = 0.0018, cross = 0.55, segments = 48 } = {}) {
+  const w = rimWidth / 2;
+  const profile = [
+    [rimRadius - 0.016, w - 0.004], [rimRadius - 0.016, -w + 0.004], [rimRadius - 0.004, -w], [rimRadius + 0.008, -w],
+    [rimRadius + 0.008, w], [rimRadius - 0.004, w], [rimRadius - 0.016, w - 0.004]
+  ].map(([r, y]) => new THREE.Vector2(r, y));
+  const rim = new THREE.LatheGeometry(profile, segments);
+  rim.rotateX(Math.PI / 2);
+  rim.deleteAttribute('uv');
+
+  const zf = hubWidth / 2 - 0.006;
+  const parts = [];
+  const half = spokes / 2;
+  for (const s of [1, -1]) {
+    for (let j = 0; j < half; j += 1) {
+      const a = (j / half) * Math.PI * 2 + (s > 0 ? 0 : Math.PI / half);
+      const dir = j % 2 ? 1 : -1;
+      const hubPt = new THREE.Vector3(Math.cos(a) * flange, Math.sin(a) * flange, s * zf);
+      const b = a + dir * cross;
+      const rimPt = new THREE.Vector3(Math.cos(b) * (rimRadius - 0.015), Math.sin(b) * (rimRadius - 0.015), s * 0.004);
+      parts.push(rod(hubPt, rimPt, spokeRadius, { radial: 4, caps: false }));
+    }
+  }
+  const spokesGeo = mergeGeometries(parts);
+  const barrel = new THREE.CylinderGeometry(hubRadius, hubRadius, hubWidth - 0.02, 24);
+  const flanges = [1, -1].map((s) => new THREE.CylinderGeometry(flange + 0.008, flange + 0.008, 0.006, 24).translate(0, s * zf, 0));
+  const hub = mergeGeometries([barrel, ...flanges].map((g) => {
+    g.deleteAttribute('uv');
+    return g;
+  }));
+  hub.rotateX(Math.PI / 2);
+  return { rim, spokes: spokesGeo, hub };
+}
+
+/** A coil spring of wire radius r from a to b, coil radius rc and the given number of turns. */
+export function helix(a, b, rc, turns, r, { segments = 0, radial = 6 } = {}) {
+  const p = Array.isArray(a) ? new THREE.Vector3(...a) : a.clone();
+  const q = Array.isArray(b) ? new THREE.Vector3(...b) : b.clone();
+  const axis = q.clone().sub(p);
+  const len = axis.length();
+  axis.normalize();
+  const u = new THREE.Vector3(0, 0, 1).cross(axis);
+  if (u.lengthSq() < 1e-6) u.set(1, 0, 0);
+  u.normalize();
+  const v = axis.clone().cross(u);
+  const pts = [];
+  const n = Math.max(turns * 12, 8);
+  for (let k = 0; k <= n; k += 1) {
+    const t = k / n;
+    const ang = t * turns * Math.PI * 2;
+    pts.push(p.clone().addScaledVector(axis, t * len).addScaledVector(u, Math.cos(ang) * rc).addScaledVector(v, Math.sin(ang) * rc));
+  }
+  return tube(pts, r, { segments: segments || n * 2, radial });
+}
+
+/** A thin shell visible from both sides with a single-sided material: the geometry plus a copy with its faces reversed. */
+export function doubleSided(geo) {
+  const front = indexed(geo.clone());
+  const back = front.clone();
+  const a = back.getIndex().array;
+  for (let i = 0; i < a.length; i += 3) [a[i + 1], a[i + 2]] = [a[i + 2], a[i + 1]];
+  back.getIndex().needsUpdate = true;
+  const n = back.getAttribute('normal');
+  if (n) for (let i = 0; i < n.array.length; i += 1) n.array[i] = -n.array[i];
+  for (const g of [front, back]) for (const key of Object.keys(g.attributes)) if (key !== 'position' && key !== 'normal') g.deleteAttribute(key);
+  return mergeGeometries([front, back]);
 }

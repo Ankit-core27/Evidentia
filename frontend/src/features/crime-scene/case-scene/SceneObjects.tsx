@@ -363,7 +363,8 @@ const Model: React.FC<{
   const native = box.getSize(new THREE.Vector3());
   const fit: [number, number, number] =
     native.x > 0 && Math.abs(native.x / size[0] - 1) > 0.05 ? [size[0] / native.x, size[2] / native.y, size[1] / native.z] : [1, 1, 1];
-  const hasLamps = lamps.some((m) => m.name === 'headlight');
+  // A bicycle's front reflector glows but throws no beam.
+  const hasLamps = lamps.some((m) => m.name === 'headlight') && !object.model_id.startsWith('bicycle');
   return (
     <group name={`${object.model_id} model`} scale={fit}>
       <primitive object={root} />
