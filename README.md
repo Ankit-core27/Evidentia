@@ -2,9 +2,9 @@
 
 Evidentia is one integrated AI forensic investigation platform. An officer creates a case, collects evidence, discovers relationships, reconstructs what may have happened, and explores the incident in geographic and 3D views. Every module reads the same case records, so the canvas, timeline, 3D scene and report all point back to the same evidence. The hackathon build delivers one complete road-accident investigation; anatomy, geographic and building views then extend the same architecture.
 
-## Hackathon MVP
+## MVP
 
-The hackathon build is done when one road-accident case runs through all nine steps below. Work on anatomy, Cesium and building views starts only after this list is complete.
+The  build is done when one road-accident case runs through all nine steps below. Work on anatomy, Cesium and building views starts only after this list is complete.
 
 - [ ] Create a case and open its workspace
 - [ ] Upload evidence and inspect source files
